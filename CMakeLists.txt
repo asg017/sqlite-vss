@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.17 FATAL_ERROR)
 
-project(myProject VERSION 0.1.0)
+project(sqlite-faiss VERSION 0.0.0)
 
 
 set(CMAKE_CXX_STANDARD 11)
@@ -17,8 +17,14 @@ include_directories(/Users/alex/projects/sqlite-lines/sqlite)
 option(FAISS_ENABLE_GPU "" OFF)
 option(FAISS_ENABLE_PYTHON "" OFF)
 add_subdirectory(./faiss)
+option(BUILD_TESTING "" OFF)
 
-add_library(myProject SHARED src/main.cpp)
-target_link_libraries(myProject faiss_avx2)
-target_link_libraries(myProject sqlite3)
+add_library(sqlite-faiss SHARED src/main.cpp)
+target_link_libraries(sqlite-faiss faiss_avx2)
+target_link_libraries(sqlite-faiss sqlite3)
 ##target_link_libraries(myProject PRIVATE faiss)
+
+set_target_properties(sqlite-faiss PROPERTIES PREFIX "")
+set_target_properties(sqlite-faiss PROPERTIES PREFIX "")
+set_target_properties(sqlite-faiss PROPERTIES OUTPUT_NAME "faiss0")
+

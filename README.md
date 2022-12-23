@@ -1,11 +1,15 @@
 https://github.com/matsui528/faiss_tips
 
+```
+cmake -B build; make -C build
+
+cmake -DCMAKE_BUILD_TYPE=Release -B build_release; make -C build_release
+```
+
 ```bash
 cd build/
 cmake .. -DFAISS_ENABLE_GPU=OFF -DFAISS_ENABLE_PYTHON=OFF
 make
-
-sqlite3x :memory: '.load build/libmyProject' '.mode box' 'select a()' 'select a()' 'select 1'
 ```
 
 ## Prototype
@@ -21,7 +25,24 @@ select query(vector);
 ## real deal
 
 ```sql
-create virtual table article_embeddings
+create virtual table article_embeddings using faiss_index();
+
+-- Training portion
+insert into article_embeddings(operation, vector)
+  select 'training', embedding(headline)
+  from articles;
+
+insert into article_embeddings(operation) values ('train');
+
+
+-- adding in data portion
+insert into article_embeddings(vector)
+  select embedding(headline) from articles;
+
+
+-- now query it!
+select rowid, vector, distance
+from article_embeddings(embedding('my query'));
 ```
 
 ```
