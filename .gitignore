@@ -6,3 +6,4 @@ build_release
 News_Category_Dataset_v3.json
 *.faissindex
 *.db
+*.index

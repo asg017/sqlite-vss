@@ -19,8 +19,12 @@ from generate_embeddings((
   from (
     select line 
     from lines_read('News_Category_Dataset_v3.json')
-    limit 20000
+    limit 2000
   )
 ));
+
+
+
+
 
 -- 20k: 177s

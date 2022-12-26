@@ -28,3 +28,5 @@ set_target_properties(sqlite-faiss PROPERTIES PREFIX "")
 set_target_properties(sqlite-faiss PROPERTIES PREFIX "")
 set_target_properties(sqlite-faiss PROPERTIES OUTPUT_NAME "faiss0")
 
+add_executable(xxx src/debug.cpp)
+target_link_libraries(xxx faiss_avx2)
