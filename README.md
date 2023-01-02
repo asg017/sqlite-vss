@@ -1,8 +1,12 @@
+# sqlite-vss - SQLite as a Vector Search Database
+
+`sqlite-vss` (SQLite **V**ector **S**imilarity **S**earch) is a SQLite extension that brings vector search capabilities to SQLite. Based on [Faiss](https://faiss.ai/).
+
 ## TODO
 
-- [ ] `faiss_` -> `vss_`
+- [x] `faiss_` -> `vss_`
 - [ ] new `%w_data` table with only rowid's
-- [ ] constructor, `dimensions=128, factory="asdfasdf", colA, colB`
+- [ ] constructor, `dimensions=128, factory="asdfasdf"`
 - [ ] multiple vector columns
 - [ ] INSERT respect transactions
   - `pTable->vectors_to_add`
@@ -14,6 +18,8 @@
 - [ ] clustering?
 - [ ] [Distances](https://faiss.ai/cpp_api/file/distances_8h.html)
 - [ ] [extra distances](https://faiss.ai/cpp_api/file/extra__distances_8h.html)
+- [ ] binary index
+- [ ] hamming distance utils
 
 ```sql
 create table articles(
@@ -58,3 +64,17 @@ PYO3_PYTHON=/Users/alex/projects/research-sqlite-vector/venv/bin/python LIBDIR=/
 
 PYTHONPATH=/Users/alex/projects/research-sqlite-vector/venv/lib/python3.8/site-packages/ sqlite3x :memory: '.read test.sql'
 ```
+
+## Embeddings generating
+
+`sqlite-vss` is a **Bring Your Own Vectors** database.
+
+### Option 1: Application Defined Functions
+
+### Option 2: With `sqlite-api`
+
+### Option 3: With `sqlite-openai` or `sqlite-huggingface-inference`
+
+### Option 4: With `sqlite-py`
+
+### Option 5: With `sqlite-bert` (WIP)
