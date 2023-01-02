@@ -6,8 +6,6 @@ project(sqlite-faiss VERSION 0.0.0)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-include_directories(/Users/alex/projects/sqlite-lines/sqlite)
-
 #include_directories(/Users/alex/projects/faiss)
 ##include_directories(/Users/alex/projects/faissx/faiss/)
 
@@ -19,9 +17,20 @@ option(FAISS_ENABLE_PYTHON "" OFF)
 add_subdirectory(./faiss)
 option(BUILD_TESTING "" OFF)
 
+# Adding nlohmann_json for json parsing
+set(JSON_BuildTests OFF CACHE INTERNAL "")
+add_subdirectory(vendor/json)
+
+# vendor in SQLite amalgammation
+include_directories(vendor/sqlite-snapshot-202212231449)
+link_directories(BEFORE vendor/sqlite-snapshot-202212231449)
+
 add_library(sqlite-faiss SHARED src/main.cpp)
-target_link_libraries(sqlite-faiss faiss_avx2)
 target_link_libraries(sqlite-faiss sqlite3)
+target_link_libraries(sqlite-faiss faiss_avx2)
+target_link_libraries(sqlite-faiss nlohmann_json::nlohmann_json)
+
+
 ##target_link_libraries(myProject PRIVATE faiss)
 
 set_target_properties(sqlite-faiss PROPERTIES PREFIX "")

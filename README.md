@@ -1,3 +1,44 @@
+## TODO
+
+- [ ] `faiss_` -> `vss_`
+- [ ] new `%w_data` table with only rowid's
+- [ ] constructor, `dimensions=128, factory="asdfasdf", colA, colB`
+- [ ] multiple vector columns
+- [ ] INSERT respect transactions
+  - `pTable->vectors_to_add`
+  - `xCommit`/`xRollback`
+- [ ] DELETE and UPDATE support
+  - [ ] xUpdate DELETE, with `pTable->ids_to_data` and `xCommit`/`xRollback` support
+  - [ ] update, call remove_id, add_id?
+- [ ] get reconstructed vector?
+- [ ] clustering?
+- [ ] [Distances](https://faiss.ai/cpp_api/file/distances_8h.html)
+- [ ] [extra distances](https://faiss.ai/cpp_api/file/extra__distances_8h.html)
+
+```sql
+create table articles(
+  headline text,
+  body text
+);
+create virtual table article_vectors using vss(
+  headline(384) using "Flat,IDMap",
+  body(384) using "IVF10,PQ4",
+);
+
+with similar_headlines as (
+  select
+    id,
+    distance
+  from article_vectors
+  where vss_search(headline, vss_params('query', :query, 'k', 50));
+)
+select
+  articles.headline
+from similar_headlines
+left join articles on articles.rowid = similar_headlines.id
+
+```
+
 https://github.com/matsui528/faiss_tips
 
 ```
@@ -10,39 +51,6 @@ cmake -DCMAKE_BUILD_TYPE=Release -B build_release; make -C build_release
 cd build/
 cmake .. -DFAISS_ENABLE_GPU=OFF -DFAISS_ENABLE_PYTHON=OFF
 make
-```
-
-## Prototype
-
-```sql
---select create_index('file.index');
-select add_training(data.data) from data;
-select train();
-select add_data(data.data) from data;
-select query(vector);
-```
-
-## real deal
-
-```sql
-create virtual table article_embeddings using faiss_index();
-
--- Training portion
-insert into article_embeddings(operation, vector)
-  select 'training', embedding(headline)
-  from articles;
-
-insert into article_embeddings(operation) values ('train');
-
-
--- adding in data portion
-insert into article_embeddings(vector)
-  select embedding(headline) from articles;
-
-
--- now query it!
-select rowid, vector, distance
-from article_embeddings(embedding('my query'));
 ```
 
 ```
