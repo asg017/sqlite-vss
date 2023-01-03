@@ -1,11 +1,11 @@
 # sqlite-vss - SQLite as a Vector Search Database
 
-`sqlite-vss` (SQLite **V**ector **S**imilarity **S**earch) is a SQLite extension that brings vector search capabilities to SQLite. Based on [Faiss](https://faiss.ai/).
+`sqlite-vss` (SQLite <b><u>V</u></b>ector <b><u>S</u></b>imilarity <b><u>S</u></b>earch) is a SQLite extension that brings vector search capabilities to SQLite. Based on [Faiss](https://faiss.ai/).
 
 ## TODO
 
 - [x] `faiss_` -> `vss_`
-- [ ] new `%w_data` table with only rowid's
+- [x] new `%w_data` table with only rowid's
 - [ ] constructor, `dimensions=128, factory="asdfasdf"`
 - [ ] multiple vector columns
 - [ ] INSERT respect transactions
@@ -14,7 +14,7 @@
 - [ ] DELETE and UPDATE support
   - [ ] xUpdate DELETE, with `pTable->ids_to_data` and `xCommit`/`xRollback` support
   - [ ] update, call remove_id, add_id?
-- [ ] get reconstructed vector?
+- [x] get reconstructed vector?
 - [ ] clustering?
 - [ ] [Distances](https://faiss.ai/cpp_api/file/distances_8h.html)
 - [ ] [extra distances](https://faiss.ai/cpp_api/file/extra__distances_8h.html)

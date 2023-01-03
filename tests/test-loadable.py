@@ -76,12 +76,35 @@ class TestVss(unittest.TestCase):
 
     
   def test_vss_index(self):
-    execute_all('create virtual table x using vss_index(2, "Flat,IDMap");')
+    #
+    #            |
+    #    1000 -> X 
+    #            |          1002
+    #            |          /
+    #            |         V
+    # ---X-----------------X--
+    #    ^1001   |
+    #            |
+    #            |
+    #            X <- 1003
+    #            |
+    #
+    #
+    execute_all('create virtual table x using vss_index(2, "Flat,IDMap2");')
     execute_all("""
       insert into x(rowid, vector)
-        select key, value
+        select key + 1000, value
         from json_each(?);
       """, ['[[0, 1], [0, -1], [1, 0], [-1, 0]]'])
+    db.commit()
+
+    self.assertEqual(execute_all("select count(*) from x_index")[0]["count(*)"], 1)
+    self.assertEqual(execute_all("select rowid from x_data"), [
+      {"rowid": 1000},
+      {"rowid": 1001},
+      {"rowid": 1002},
+      {"rowid": 1003},
+    ])
 
     def search_x(v, k):
       return execute_all("select rowid, distance from x where vss_search(vector, vss_search_params(json(?), ?))", [v, k])
@@ -90,28 +113,45 @@ class TestVss(unittest.TestCase):
       return execute_all("select rowid, distance from x where vss_range_search(vector, vss_range_search_params(json(?), ?))", [v, d])
     
     self.assertEqual(search_x('[0.9, 0]', 5), [
-      {'distance': 0.010000004433095455, 'rowid': 2},
-      {'distance': 1.809999942779541, 'rowid': 0},
-      {'distance': 1.809999942779541, 'rowid': 1},
-      {'distance': 3.609999895095825, 'rowid': 3}
+      {'rowid': 1002, 'distance': 0.010000004433095455},
+      {'rowid': 1000, 'distance': 1.809999942779541},
+      {'rowid': 1001, 'distance': 1.809999942779541},
+      {'rowid': 1003, 'distance': 3.609999895095825}
     ])
     self.assertEqual(range_search_x('[0.5, 0.5]', 1), [
-      {'distance': 0.5, 'rowid': 0},
-      {'distance': 0.5, 'rowid': 2},
+      {'rowid': 1000, 'distance': 0.5},
+      {'rowid': 1002, 'distance': 0.5},
     ])
-    self.assertEqual(
-      explain_query_plan("select * from x where vss_range_search(vector, null);"),
-      "SCAN x VIRTUAL TABLE INDEX 0:range_search"
-    )
+    self.assertEqual(execute_all('select rowid, vector from x'), [
+      {'rowid': 1000, "vector": "[0.0,1.0]"},
+      {'rowid': 1001, "vector": "[0.0,-1.0]"},
+      {'rowid': 1002, "vector": "[1.0,0.0]"},
+      {'rowid': 1003, "vector": "[-1.0,0.0]"},
+    ])
+
     self.assertEqual(
       explain_query_plan("select * from x where vss_search(vector, null);"),
-      "SCAN x VIRTUAL TABLE INDEX 0:search"
+      "SCAN x VIRTUAL TABLE INDEX 1:search"
     )
-    # TODO support rowid query plans
-    #self.assertEqual(
-    #  explain_query_plan("select * from x"),
-    #  "SCAN x VIRTUAL TABLE INDEX 0:rowid"
-    #)
+    self.assertEqual(
+      explain_query_plan("select * from x where vss_range_search(vector, null);"),
+      "SCAN x VIRTUAL TABLE INDEX 2:range_search"
+    )
+    self.assertEqual(
+      explain_query_plan("select * from x"),
+      "SCAN x VIRTUAL TABLE INDEX 3:fullscan"
+    )
+
+    # TODO support rowid point queries
+
+    self.assertEqual(execute_all("select name from pragma_table_list where name like 'x%' order by 1"),[
+      {"name": "x"},
+      {"name": "x_data"},
+      {"name": "x_index"},
+    ])
+    execute_all("drop table x;")
+    self.assertEqual(execute_all("select name from pragma_table_list where name like 'x%' order by 1"),[])
+    
 
 class TestCoverage(unittest.TestCase):                                      
   def test_coverage(self):                                                      
