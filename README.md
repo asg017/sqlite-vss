@@ -17,23 +17,8 @@
 - [ ] [extra distances](https://faiss.ai/cpp_api/file/extra__distances_8h.html)
 - [ ] binary index
 - [ ] hamming distance utils
-
-### sqlite-vector
-
-```sql
-select vectori32(1, 2, 3, 4); -- NULL, pointer="vectori32v0"
-select vector_to_blob(vectori32(1,2,3,4)); -- X'xxxxxx'
-select vector_to_json(vectori32(1, 2, 3, 4)); -- '[1,2,3,4]', subtype=J
-select vector_to_fvecs(); -- X'xxxx'
-
-select vector_from_json(json('[]'));
-select vector_from_blob(json('[]'));
-select vector_from_fvecs(json('[]'));
-
-select vector_group(value) from xxx;
-
-select vector from vector_fvecs_each(readfile('file.fvecs'));
-```
+- [ ] vtab option to store index on disk instead (mmaped)
+- [ ] GPU?
 
 ```sql
 create table articles(

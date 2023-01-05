@@ -14,8 +14,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(FAISS_ENABLE_GPU "" OFF)
 option(FAISS_ENABLE_PYTHON "" OFF)
-add_subdirectory(./faiss)
 option(BUILD_TESTING "" OFF)
+add_subdirectory(./faiss)
 
 # Adding nlohmann_json for json parsing
 set(JSON_BuildTests OFF CACHE INTERNAL "")
