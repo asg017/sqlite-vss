@@ -18,15 +18,9 @@ SQLITE_EXTENSION_INIT1
 #include <faiss/impl/io.h>
 #include <faiss/impl/AuxIndexStructures.h>
 
-
+#include "vectors.h"
 
 #pragma region work 
-
-
-struct VecX {
-  int64_t size;
-  float * data;
-};
 
 void del(void*p) {
   //delete p;
@@ -41,68 +35,7 @@ static void vss_debug(sqlite3_context *context, int argc, sqlite3_value **argv) 
   sqlite3_result_text(context, debug, -1, SQLITE_TRANSIENT);
   sqlite3_free((void *) debug);
 }
-static void faiss_vector_debug(sqlite3_context *context, int argc, sqlite3_value **argv) {
-  VecX* v = (VecX*) sqlite3_value_pointer(argv[0], "vecx0");
-  std::vector<float> vvv(v->data, v->data + v->size);
-}
-static void vector(sqlite3_context *context, int argc, sqlite3_value **argv) {
-  std::vector<float> *v = new std::vector<float>();
-  for(int i = 0; i < argc; i++) {
-    v->push_back(sqlite3_value_double(argv[i]));
-  }
-  VecX *vv = new VecX();
-  vv->size = v->size();
-  vv->data = v->data();
-  sqlite3_result_pointer(context, vv, "vecx0", del);
-  
-}
-static void vector_print(sqlite3_context *context, int argc, sqlite3_value **argv) {
-  VecX* v = (VecX*) sqlite3_value_pointer(argv[0], "vecx0");
-  std::vector<float> vvv(v->data, v->data + v->size);
-  sqlite3_str *str = sqlite3_str_new(NULL);
-  for (float v:vvv) {
-    sqlite3_str_appendf(str, "%f,", v);
-  }
-  int n = sqlite3_str_length(str);
-  sqlite3_result_text(context,  sqlite3_str_finish(str), n, SQLITE_TRANSIENT);
-}
-static void vector_to_blob(sqlite3_context *context, int argc, sqlite3_value **argv) {
-  VecX* v = (VecX*) sqlite3_value_pointer(argv[0], "vecx0");
-  //std::vector<float> vvv(v->data, v->data + v->size);
-  int n = sizeof(int64_t) + (v->size * sizeof(float));
-  void *p = sqlite3_malloc(n);
 
-  printf("n=%d\n", n);
-  memset(p, 0, n);
-  void* p_data = (void*)( ((char*)p ) + sizeof(int64_t));
-  printf("p=%p, p_data=%p\n", p, p_data);
-  memcpy(p, (void *) &v->size, sizeof(v->size));
-  printf("a\n");
-  memcpy(p_data, (void *) v->data, n - sizeof(int64_t));
-  //memset(p, )
-
-  sqlite3_result_blob(context, p, n, SQLITE_TRANSIENT);
-  sqlite3_free(p);
-}
-static void vector_from_blob(sqlite3_context *context, int argc, sqlite3_value **argv) {
-  void* blob = (VecX*) sqlite3_value_blob(argv[0]);
-  //int64_t size = 
-  
-  //std::vector<float> vvv(v->data, v->data + v->size);
-  //int n = sizeof(int64_t) + (vvv.size() * sizeof(float));
-  //sqlite3_result_blob(context, b, n, )
-}
-
-static void add_training(sqlite3_context *context, int argc, sqlite3_value **argv) {
-  std::vector<float> * training = (std::vector<float> *) sqlite3_user_data(context);
-  VecX* v = (VecX*) sqlite3_value_pointer(argv[0], "vecx0");
-  std::vector<float> vvv(v->data, v->data + v->size);
-  //printf("before: %d \n", training->size());
-  training->reserve(vvv.size() + distance(vvv.begin(), vvv.end()));
-  training->insert(training->end(), vvv.begin(),vvv.end());
-  //printf("after: %d \n", training->size());
-  sqlite3_result_int(context, 1);
-}
 
 #pragma endregion
 
@@ -115,7 +48,7 @@ static void add_training(sqlite3_context *context, int argc, sqlite3_value **arg
 using json = nlohmann::json;
 
 static std::vector<float>* valueAsVector(sqlite3_value*value) {
-    VecX* v = (VecX*) sqlite3_value_pointer(value, "vecx0");
+    VectorFloat* v = (VectorFloat*) sqlite3_value_pointer(value, VECTOR_FLOAT_POINTER_NAME);
     if (v!=NULL) return new std::vector<float>(v->data, v->data + v->size);
 
     if(sqlite3_value_subtype(value) == JSON_SUBTYPE) {
@@ -767,13 +700,7 @@ static int vssIndexUpdate(
             p->trainings->at(i).insert(p->trainings->at(i).end(), vec->begin(),vec->end());
             p->isTraining = true;
           }
-
-        }
-
-        //VecX* v = (VecX*) sqlite3_value_pointer(argv[2+VSS_INDEX_COLUMN_VECTOR], "vecx0");
-        //std::vector<float> vvv(v->data, v->data + v->size);
-        
-      
+        }      
       } 
       else {
         printf("unknown operation\n");
@@ -881,12 +808,6 @@ extern "C" {
   #endif
   int sqlite3_extension_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi) {
     SQLITE_EXTENSION_INIT2(pApi);
-    /*sqlite3_create_function_v2(db, "faiss_memory_usage", 0, 0, 0, faissMemoryUsageFunc, 0, 0, 0);
-    sqlite3_create_function_v2(db, "faiss_vector_debug", 1, 0, 0, faiss_vector_debug, 0, 0, 0);
-    sqlite3_create_function_v2(db, "vector", -1, 0, 0, vector, 0, 0, 0);
-    sqlite3_create_function_v2(db, "vector_print", 1, 0, 0, vector_print, 0, 0, 0);
-    sqlite3_create_function_v2(db, "vector_to_blob", 1, 0, 0, vector_to_blob, 0, 0, 0);
-    */
     sqlite3_create_function_v2(db, "vss_version", 0, SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS, 0, vss_version, 0, 0, 0);
     sqlite3_create_function_v2(db, "vss_debug", 0, SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS, 0, vss_debug, 0, 0, 0);
 

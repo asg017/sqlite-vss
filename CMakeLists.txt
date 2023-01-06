@@ -29,7 +29,7 @@ add_library(sqlite-vss SHARED src/main.cpp)
 target_link_libraries(sqlite-vss sqlite3)
 target_link_libraries(sqlite-vss faiss_avx2)
 target_link_libraries(sqlite-vss nlohmann_json::nlohmann_json)
-
+target_include_directories(sqlite-vss PRIVATE ../sqlite-vector/include/)
 
 ##target_link_libraries(myProject PRIVATE faiss)
 
