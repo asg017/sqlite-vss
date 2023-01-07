@@ -3,7 +3,7 @@ import unittest
 import time
 import os
 
-EXT_PATH="./build_release/vss0"
+EXT_PATH="./build/vss0"
 
 
 def connect(ext, path=":memory:"):
@@ -34,6 +34,12 @@ def execute_all(cursor, sql, args=None):
 
 FUNCTIONS = [
   'vss_debug',
+  'vss_distance_l1',
+  'vss_distance_l2',
+  'vss_distance_linf',
+  'vss_fvec_add',
+  'vss_fvec_sub',
+  'vss_inner_product',
   'vss_range_search',
   'vss_range_search_params',
   'vss_search',
@@ -60,7 +66,37 @@ class TestVss(unittest.TestCase):
   def test_vss_debug(self):
     debug = db.execute("select vss_debug()").fetchone()[0].split('\n')
     self.assertEqual(len(debug), 2)
+  
+  def test_vss_distance_l1(self):
+    vss_distance_l1 = lambda a, b: db.execute("select vss_distance_l1(json(?), json(?))", [a, b]).fetchone()[0]
+    self.assertEqual(vss_distance_l1('[0, 0]', '[0, 0]'), 0.0)
+    self.assertEqual(vss_distance_l1('[0, 0]', '[0, 1]'), 1.0)
 
+  def test_vss_distance_l2(self):
+    vss_distance_l2 = lambda a, b: db.execute("select vss_distance_l2(json(?), json(?))", [a, b]).fetchone()[0]
+    self.assertEqual(vss_distance_l2('[0, 0]', '[0, 0]'), 0.0)
+    self.assertEqual(vss_distance_l2('[0, 0]', '[0, 1]'), 1.0)
+
+  def test_vss_distance_linf(self):
+    vss_distance_linf = lambda a, b: db.execute("select vss_distance_linf(json(?), json(?))", [a, b]).fetchone()[0]
+    self.assertEqual(vss_distance_linf('[0, 0]', '[0, 0]'), 0.0)
+    self.assertEqual(vss_distance_linf('[0, 0]', '[0, 1]'), 1.0)
+  
+  def test_vss_inner_product(self):
+    vss_inner_product = lambda a, b: db.execute("select vss_inner_product(json(?), json(?))", [a, b]).fetchone()[0]
+    self.assertEqual(vss_inner_product('[0, 0]', '[0, 0]'), 0.0)
+    self.assertEqual(vss_inner_product('[0, 0]', '[0, 1]'), 0.0)
+  
+  def test_vss_fvec_add(self):
+    vss_fvec_add = lambda a, b: db.execute("select vss_fvec_add(json(?), json(?))", [a, b]).fetchone()[0]
+    self.assertEqual(vss_fvec_add('[0, 0]', '[0, 0]'), None)
+    self.skipTest("TODO")
+  
+  def test_vss_fvec_sub(self):
+    vss_fvec_sub = lambda a, b: db.execute("select vss_fvec_sub(json(?), json(?))", [a, b]).fetchone()[0]
+    self.assertEqual(vss_fvec_sub('[0, 0]', '[0, 0]'), None)
+    self.skipTest("TODO")
+    
   def test_vss_search(self):
     self.skipTest("TODO")
 

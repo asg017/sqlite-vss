@@ -25,7 +25,7 @@ add_subdirectory(vendor/json)
 include_directories(vendor/sqlite-snapshot-202212231449)
 link_directories(BEFORE vendor/sqlite-snapshot-202212231449)
 
-add_library(sqlite-vss SHARED src/main.cpp)
+add_library(sqlite-vss SHARED src/extension.cpp)
 target_link_libraries(sqlite-vss sqlite3)
 target_link_libraries(sqlite-vss faiss_avx2)
 target_link_libraries(sqlite-vss nlohmann_json::nlohmann_json)
