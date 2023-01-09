@@ -1,79 +1,119 @@
 # sqlite-vss - SQLite as a Vector Search Database
 
-`sqlite-vss` (SQLite <b><u>V</u></b>ector <b><u>S</u></b>imilarity <b><u>S</u></b>earch) is a SQLite extension that brings vector search capabilities to SQLite. Based on [Faiss](https://faiss.ai/).
+`sqlite-vss` (SQLite <b><u>V</u></b>ector <b><u>S</u></b>imilarity <b><u>S</u></b>earch) is a SQLite extension that brings vector search capabilities to SQLite, based on [Faiss](https://faiss.ai/) and [`sqlite-vector`](https://github.com/asg017/sqlite-vector).
 
-## TODO
+Still a work in progress, not meant to be widely shared!
 
-- [ ] `sqlite-vector`
-- [ ] light benchmarks
-- [ ] INSERT respect transactions
-  - `pTable->vectors_to_add`
-  - `xCommit`/`xRollback`
-- [ ] DELETE and UPDATE support
-  - [ ] xUpdate DELETE, with `pTable->ids_to_data` and `xCommit`/`xRollback` support
-  - [ ] update, call remove_id, add_id?
-- [ ] clustering?
-- [ ] [Distances](https://faiss.ai/cpp_api/file/distances_8h.html)
-- [ ] [extra distances](https://faiss.ai/cpp_api/file/extra__distances_8h.html)
-- [ ] binary index
-- [ ] hamming distance utils
-- [ ] vtab option to store index on disk instead (mmaped)
-- [ ] GPU?
+Once complete, you'll be able to do things like:
+
+**Semantic Search**
 
 ```sql
+
+/*
+  Here we have a table of newspaper articles, where we want to perform
+  semantic search on the  headline column. sqlie-vss is "bring your own
+  vectors", so we'll need some API to generate vector embeddings from
+  text (OpenAI's embbedding API, sentence-transformers, etc.).
+*/
 create table articles(
   headline text,
-  body text
-);
-create virtual table article_vectors using vss(
-  headline(384) using "Flat,IDMap",
-  body(384) using "IVF10,PQ4",
+  headline_embedding blob,
+  authors text
 );
 
-with similar_headlines as (
+insert into articles
   select
-    id,
+    headline,
+    -- OpenAI, sentence-transformers, huggingface inference, etc.
+    some_embeddings_api(headline),
+    authors
+  from data;
+
+
+/*
+  Here, we're creating a vss virtual table so we can search through a
+  large amount of vectors efficiently. Our embeddings examples has 384
+  dimensions, and the 'with "IVF4096,PQ64"' string refers to Faiss's
+  index_factory function.
+*/
+create virtual table vss_articles using vss_index(
+  headline_embedding(384) with "IVF4096,PQ64"
+);
+
+-- The IVF index we're using requires training, so we're training it
+-- with a special "operation='training'" insert.
+insert into vss_articles(operation, headline_embedding)
+  select
+    'training',
+    vector_from_blob(headline_embedding)
+  from articles;
+
+-- Now that the underlying index is trained, we can insert our vectors.
+insert into vss_articles(rowid, headline_embedding)
+  select
+    rowid,
+    vector_from_blob(headline_embedding)
+  from articles;
+
+
+-- Now, we can query the vector database and join results back to our original table!
+with similar_matches as (
+  select
+    rowid,
     distance
-  from article_vectors
-  where vss_search(headline, vss_params('query', :query, 'k', 50));
+  from vss_articles
+  -- "get the 10 nearest vectors"
+  where vss_search(
+    headline_embedding,
+    vss_search_params(
+      some_embeddings_api('global warming'),
+      10
+    )
+  )
 )
 select
+  articles.rowid,
+  similar_matches.distance
   articles.headline
-from similar_headlines
-left join articles on articles.rowid = similar_headlines.id
+from similar_matches
+left join articles on articles.rowid = similar_matches.rowid;
+/*
+┌───────┬───────────────┬──────────────────────────────────────────────────────────────┐
+│ rowid │    distance   │                           headline                           │
+├───────┼───────────────┼──────────────────────────────────────────────────────────────┤
+│ 980   │ 0.80562582091 │ Goal Of Capping Global Warming At 1.5 Degrees Celsius Is 'On │
+│       │               │  Life Support,' UN Chief Warns                               │
+├───────┼───────────────┼──────────────────────────────────────────────────────────────┤
+│ 906   │ 1.0909304615  │ ‘Now Or Never’: New U.N. Report Sees Narrow Path For Avertin │
+│       │               │ g Climate Catastrophe                                        │
+├───────┼───────────────┼──────────────────────────────────────────────────────────────┤
+│ 813   │ 1.0154189589  │ This Earth Day, Biden Faces 'Headwinds' On Climate Agenda    │
+├───────┼───────────────┼──────────────────────────────────────────────────────────────┤
+│ 318   │ 1.1543321607  │ Democrats' Reconciliation Package The 'Biggest Climate Actio │
+│       │               │ n In Human History'                                          │
+├───────┼───────────────┼──────────────────────────────────────────────────────────────┤
+│ 182   │ 1.1375182154  │ Gas Prices Are Falling, But Global Events Could Cause Increa │
+│       │               │ se, Energy Secretary Warns                                   │
+├───────┼───────────────┼──────────────────────────────────────────────────────────────┤
+│ 352   │ 1.267364358   │ Biden Takes Modest Executive Action After Climate Agenda Sta │
+│       │               │ lls In Congress                                              │
+├───────┼───────────────┼──────────────────────────────────────────────────────────────┤
+│ 146   │ 1.2807360649  │ Pakistan Flooding Deaths Pass 1,000 In 'Climate Catastrophe' │
+├───────┼───────────────┼──────────────────────────────────────────────────────────────┤
+│ 69    │ 1.2418689723  │ Weather Helping, But Threat From Western Fires Persists      │
+├───────┼───────────────┼──────────────────────────────────────────────────────────────┤
+│ 806   │ 1.2779963497  │ Twitter Bans Ads That Contradict Science On Climate Change   │
+├───────┼───────────────┼──────────────────────────────────────────────────────────────┤
+│ 463   │ 1.3659076694  │ The Netherlands, Facing Energy And Climate Crises, Bets On A │
+│       │               │  Nuclear Revival                                             │
+└───────┴───────────────┴──────────────────────────────────────────────────────────────┘
+
+Notice how searching "global warming" returns results about "climate change",
+since they are semantically similar.
+
+Very cool!
+*/
+
 
 ```
-
-https://github.com/matsui528/faiss_tips
-
-```
-cmake -B build; make -C build
-
-cmake -DCMAKE_BUILD_TYPE=Release -B build_release; make -C build_release
-```
-
-```bash
-cd build/
-cmake .. -DFAISS_ENABLE_GPU=OFF -DFAISS_ENABLE_PYTHON=OFF
-make
-```
-
-```
-PYO3_PYTHON=/Users/alex/projects/research-sqlite-vector/venv/bin/python LIBDIR=/usr/local/opt/python@3.8/Frameworks/Python.framework/Versions/3.8/lib cargo build
-
-PYTHONPATH=/Users/alex/projects/research-sqlite-vector/venv/lib/python3.8/site-packages/ sqlite3x :memory: '.read test.sql'
-```
-
-## Embeddings generating
-
-`sqlite-vss` is a **Bring Your Own Vectors** database.
-
-### Option 1: Application Defined Functions
-
-### Option 2: With `sqlite-api`
-
-### Option 3: With `sqlite-openai` or `sqlite-huggingface-inference`
-
-### Option 4: With `sqlite-py`
-
-### Option 5: With `sqlite-bert` (WIP)

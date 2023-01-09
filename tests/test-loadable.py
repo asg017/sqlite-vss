@@ -264,6 +264,8 @@ class TestVss(unittest.TestCase):
     ])
     db.close()
 
+    print(tf.name)
+
     db = connect(EXT_PATH, tf.name)
     cur = db.cursor()
     self.assertEqual(execute_all(db.cursor(), "select a from t"), [{"a": 1}])

@@ -658,6 +658,7 @@ static int vssIndexFilter(
   int idxNum, const char *idxStr,
   int argc, sqlite3_value **argv
 ){
+  printf("filter\n");
   vss_index_cursor *pCur = (vss_index_cursor *)pVtabCursor;  
   if (strcmp(idxStr, "search")==0) {
     pCur->query_type = QueryType::search;
@@ -666,7 +667,10 @@ static int vssIndexFilter(
     pCur->dis  = new std::vector<float>(params->k * nq);
     pCur->nns  = new std::vector<faiss::idx_t>(params->k * nq);
     faiss::Index* index = pCur->table->indexes->at(idxNum);
+    index->verbose = true;
+    printf("pls k=%d vsize=%lld index=%lld %lld %lld\n", params->k, params->vector->size(), index->d, pCur->dis->size(), pCur->nns->size());
     index->search(nq, params->vector->data(), params->k, pCur->dis->data(), pCur->nns->data());
+    printf("pls2\n");
     pCur->k = params->k;
     
   }
