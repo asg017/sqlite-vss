@@ -1,10 +1,10 @@
 .vscode
 rust
 build
-faiss
 build_release
 News_Category_Dataset_v3.json
 *.faissindex
 *.db
 *.index
-vendor/sqlite-snapshot-202212231449/
+vendor/sqlite/
+vendor_old
