@@ -35,7 +35,7 @@ jobs:
         run: ./get_sqlite.sh
       - working-directory: vendor/sqlite
         run: ./configure && make
-      - run: brew install cmake
+      - run: brew install llvm
       - run: cmake -B build; make -C build
         env:
           # https://stackoverflow.com/questions/48825416/missing-openmp-c-flags-openmp-c-lib-names
