@@ -17,6 +17,7 @@ jobs:
         run: ./get_sqlite.sh
       - working-directory: vendor/sqlite
         run: ./configure && make
+      - run: sudo apt-get install -y cmake
       - run: cmake -B build; make -C build
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
