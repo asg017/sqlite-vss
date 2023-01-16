@@ -24,3 +24,21 @@ jobs:
         with:
           name: test
           path: build/vss0.so
+  test-macos:
+    name: Testing macos-latest
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - working-directory: vendor
+        run: ./get_sqlite.sh
+      - working-directory: vendor/sqlite
+        run: ./configure && make
+      - run: brew install cmake
+      - run: cmake -B build; make -C build
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: test
+          path: build/vss0.dylib
