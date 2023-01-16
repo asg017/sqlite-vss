@@ -862,7 +862,7 @@ static int vssIndexUpdate(
             shadow_data_insert(p->db, p->name, &rowid, &retrowid);
             inserted_rowid = true;
           }
-          p->indexes->at(i)->add_with_ids(1, vec->data(), &rowid);
+          p->indexes->at(i)->add_with_ids(1, vec->data(), (faiss::idx_t *) &rowid);
           p->isInsertData = true;
           *pRowid = rowid;
         }
