@@ -1,0 +1,25 @@
+name: "test build"
+on:
+  push:
+    branches:
+      - main
+permissions:
+  contents: read
+jobs:
+  test-ubuntu:
+    name: Testing ubuntu-latest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - working-directory: vendor
+        run: ./get_sqlite.sh
+      - working-directory: vendor/sqlite
+        run: ./configure && make
+      - run: cmake -B build; make -C build
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: test
+          path: build/vss0.so
