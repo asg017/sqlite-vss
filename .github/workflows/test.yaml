@@ -37,7 +37,7 @@ jobs:
           key: ${{ runner.os }}-build
       - run: cmake -B build; make -C build
       - name: Upload artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: sqlite-vss-ubuntu
           path: build/vss0.so
@@ -61,7 +61,17 @@ jobs:
         working-directory: vendor/sqlite
         run: ./configure && make
 
-      # TODO how cache this?
+      - name: Cache brew llvm
+        id: cache-brew-llvm
+        uses: actions/cache@v3
+        with:
+          path: |
+            /usr/local/Homebrew
+            /usr/local/Cellar
+            /usr/local/Frameworks
+            /usr/local/bin
+            /usr/local/opt
+          key: ${{ runner.os }}-brew-llvm
       - run: brew install llvm
 
       - name: Cache cmake build
@@ -78,7 +88,7 @@ jobs:
           LDFLAGS: "-L/usr/local/opt/llvm/lib"
           CPPFLAGS: "-I/usr/local/opt/llvm/include"
       - name: Upload artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: sqlite-vss-macos
           path: build/vss0.dylib
@@ -89,9 +99,9 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Download workflow artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
       - uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
