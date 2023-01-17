@@ -25,7 +25,16 @@ jobs:
       - if: steps.cache-sqlite-build.outputs.cache-hit != 'true'
         working-directory: vendor/sqlite
         run: ./configure && make
+
+      # TODO how cache this?
       - run: sudo apt-get install -y cmake
+
+      - name: Cache cmake build
+        id: cache-cmake-build
+        uses: actions/cache@v3
+        with:
+          path: build
+          key: ${{ runner.os }}-build
       - run: cmake -B build; make -C build
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
@@ -51,7 +60,16 @@ jobs:
       - if: steps.cache-sqlite-build.outputs.cache-hit != 'true'
         working-directory: vendor/sqlite
         run: ./configure && make
+
+      # TODO how cache this?
       - run: brew install llvm
+
+      - name: Cache cmake build
+        id: cache-cmake-build
+        uses: actions/cache@v3
+        with:
+          path: build
+          key: ${{ runner.os }}-build
       - run: cmake -B build; make -C build
         env:
           # https://stackoverflow.com/questions/48825416/missing-openmp-c-flags-openmp-c-lib-names
