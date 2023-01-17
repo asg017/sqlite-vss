@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.17 FATAL_ERROR)
 project(sqlite-vss VERSION 0.0.0)
 
+configure_file(src/sqlite-vss.h.in sqlite-vss.h)
+
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -22,6 +24,7 @@ target_link_libraries(sqlite-vss sqlite3)
 target_link_libraries(sqlite-vss faiss_avx2)
 target_link_libraries(sqlite-vss nlohmann_json::nlohmann_json)
 target_include_directories(sqlite-vss PRIVATE vendor/sqlite-vector/include/)
+target_include_directories(sqlite-vss PUBLIC "${PROJECT_BINARY_DIR}")
 
 set_target_properties(sqlite-vss PROPERTIES PREFIX "")
 set_target_properties(sqlite-vss PROPERTIES PREFIX "")

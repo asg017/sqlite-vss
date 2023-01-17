@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include "sqlite3ext.h"
+#include "sqlite-vss.h"
 
 SQLITE_EXTENSION_INIT1
 
@@ -48,7 +49,7 @@ void del(void*p) {
   //delete p;
 }
 static void vss_version(sqlite3_context *context, int argc, sqlite3_value **argv) {
-  sqlite3_result_text(context, "", -1, SQLITE_STATIC);
+  sqlite3_result_text(context, SQLITE_VSS_VERSION, -1, SQLITE_STATIC);
 }
 static void vss_debug(sqlite3_context *context, int argc, sqlite3_value **argv) {
   const char * debug = sqlite3_mprintf("faiss version: %d.%d.%d\nfaiss compile options: %s", 
