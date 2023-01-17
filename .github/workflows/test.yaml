@@ -39,7 +39,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: test-ubuntu
+          name: sqlite-vss-ubuntu
           path: build/vss0.so
   test-macos:
     name: Testing macos-latest
@@ -80,5 +80,21 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: test-macos
+          name: sqlite-vss-macos
           path: build/vss0.dylib
+  upload:
+    name: upload to unstable
+    needs: [test-macos, test-ubuntu]
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Download workflow artifacts
+        uses: actions/download-artifact@v2
+      - uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const script = require('.github/workflows/upload-unstable.js')
+            await script({github, context})
