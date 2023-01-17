@@ -212,13 +212,15 @@ class TestVss(unittest.TestCase):
 
     # TODO support rowid point queries
 
-    self.assertEqual(execute_all(cur, "select name from pragma_table_list where name like 'x%' order by 1"),[
-      {"name": "x"},
-      {"name": "x_data"},
-      {"name": "x_index"},
-    ])
+    self.assertEqual(db.execute("select count(*) from x_data").fetchone()[0], 4)
+    
     execute_all(cur, "drop table x;")
-    self.assertEqual(execute_all(cur, "select name from pragma_table_list where name like 'x%' order by 1"),[])
+    with self.assertRaisesRegex(sqlite3.OperationalError, "no such table: x_data"):
+      self.assertEqual(db.execute("select count(*) from x_data").fetchone()[0], 4)
+    
+    with self.assertRaisesRegex(sqlite3.OperationalError, "no such table: x_index"):
+      self.assertEqual(db.execute("select count(*) from x_index").fetchone()[0], 2)
+    
     
   def test_vss_index_persistent(self):
     import tempfile
