@@ -60,20 +60,7 @@ jobs:
       - if: steps.cache-sqlite-build.outputs.cache-hit != 'true'
         working-directory: vendor/sqlite
         run: ./configure && make
-
-      - name: Cache brew llvm
-        id: cache-brew-llvm
-        uses: actions/cache@v3
-        with:
-          path: |
-            /usr/local/Homebrew
-            /usr/local/Cellar
-            /usr/local/Frameworks
-            /usr/local/bin
-            /usr/local/opt
-          key: ${{ runner.os }}-brew-llvm
       - run: brew install llvm
-
       - name: Cache cmake build
         id: cache-cmake-build
         uses: actions/cache@v3
@@ -94,7 +81,7 @@ jobs:
           path: build/vss0.dylib
   upload:
     name: upload to unstable
-    needs: [test-macos, test-ubuntu]
+    needs: [test-ubuntu]
     permissions:
       contents: write
     runs-on: ubuntu-latest
