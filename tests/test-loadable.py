@@ -61,11 +61,11 @@ class TestVss(unittest.TestCase):
 
     
   def test_vss_version(self):
-    self.assertEqual(db.execute("select vss_version()").fetchone()[0], "")
+    self.assertEqual(db.execute("select vss_version()").fetchone()[0], "v0.0.0")
 
   def test_vss_debug(self):
     debug = db.execute("select vss_debug()").fetchone()[0].split('\n')
-    self.assertEqual(len(debug), 2)
+    self.assertEqual(len(debug), 3)
   
   def test_vss_distance_l1(self):
     vss_distance_l1 = lambda a, b: db.execute("select vss_distance_l1(json(?), json(?))", [a, b]).fetchone()[0]
@@ -189,25 +189,25 @@ class TestVss(unittest.TestCase):
       {'rowid': 1003, "a": "[-1.0,0.0]", "b": "[4.0]", "distance": None},
     ])
 
-    self.assertEqual(
+    self.assertRegex(
       explain_query_plan("select * from x where vss_search(a, null);"),
-      "SCAN x VIRTUAL TABLE INDEX 0:search"
+      r'SCAN (TABLE )?x VIRTUAL TABLE INDEX 0:search'
     )
-    self.assertEqual(
+    self.assertRegex(
       explain_query_plan("select * from x where vss_search(b, null);"),
-      "SCAN x VIRTUAL TABLE INDEX 1:search"
+      r'SCAN (TABLE )?x VIRTUAL TABLE INDEX 1:search'
     )
-    self.assertEqual(
+    self.assertRegex(
       explain_query_plan("select * from x where vss_range_search(a, null);"),
-      "SCAN x VIRTUAL TABLE INDEX 0:range_search"
+      r'SCAN (TABLE )?x VIRTUAL TABLE INDEX 0:range_search'
     )
-    self.assertEqual(
+    self.assertRegex(
       explain_query_plan("select * from x where vss_range_search(b, null);"),
-      "SCAN x VIRTUAL TABLE INDEX 1:range_search"
+      r'SCAN (TABLE )?x VIRTUAL TABLE INDEX 1:range_search'
     )
-    self.assertEqual(
+    self.assertRegex(
       explain_query_plan("select * from x"),
-      "SCAN x VIRTUAL TABLE INDEX -1:fullscan"
+      r'SCAN (TABLE )?x VIRTUAL TABLE INDEX -1:fullscan'
     )
 
     # TODO support rowid point queries
