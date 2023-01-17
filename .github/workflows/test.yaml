@@ -36,6 +36,7 @@ jobs:
           path: build
           key: ${{ runner.os }}-build
       - run: cmake -B build; make -C build
+      - run: make test
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
