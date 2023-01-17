@@ -92,27 +92,26 @@ jobs:
       - if: steps.cache-sqlite-build.outputs.cache-hit != 'true'
         working-directory: vendor/sqlite
         run: ./configure && make
-      - name: setup arm brew libs
-        run: |
-          setopt sh_word_split
-          mkdir arm-homebrew && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C arm-homebrew 
-          response=$(./arm-homebrew/bin/brew fetch --force --bottle-tag=arm64_big_sur llvm | grep "Downloaded to")
-          parsed=($response)  
-          echo $response
-          echo $parsed
-          ./arm-homebrew/bin/brew install $parsed[3]
-      - run: cmake -B build_cross -D CMAKE_OSX_ARCHITECTURES=arm64; make -C build_cross
-        env:
-          # https://stackoverflow.com/questions/48825416/missing-openmp-c-flags-openmp-c-lib-names
-          CC: /usr/local/opt/llvm/bin/clang
-          CXX: /usr/local/opt/llvm/bin/clang++
-          LDFLAGS: "-L/usr/local/opt/llvm/lib"
-          CPPFLAGS: "-I/usr/local/opt/llvm/include"
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: sqlite-vss-macos-arm
-          path: build/vss0.dylib
+      #- name: setup arm brew libs
+      #  run: |
+      #    mkdir arm-homebrew && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C arm-homebrew
+      #    response=$(./arm-homebrew/bin/brew fetch --force --bottle-tag=arm64_big_sur llvm | grep "Downloaded to")
+      #    parsed=($response)
+      #    echo $response
+      #    echo $parsed
+      #    ./arm-homebrew/bin/brew install $parsed[3]
+      #- run: cmake -B build_cross -D CMAKE_OSX_ARCHITECTURES=arm64; make -C build_cross
+      #  env:
+      #    # https://stackoverflow.com/questions/48825416/missing-openmp-c-flags-openmp-c-lib-names
+      #    CC: /usr/local/opt/llvm/bin/clang
+      #    CXX: /usr/local/opt/llvm/bin/clang++
+      #    LDFLAGS: "-L/usr/local/opt/llvm/lib"
+      #    CPPFLAGS: "-I/usr/local/opt/llvm/include"
+      #- name: Upload artifacts
+      #  uses: actions/upload-artifact@v3
+      #  with:
+      #    name: sqlite-vss-macos-arm
+      #    path: build/vss0.dylib
   upload:
     name: upload to unstable
     needs: [test-ubuntu]
