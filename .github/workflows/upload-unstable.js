@@ -25,7 +25,7 @@ module.exports = async ({ github, context }) => {
     });
   }
   await Promise.all([
-    uploadReleaseAsset("sqlite-vss/sqlite-vss-ubuntu/vss0.so", "vss0.so"),
+    uploadReleaseAsset("sqlite-vss-ubuntu/vss0.so", "vss0.so"),
     //uploadReleaseAsset("sqlite-vss/sqlite-vss-macos/vss0.dylib", "vss0.dylib"),
     //uploadReleaseAsset("sqlite-xsv-windows/xsv0.dll", "xsv0.dll"),
   ]);
