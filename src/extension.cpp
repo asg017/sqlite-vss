@@ -52,8 +52,8 @@ static void vss_version(sqlite3_context *context, int argc, sqlite3_value **argv
   sqlite3_result_text(context, SQLITE_VSS_VERSION, -1, SQLITE_STATIC);
 }
 static void vss_debug(sqlite3_context *context, int argc, sqlite3_value **argv) {
-  const char * debug = sqlite3_mprintf("faiss version: %d.%d.%d\nfaiss compile options: %s", 
-  FAISS_VERSION_MAJOR, FAISS_VERSION_MINOR, FAISS_VERSION_PATCH,
+  const char * debug = sqlite3_mprintf("version: %s\nfaiss version: %d.%d.%d\nfaiss compile options: %s", 
+  SQLITE_VSS_VERSION, FAISS_VERSION_MAJOR, FAISS_VERSION_MINOR, FAISS_VERSION_PATCH,
   faiss::get_compile_options().c_str());
   sqlite3_result_text(context, debug, -1, SQLITE_TRANSIENT);
   sqlite3_free((void *) debug);
