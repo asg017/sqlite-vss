@@ -8,3 +8,15 @@ News_Category_Dataset_v3.json
 *.index
 vendor/sqlite/
 vendor_old
+
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Testing
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps

@@ -28,13 +28,6 @@ jobs:
 
       # TODO how cache this?
       - run: sudo apt-get install -y cmake libgomp1
-
-      - name: Cache cmake build
-        id: cache-cmake-build
-        uses: actions/cache@v3
-        with:
-          path: build
-          key: ${{ runner.os }}-build
       - run: cmake -B build; make -C build
       - run: make test
       - name: Upload artifacts
