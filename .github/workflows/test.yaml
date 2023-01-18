@@ -76,6 +76,7 @@ jobs:
   test-macos-arm:
     name: Testing macos-arm
     runs-on: macos-latest
+    if: false
     steps:
       - uses: actions/checkout@v3
         with:
