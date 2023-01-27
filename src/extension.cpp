@@ -103,7 +103,7 @@ static void vss_distance_l2(sqlite3_context *context, int argc, sqlite3_value **
     return;
   }
   if(a->size() != b->size()) {
-    sqlite3_result_error(context, "b is not a vector", -1);
+    sqlite3_result_error(context, "TODO", -1);
     delete a;
     delete b;
     return;
@@ -249,6 +249,10 @@ static void VssSearchParamsFunc(
   sqlite3_value **argv
 ){
   std::vector<float> * vector = valueAsVector(argv[0]);
+  if(vector==NULL) {
+    sqlite3_result_error(context, "1st argument is not a vector", -1);
+    return;
+  }
   sqlite3_int64 k = sqlite3_value_int64(argv[1]);
   VssSearchParams* params = new VssSearchParams();
   params->vector = vector;
@@ -267,6 +271,10 @@ static void VssRangeSearchParamsFunc(
   sqlite3_value **argv
 ){
   std::vector<float> * vector = valueAsVector(argv[0]);
+  if(vector==NULL) {
+    sqlite3_result_error(context, "1st argument is not a vector", -1);
+    return;
+  }
   float distance = sqlite3_value_double(argv[1]);
   VssRangeSearchParams* params = new VssRangeSearchParams();
   params->vector = vector;
@@ -278,9 +286,9 @@ static int write_index_insert(faiss::Index * index, sqlite3*db, char * name, int
   printf("writing_index_insert\n");
   faiss::VectorIOWriter * w = new faiss::VectorIOWriter();
   faiss::write_index(index, w);
-  printf("lol\n");
   sqlite3_int64 nIn = w->data.size();
-
+  printf("lol n=%ld\n", nIn);
+  
   sqlite3_stmt *stmt;
   char * q = sqlite3_mprintf("insert into \"%w_index\"(c%d) values (?)", name, i);
   int rc = sqlite3_prepare_v2(db, q, -1, &stmt, 0);
@@ -288,7 +296,11 @@ static int write_index_insert(faiss::Index * index, sqlite3*db, char * name, int
     printf("error prepping stmt\n");
     return SQLITE_ERROR;
   }
-  sqlite3_bind_blob64(stmt, 1, w->data.data(), nIn, 0);
+  rc = sqlite3_bind_blob64(stmt, 1, w->data.data(), nIn, SQLITE_TRANSIENT);
+  if (rc != SQLITE_OK) {
+    printf("error binding blob: %s\n", sqlite3_errmsg(db));
+    return SQLITE_ERROR;
+  }
   if(sqlite3_step(stmt) != SQLITE_DONE) {
     printf("error inserting?\n");
     sqlite3_finalize(stmt);
@@ -296,6 +308,7 @@ static int write_index_insert(faiss::Index * index, sqlite3*db, char * name, int
   }
   sqlite3_free(q);
   sqlite3_finalize(stmt);
+  printf("last insert rowid: %ld\n", sqlite3_last_insert_rowid(db));
   return SQLITE_OK;
 }
 
@@ -426,7 +439,7 @@ struct vss_index_vtab {
   char * name;
   sqlite3_int64 indexCount;
   std::vector<faiss::Index *> *indexes;
-  std::vector<std::vector<float>> * trainings;
+  std::vector<std::vector<float>*> * trainings;
   bool isTraining;
   bool isInsertData;
 };
@@ -446,7 +459,8 @@ struct vss_index_cursor {
   // for query_type == QueryType::search
   sqlite3_int64 k;
   std::vector<faiss::idx_t> *nns;
-  std::vector<float> *dis;
+  std::vector<
+  float> *dis;
   
   // for query_type == QueryType::range_search
   faiss::RangeSearchResult * range_search_result;
@@ -538,7 +552,11 @@ static int init(
     }
   }
 
-  pNew->trainings = new std::vector<std::vector<float>>();
+  pNew->trainings = new std::vector<std::vector<float>*>();
+  for(int i = 0; i < pNew->indexCount; i++) {
+    pNew->trainings->push_back(new std::vector<float>());
+  }
+
   
   pNew->isTraining = false;
   pNew->isInsertData = false;
@@ -661,16 +679,27 @@ static int vssIndexFilter(
   int idxNum, const char *idxStr,
   int argc, sqlite3_value **argv
 ){
-  printf("filter argc=%d\n", argc);
+  printf("filter argc=%d, idxStr='%s', idxNum=%d\n", argc, idxStr, idxNum);
   vss_index_cursor *pCur = (vss_index_cursor *)pVtabCursor;  
   if (strcmp(idxStr, "search")==0) {
     pCur->query_type = QueryType::search;
     VssSearchParams* params = (VssSearchParams*) sqlite3_value_pointer(argv[0], "vss0_searchparams");
+    if(params==NULL) return SQLITE_ERROR;
     int nq = 1;
+    printf("a\n");
     pCur->dis  = new std::vector<float>(params->k * nq);
+    printf("b\n");
     pCur->nns  = new std::vector<faiss::idx_t>(params->k * nq);
+    printf("c\n");
     faiss::Index* index = pCur->table->indexes->at(idxNum);
+    printf("d %p\n", index);
     index->verbose = true;
+    printf("k=%d\n", params->k);
+    printf("v=%p\n", params->vector);
+    printf("vsize=%p\n", params->vector->size());
+    printf("index->d=%d\n", index->d);
+    printf("pCur->dis->size()=%ld\n", pCur->dis->size());
+    printf("pCur->nns->size()=%ld\n", pCur->nns->size());
     printf("pls k=%d vsize=%lld index=%lld %lld %lld\n", params->k, params->vector->size(), index->d, pCur->dis->size(), pCur->nns->size());
     index->search(nq, params->vector->data(), params->k, pCur->dis->data(), pCur->nns->data());
     printf("pls2\n");
@@ -815,9 +844,9 @@ static int vssIndexCommit(sqlite3_vtab *pVTab) {
     //printf("TRAINING %lu\n", p->training->size());
     for (std::size_t i = 0; i != p->trainings->size(); ++i) {
       auto training = p->trainings->at(i);
-      if(!training.empty()) {
+      if(!training->empty()) {
         faiss::Index * index = p->indexes->at(i);
-        index->train(training.size() / index->d, training.data());
+        index->train(training->size() / index->d, training->data());
       }
     }
     p->isTraining = false;
@@ -856,7 +885,6 @@ static int vssIndexUpdate(
     // if no operation, we adding it to the index
     bool noOperation = sqlite3_value_type(argv[2+VSS_INDEX_COLUMN_OPERATION]) == SQLITE_NULL;
     if (noOperation) {
-      printf("insert\n");
       std::vector<float>* vec;
       sqlite3_int64 rowid = sqlite3_value_int64(argv[1]);
       bool inserted_rowid = false;
@@ -881,8 +909,8 @@ static int vssIndexUpdate(
         std::vector<float>* vec;
         for(int i = 0; i < p->indexCount; i++) {
           if ( (vec = valueAsVector(argv[2+VSS_INDEX_COLUMN_VECTORS+i])) != NULL ) {
-            p->trainings->at(i).reserve(vec->size() + distance(vec->begin(), vec->end()));
-            p->trainings->at(i).insert(p->trainings->at(i).end(), vec->begin(),vec->end());
+            p->trainings->at(i)->reserve(vec->size() + distance(vec->begin(), vec->end()));
+            p->trainings->at(i)->insert(p->trainings->at(i)->end(), vec->begin(),vec->end());
             p->isTraining = true;
           }
         }      
