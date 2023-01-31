@@ -33,7 +33,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: sqlite-vss-ubuntu
-          path: build/vss0.so
+          path: build_release/vss0.so
   build-macos:
     name: Building macos-latest
     runs-on: macos-latest
@@ -71,7 +71,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: sqlite-vss-macos
-          path: build/vss0.dylib
+          path: build_release/vss0.dylib
   upload:
     name: upload
     needs: [build-macos, build-ubuntu]
