@@ -23,10 +23,6 @@ endif
 
 prefix=dist
 
-$(prefix):
-	mkdir -p $(prefix)
-
-
 loadable:
 	cmake -B build; make -C build
 
@@ -39,4 +35,4 @@ test:
 test-3.41.0:
 	LD_LIBRARY_PATH=vendor/sqlite-snapshot-202301161813/.libs/  make test 
 
-.PHONY: clean test loadable static
+.PHONY: clean test test-3.41.0 loadable
