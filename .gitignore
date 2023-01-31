@@ -1,12 +1,18 @@
 .vscode
 rust
-build
-build_release
+/build
+/build_release
 News_Category_Dataset_v3.json
 *.faissindex
 *.db
+*.so
+*.dylib
+*.dll
+*.xml
+*.zip
 *.index
 vendor/sqlite/
+vendor/sqlite-snapshot*
 vendor_old
 
 CMakeLists.txt.user

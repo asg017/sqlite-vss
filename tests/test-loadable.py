@@ -174,6 +174,19 @@ class TestVss(unittest.TestCase):
       {'rowid': 1003, 'distance': 4.0},
       {'rowid': 1002, 'distance': 9.0},
     ])
+    
+    with self.assertRaisesRegex(sqlite3.OperationalError, 'input query size doesn\'t match index dimensions: 0 != 1'):
+      search('b', '[]', 2)
+
+    with self.assertRaisesRegex(sqlite3.OperationalError, 'input query size doesn\'t match index dimensions: 3 != 1'):
+      search('b', '[0.1, 0.2, 0.3]', 2)
+    
+    with self.assertRaisesRegex(sqlite3.OperationalError, 'k must be greater than 0, got -1'):
+      search('b', '[6]', -1)
+    
+    with self.assertRaisesRegex(sqlite3.OperationalError, 'k must be greater than 0, got 0'):
+      search('b', '[6]', 0)
+
     self.assertEqual(range_search('a', '[0.5, 0.5]', 1), [
       {'rowid': 1000, 'distance': 0.5},
       {'rowid': 1002, 'distance': 0.5},
@@ -182,13 +195,39 @@ class TestVss(unittest.TestCase):
       {'rowid': 1001, 'distance': 0.25},
       {'rowid': 1002, 'distance': 0.25},
     ])
-    self.assertEqual(execute_all(cur, 'select rowid, a, b, distance  from x'), [
+    self.assertEqual(execute_all(cur, 'select rowid, a, b, distance from x'), [
       {'rowid': 1000, "a": "[0.0,1.0]",  "b": "[1.0]", "distance": None},
       {'rowid': 1001, "a": "[0.0,-1.0]", "b": "[2.0]", "distance": None},
       {'rowid': 1002, "a": "[1.0,0.0]",  "b": "[3.0]", "distance": None},
       {'rowid': 1003, "a": "[-1.0,0.0]", "b": "[4.0]", "distance": None},
     ])
 
+    if sqlite3.sqlite_version_info[1] >= 41:
+      self.assertEqual(
+        execute_all(
+          cur, 
+          f"select rowid, distance from x where vss_search(a, json(?)) limit ?", 
+          ['[0.9, 0]', 2]
+        ),
+        [
+          {'distance': 0.010000004433095455, 'rowid': 1002},
+          {'distance': 1.809999942779541, 'rowid': 1000}
+        ]
+      )
+      with self.assertRaisesRegex(sqlite3.OperationalError, "2nd argument to vss_search\(\) must be a vector"):
+        execute_all(
+            cur, 
+            f"select rowid, distance from x where vss_search(a, 3) limit 1"
+          )
+    
+    else:
+      with self.assertRaisesRegex(sqlite3.OperationalError, "vss_search\(\) only support vss_search_params\(\) as a 2nd parameter for SQLite versions below 3.41.0"):
+        execute_all(
+            cur, 
+            f"select rowid, distance from x where vss_search(a, json(?)) limit ?", 
+            ['[0.9, 0]', 2]
+          )
+    
     self.assertRegex(
       explain_query_plan("select * from x where vss_search(a, null);"),
       r'SCAN (TABLE )?x VIRTUAL TABLE INDEX 0:search'
@@ -284,7 +323,24 @@ class TestVss(unittest.TestCase):
     
     db.close()
   
-
+  def test_vss_stress(self):
+    cur = db.cursor()
+    
+    execute_all(cur, 'create virtual table no_id_map using vss_index(a(2) with "Flat");')
+    with self.assertRaisesRegex(sqlite3.OperationalError, ".*add_with_ids not implemented for this type of index.*"):
+      execute_all(cur, """insert into no_id_map(rowid, a) select  100, json('[0, 1]')""")
+    
+    execute_all(cur, 'create virtual table no_id_map2 using vss_index(a(2) with "Flat,IDMap");')
+    execute_all(cur, "insert into no_id_map2(rowid, a) select  100, json('[0, 1]')")
+    with self.assertRaisesRegex(sqlite3.OperationalError, ".*reconstruct not implemented for this type of index"):
+      execute_all(cur, "select * from no_id_map2;")
+    
+    with self.assertRaisesRegex(sqlite3.OperationalError, ".*could not parse index string invalid"):
+      execute_all(cur, 'create virtual table t1 using vss_index(a(2) with "invalid");')
+      execute_all(cur, "insert into t1(rowid, a) select  100, json('[0, 1]')")
+    
+    
+    
 class TestCoverage(unittest.TestCase):                                      
   def test_coverage(self):                                                      
     test_methods = [method for method in dir(TestVss) if method.startswith('test_vss')]
