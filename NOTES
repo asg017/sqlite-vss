@@ -8,6 +8,9 @@
 - [ ] DELETE and UPDATE support
   - [ ] xUpdate DELETE, with `pTable->ids_to_data` and `xCommit`/`xRollback` support
   - [ ] update, call remove_id, add_id?
+
+
+
 - [ ] clustering?
 - [ ] [Distances](https://faiss.ai/cpp_api/file/distances_8h.html)
 - [ ] [extra distances](https://faiss.ai/cpp_api/file/extra__distances_8h.html)

@@ -283,36 +283,36 @@ static void VssRangeSearchParamsFunc(
 }
 
 static int write_index_insert(faiss::Index * index, sqlite3*db, char * schema, char * name, int i) {
-  printf("writing_index_insert\n");
+  //printf("writing_index_insert\n");
   faiss::VectorIOWriter * w = new faiss::VectorIOWriter();
   faiss::write_index(index, w);
   sqlite3_int64 nIn = w->data.size();
-  printf("lol n=%ld\n", nIn);
+  //printf("lol n=%ld\n", nIn);
   
   sqlite3_stmt *stmt;
   char * q = sqlite3_mprintf("insert into \"%w\".\"%w_index\"(c%d) values (?)", schema, name, i);
   int rc = sqlite3_prepare_v2(db, q, -1, &stmt, 0);
   if (rc != SQLITE_OK || stmt==0) {
-    printf("error prepping stmt\n");
+    //printf("error prepping stmt\n");
     return SQLITE_ERROR;
   }
   rc = sqlite3_bind_blob64(stmt, 1, w->data.data(), nIn, SQLITE_TRANSIENT);
   if (rc != SQLITE_OK) {
-    printf("error binding blob: %s\n", sqlite3_errmsg(db));
+    //printf("error binding blob: %s\n", sqlite3_errmsg(db));
     sqlite3_free(q);
     return SQLITE_ERROR;
   }
   int result = sqlite3_step(stmt);
-  printf("result=%d\n", result);
+  //printf("result=%d\n", result);
   if(result != SQLITE_DONE) {
-    printf("error inserting?\n");
+    //printf("error inserting?\n");
     sqlite3_finalize(stmt);
     sqlite3_free(q);
     return SQLITE_ERROR;
   }
   sqlite3_free(q);
   sqlite3_finalize(stmt);
-  printf("last insert rowid: %ld\n", sqlite3_last_insert_rowid(db));
+  //printf("last insert rowid: %ld\n", sqlite3_last_insert_rowid(db));
   sqlite3_exec(db, sqlite3_mprintf("select count(*) from \"%w\".\"%w_index\""), 0, 0, 0);
   return SQLITE_OK;
 }
@@ -326,12 +326,12 @@ static int shadow_data_insert(sqlite3*db, char * schema, char * name, sqlite3_in
     char * q = sqlite3_str_finish(query);
     int rc = sqlite3_prepare_v2(db, q, -1, &stmt, 0);
     if (rc != SQLITE_OK || stmt==0) {
-      printf("error prepping stmt: %s \n", sqlite3_errmsg(db));
+      //printf("error prepping stmt: %s \n", sqlite3_errmsg(db));
       return SQLITE_ERROR;
     }
     sqlite3_bind_null(stmt, 1);
     if(sqlite3_step(stmt) != SQLITE_DONE) {
-      printf("error inserting?\n");
+      //printf("error inserting?\n");
       sqlite3_finalize(stmt);
       return SQLITE_ERROR;
     }
@@ -341,13 +341,13 @@ static int shadow_data_insert(sqlite3*db, char * schema, char * name, sqlite3_in
     char * q = sqlite3_str_finish(query);
     int rc = sqlite3_prepare_v2(db, q, -1, &stmt, 0);
     if (rc != SQLITE_OK || stmt==0) {
-      printf("error prepping stmt: %s \n", sqlite3_errmsg(db));
+      //printf("error prepping stmt: %s \n", sqlite3_errmsg(db));
       return SQLITE_ERROR;
     }
     sqlite3_bind_int64(stmt, 1, *rowid);
     sqlite3_bind_null(stmt, 2);
     if(sqlite3_step(stmt) != SQLITE_DONE) {
-      printf("error inserting: %s\n", sqlite3_errmsg(db));
+      //printf("error inserting: %s\n", sqlite3_errmsg(db));
       sqlite3_finalize(stmt);
       return SQLITE_ERROR;
     }
@@ -363,12 +363,12 @@ static faiss::Index * read_index_select(sqlite3 * db, const char * name, int i) 
   char * q = sqlite3_mprintf("select c%d from \"%w_index\" where c%d is not null", i, name, i);
   int rc = sqlite3_prepare_v2(db, q, -1, &stmt, 0);
   if (rc != SQLITE_OK || stmt==0) {
-    printf("error prepping stmt: %s\n", sqlite3_errmsg(db));
+    //printf("error prepping stmt: %s\n", sqlite3_errmsg(db));
     sqlite3_finalize(stmt);
     return 0;
   }
   if(sqlite3_step(stmt) != SQLITE_ROW) {
-    printf("connect no row??\n");
+    //printf("connect no row??\n");
     sqlite3_finalize(stmt);
     return 0;
   }
@@ -419,11 +419,11 @@ static int drop_shadow_tables(sqlite3*db, char * name) {
 
     int rc = sqlite3_prepare_v2(db, q, -1, &stmt, 0);
     if (rc != SQLITE_OK || stmt==0) {
-      printf("error prepping stmt\n");
+      //printf("error prepping stmt\n");
       return SQLITE_ERROR;
     }
     if(sqlite3_step(stmt) != SQLITE_DONE) {
-      printf("error dropping?\n");
+      //printf("error dropping?\n");
       sqlite3_finalize(stmt);
       return SQLITE_ERROR;
     }
@@ -599,14 +599,14 @@ static int vssIndexConnect(
 
 static int vssIndexDisconnect(sqlite3_vtab *pVtab){
   vss_index_vtab *p = (vss_index_vtab*)pVtab;
-  printf("disconnect\n");
+  //printf("disconnect\n");
   sqlite3_free(p);
   return SQLITE_OK;
 }
 
 static int vssIndexDestroy(sqlite3_vtab *pVtab){
   vss_index_vtab *p = (vss_index_vtab*)pVtab;
-  printf("destroy\n");
+  //printf("destroy\n");
   drop_shadow_tables(p->db, p->name);
   sqlite3_free(p);
   return SQLITE_OK;
@@ -629,11 +629,11 @@ static int vssIndexOpen(sqlite3_vtab *pVtab, sqlite3_vtab_cursor **ppCursor){
 
 static int vssIndexClose(sqlite3_vtab_cursor *cur){
   vss_index_cursor *pCur = (vss_index_cursor*)cur;
-  printf("close\n");
+  //printf("close\n");
   //if(pCur->stmt) sqlite3_finalize(pCur->stmt);
-  printf("a\n");
+  //printf("a\n");
   //sqlite3_free(pCur);
-  printf("b\n");
+  //printf("b\n");
   return SQLITE_OK;
 }
 
@@ -698,7 +698,7 @@ static int vssIndexFilter(
   int idxNum, const char *idxStr,
   int argc, sqlite3_value **argv
 ){
-  printf("filter argc=%d, idxStr='%s', idxNum=%d\n", argc, idxStr, idxNum);
+  //printf("filter argc=%d, idxStr='%s', idxNum=%d\n", argc, idxStr, idxNum);
   vss_index_cursor *pCur = (vss_index_cursor *)pVtabCursor;  
   if (strcmp(idxStr, "search")==0) {
     pCur->query_type = QueryType::search;
@@ -746,13 +746,13 @@ static int vssIndexFilter(
     pCur->nns  = new std::vector<faiss::idx_t>(pCur->k * nq);
     /*printf("d %p\n", index);
     index->verbose = true;
-    printf("k=%d\n", pCur->k);
-    printf("v=%p\n", params->vector);
-    printf("vsize=%p\n", params->vector->size());
-    printf("index->d=%d\n", index->d);
-    printf("pCur->dis->size()=%ld\n", pCur->dis->size());
-    printf("pCur->nns->size()=%ld\n", pCur->nns->size());
-    printf("pls k=%d vsize=%lld index=%lld %lld %lld\n", params->k, params->vector->size(), index->d, pCur->dis->size(), pCur->nns->size());*/
+    //printf("k=%d\n", pCur->k);
+    //printf("v=%p\n", params->vector);
+    //printf("vsize=%p\n", params->vector->size());
+    //printf("index->d=%d\n", index->d);
+    //printf("pCur->dis->size()=%ld\n", pCur->dis->size());
+    //printf("pCur->nns->size()=%ld\n", pCur->nns->size());
+    //printf("pls k=%d vsize=%lld index=%lld %lld %lld\n", params->k, params->vector->size(), index->d, pCur->dis->size(), pCur->nns->size());*/
     index->search(nq, query_vector->data(), pCur->k, pCur->dis->data(), pCur->nns->data());
   }
   else if (strcmp(idxStr, "range_search")==0) {
@@ -888,7 +888,7 @@ static int vssIndexBegin(sqlite3_vtab *tab) {
 
 static int vssIndexSync(sqlite3_vtab *pVTab) {
   vss_index_vtab *p = (vss_index_vtab*)pVTab;
-  printf("SYNC %d %d\n", p->isTraining, p->isInsertData);
+  //printf("SYNC %d %d\n", p->isTraining, p->isInsertData);
   if(p->isTraining) {
     //printf("TRAINING %lu\n", p->training->size());
     for (std::size_t i = 0; i != p->trainings->size(); ++i) {
@@ -919,7 +919,7 @@ static int vssIndexCommit(sqlite3_vtab *pVTab) {
 }
 
 static int vssIndexRollback(sqlite3_vtab *tab) {
-  printf("ROLLBACK\n");
+  //printf("ROLLBACK\n");
   return SQLITE_OK;
 }
 
@@ -931,7 +931,7 @@ static int vssIndexUpdate(
 ) {
   vss_index_vtab *p = (vss_index_vtab*)pVTab;
   if (argc ==1 && sqlite3_value_type(argv[0]) != SQLITE_NULL) {
-    printf("xUpdate DELETE \n");
+    //printf("xUpdate DELETE \n");
   }
   else if (argc > 1 && sqlite3_value_type(argv[0])== SQLITE_NULL) {
     // if no operation, we adding it to the index
@@ -975,7 +975,7 @@ static int vssIndexUpdate(
         }      
       } 
       else {
-        printf("unknown operation\n");
+        //printf("unknown operation\n");
         return SQLITE_ERROR;
       }
     }
@@ -992,7 +992,7 @@ static void vssSearchFunc(
   int argc,
   sqlite3_value **argv
 ){
-  printf("search?\n");
+  //printf("search?\n");
 }
 static void faissMemoryUsageFunc(
   sqlite3_context *context,
@@ -1006,7 +1006,7 @@ static void vssRangeSearchFunc(
   int argc,
   sqlite3_value **argv
 ){
-  printf("range search?\n");
+  //printf("range search?\n");
 }
 
 static int vssIndexFindFunction(

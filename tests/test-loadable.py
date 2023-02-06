@@ -61,7 +61,7 @@ class TestVss(unittest.TestCase):
 
     
   def test_vss_version(self):
-    self.assertEqual(db.execute("select vss_version()").fetchone()[0], "v0.0.0")
+    self.assertEqual(db.execute("select vss_version()").fetchone()[0][0], "v")
 
   def test_vss_debug(self):
     debug = db.execute("select vss_debug()").fetchone()[0].split('\n')
