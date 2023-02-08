@@ -1022,7 +1022,7 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
         }
         catch(faiss::FaissException& e) {
           sqlite3_free(pVTab->zErrMsg);
-          pVTab->zErrMsg = sqlite3_mprintf("Error adding vector to index at i=%d. Does your index have \"IDMap2\" at the end? Full error: %s", i, e.msg.c_str());
+          pVTab->zErrMsg = sqlite3_mprintf("Error adding vector to index at column index %d. Full error: %s", i, e.msg.c_str());
           insert_ids->clear();
           insert_data->clear();
           return SQLITE_ERROR;
@@ -1050,8 +1050,20 @@ static int vssIndexCommit(sqlite3_vtab *pVTab) {
   return SQLITE_OK;
 }
 
-static int vssIndexRollback(sqlite3_vtab *tab) {
-  //printf("ROLLBACK\n");
+static int vssIndexRollback(sqlite3_vtab *pVTab) {
+  vss_index_vtab *p = (vss_index_vtab*)pVTab;
+  for (std::size_t i = 0; i != p->trainings->size(); ++i) {
+      auto training = p->trainings->at(i);
+      training->clear();
+  }
+  for (std::size_t i = 0; i < p->indexCount; ++i) {
+    auto insert_data = p->insert_to_add_data->at(i);
+    auto insert_ids = p->insert_to_add_ids->at(i);
+    insert_ids->clear();
+    insert_data->clear();
+    auto delete_ids = p->delete_to_delete_ids->at(i);
+    delete_ids->clear();
+  }
   return SQLITE_OK;
 }
 

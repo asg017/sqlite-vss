@@ -164,20 +164,43 @@ class TestVss(unittest.TestCase):
       {"rowid": 1004},
     ])
     
-    execute_all(cur, "delete from x where rowid = 1004")
-    db.commit()
+    with self.subTest("delete + commit"):
+      execute_all(cur, "delete from x where rowid = 1004")
+      db.commit()
 
-    self.assertEqual(execute_all(cur, "select rowid from x_data"), [
-      {"rowid": 1000},
-      {"rowid": 1001},
-      {"rowid": 1002},
-      {"rowid": 1003},
-    ])
+      self.assertEqual(execute_all(cur, "select rowid from x_data"), [
+        {"rowid": 1000},
+        {"rowid": 1001},
+        {"rowid": 1002},
+        {"rowid": 1003},
+      ])
 
-    self.assertEqual(execute_all(cur, "select rowid, length(idx) from x_index"), [
-      {'rowid': 0, 'length(idx)': 154}, 
-      {'rowid': 1, 'length(idx)': 138}
-    ])
+      self.assertEqual(execute_all(cur, "select rowid, length(idx) from x_index"), [
+        {'rowid': 0, 'length(idx)': 154}, 
+        {'rowid': 1, 'length(idx)': 138}
+      ])
+    
+    with self.subTest("delete + rollback"):
+      execute_all(cur, "delete from x where rowid = 1003")
+      self.assertEqual(execute_all(cur, "select rowid from x_data"), [
+        {"rowid": 1000},
+        {"rowid": 1001},
+        {"rowid": 1002},
+      ])
+
+      db.rollback()
+
+      self.assertEqual(execute_all(cur, "select rowid from x_data"), [
+        {"rowid": 1000},
+        {"rowid": 1001},
+        {"rowid": 1002},
+        {"rowid": 1003},
+      ])
+
+      self.assertEqual(execute_all(cur, "select rowid, length(idx) from x_index"), [
+        {'rowid': 0, 'length(idx)': 154}, 
+        {'rowid': 1, 'length(idx)': 138}
+      ])
 
     def search(column, v, k):
       return execute_all(cur, f"select rowid, distance from x where vss_search({column}, vss_search_params(json(?), ?))", [v, k])
