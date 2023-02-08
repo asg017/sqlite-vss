@@ -2,6 +2,59 @@
 
 `sqlite-vss` (SQLite <b><u>V</u></b>ector <b><u>S</u></b>imilarity <b><u>S</u></b>earch) is a SQLite extension that brings vector search capabilities to SQLite, based on [Faiss](https://faiss.ai/) and [`sqlite-vector`](https://github.com/asg017/sqlite-vector).
 
+
+## Usage
+
+`sqlite-vss` depends on the [`sqlite-vector`](https://github.com/asg017/sqlite-vector) extensio, so make sure to load that first.
+
+```sql
+.load ./vector0
+.load ./vss0
+
+create virtual table vss_articles using vss0(
+  headline_embedding(384)
+);
+```
+
+`sqlite-vss` has a similar API to the [`fts5` Full-Text Search Extension](https://www.sqlite.org/fts5.html). 
+
+
+
+`sqlite-vss` is a **Bring-your-own-vectors** database, it is compatable with any embedding or vectorization data you have. 
+
+
+`sqlite-vss` is built on top of [Faiss](https://github.com/facebookresearch/faiss), so you can pass in a [factory string](https://github.com/facebookresearch/faiss/wiki/The-index-factory) for specific columns to control how the Faiss index is stored and queried.
+
+```sql
+create virtual 
+```
+
+If your factory string requires training, you can insert training data in a single transaction with the special `operation="training"` constraint.
+
+```sql
+create virtual table
+
+insert into xxx(operation, rowid, embedding)
+
+```
+
+## Documentation
+
+See [`docs.md`](./docs.md) for a full API reference.
+
+## Installing
+
+
+
+## Tradeoffs
+
+- The underlying Faiss indicies are capped at 1GB. Follow [#1](https://github.com/asg017/sqlite-vss/issues/1) for updates.
+- Additional filtering on top of KNN searches aren't supported yet. Follow [#2](https://github.com/asg017/sqlite-vss/issues/2) for updates.
+- Only CPU Faiss indicies are supported, not GPU yet. Follow [#3](https://github.com/asg017/sqlite-vss/issues/3) for updates.
+- mmap'ed indices aren't supported yet, so indicies have to fit in RAM. Follow [#4](https://github.com/asg017/sqlite-vss/issues/4) for updates.
+- This extension is written in C++ and doesn't have fuzzy testing yet. Follow [#5](https://github.com/asg017/sqlite-vss/issues/5) for updates.
+---
+
 Still a work in progress, not meant to be widely shared!
 
 Once complete, you'll be able to do things like:

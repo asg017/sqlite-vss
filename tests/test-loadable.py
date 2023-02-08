@@ -4,16 +4,20 @@ import time
 import os
 
 EXT_PATH="./build/vss0"
+EXT_VECTOR_PATH="../sqlite-vector/build/vector0"
 
 
-def connect(ext, path=":memory:"):
+def connect(path=":memory:"):
   db = sqlite3.connect(path)
+
+  
+  db.enable_load_extension(True)
+  db.load_extension(EXT_VECTOR_PATH)
 
   db.execute("create temp table base_functions as select name from pragma_function_list")
   db.execute("create temp table base_modules as select name from pragma_module_list")
 
-  db.enable_load_extension(True)
-  db.load_extension(ext)
+  db.load_extension(EXT_PATH)
 
   db.execute("create temp table loaded_functions as select name from pragma_function_list where name not in (select name from base_functions) order by name")
   db.execute("create temp table loaded_modules as select name from pragma_module_list where name not in (select name from base_modules) order by name")
@@ -22,7 +26,7 @@ def connect(ext, path=":memory:"):
   return db
 
 
-db = connect(EXT_PATH)
+db = connect()
 
 def explain_query_plan(sql):
   return db.execute("explain query plan " + sql).fetchone()["detail"]
@@ -48,7 +52,7 @@ FUNCTIONS = [
 ]
 
 MODULES = [
-  "vss_index",
+  "vss0",
 ]
 class TestVss(unittest.TestCase):
   def test_funcs(self):
@@ -110,7 +114,7 @@ class TestVss(unittest.TestCase):
     self.skipTest("TODO")
 
     
-  def test_vss_index(self):
+  def test_vss0(self):
     #
     #            |
     #    1000 -> X 
@@ -127,7 +131,7 @@ class TestVss(unittest.TestCase):
     #
     cur = db.cursor()
     execute_all(cur, """
-      create virtual table x using vss_index( a(2) with "Flat,IDMap2", b(1) with "Flat,IDMap2");
+      create virtual table x using vss0( a(2) factory="Flat,IDMap2", b(1)  factory="Flat,IDMap2");
     """)
     execute_all(cur, """
       insert into x(rowid, a, b)
@@ -141,21 +145,37 @@ class TestVss(unittest.TestCase):
           [[0, 1], [1]], 
           [[0, -1], [2]], 
           [[1, 0], [3]], 
-          [[-1, 0], [4]]
+          [[-1, 0], [4]],
+          [[0, 0], [5]]
         ]
         """])
     db.commit()
-
-    self.assertEqual(cur.lastrowid, 1003)
-    self.assertEqual(execute_all(cur, "select length(c0), length(c1) from x_index"), [
-      {"length(c0)": 154, "length(c1)": None},
-      {"length(c0)": None, "length(c1)": 138}
+    
+    self.assertEqual(cur.lastrowid, 1004)
+    self.assertEqual(execute_all(cur, "select rowid, length(idx) from x_index"), [
+      {'length(idx)': 170, 'rowid': 0}, 
+      {'length(idx)': 150, 'rowid': 1}
     ])
     self.assertEqual(execute_all(cur, "select rowid from x_data"), [
       {"rowid": 1000},
       {"rowid": 1001},
       {"rowid": 1002},
       {"rowid": 1003},
+      {"rowid": 1004},
+    ])
+    execute_all(cur, "delete from x where rowid = 1004")
+    db.commit()
+
+    self.assertEqual(execute_all(cur, "select rowid from x_data"), [
+      {"rowid": 1000},
+      {"rowid": 1001},
+      {"rowid": 1002},
+      {"rowid": 1003},
+    ])
+
+    self.assertEqual(execute_all(cur, "select rowid, length(idx) from x_index"), [
+      {'length(idx)': 154, 'rowid': 0}, 
+      {'length(idx)': 138, 'rowid': 1}
     ])
 
     def search(column, v, k):
@@ -195,11 +215,14 @@ class TestVss(unittest.TestCase):
       {'rowid': 1001, 'distance': 0.25},
       {'rowid': 1002, 'distance': 0.25},
     ])
-    self.assertEqual(execute_all(cur, 'select rowid, a, b, distance from x'), [
-      {'rowid': 1000, "a": "[0.0,1.0]",  "b": "[1.0]", "distance": None},
-      {'rowid': 1001, "a": "[0.0,-1.0]", "b": "[2.0]", "distance": None},
-      {'rowid': 1002, "a": "[1.0,0.0]",  "b": "[3.0]", "distance": None},
-      {'rowid': 1003, "a": "[-1.0,0.0]", "b": "[4.0]", "distance": None},
+
+    #import pdb;pdb.set_trace()
+
+    self.assertEqual(execute_all(cur, 'select rowid, vector_debug(a) as a, vector_debug(b) as b, distance from x'), [
+      {'rowid': 1000, "a": "size: 2 [0.000000, 1.000000]",  "b": "size: 1 [1.000000]", "distance": None},
+      {'rowid': 1001, "a": "size: 2 [0.000000, -1.000000]", "b": "size: 1 [2.000000]", "distance": None},
+      {'rowid': 1002, "a": "size: 2 [1.000000, 0.000000]",  "b": "size: 1 [3.000000]", "distance": None},
+      {'rowid': 1003, "a": "size: 2 [-1.000000, 0.000000]", "b": "size: 1 [4.000000]", "distance": None},
     ])
 
     if sqlite3.sqlite_version_info[1] >= 41:
@@ -261,16 +284,16 @@ class TestVss(unittest.TestCase):
       self.assertEqual(db.execute("select count(*) from x_index").fetchone()[0], 2)
     
     
-  def test_vss_index_persistent(self):
+  def test_vss0_persistent(self):
     import tempfile
     tf = tempfile.NamedTemporaryFile(delete=False)
     tf.close()
     
-    db = connect(EXT_PATH, tf.name)
+    db = connect(tf.name)
     db.execute("create table t as select 1 as a")
     cur = db.cursor()
     execute_all(cur, """
-      create virtual table x using vss_index( a(2) with "Flat,IDMap2", b(1) with "Flat,IDMap2");
+      create virtual table x using vss0( a(2), b(1) factory="Flat,IDMap2");
     """)
     execute_all(cur, """
       insert into x(rowid, a, b)
@@ -305,9 +328,7 @@ class TestVss(unittest.TestCase):
     ])
     db.close()
 
-    print(tf.name)
-
-    db = connect(EXT_PATH, tf.name)
+    db = connect(tf.name)
     cur = db.cursor()
     self.assertEqual(execute_all(db.cursor(), "select a from t"), [{"a": 1}])
     self.assertEqual(search(cur, 'a', '[0.9, 0]', 5), [
@@ -326,20 +347,22 @@ class TestVss(unittest.TestCase):
   def test_vss_stress(self):
     cur = db.cursor()
     
-    execute_all(cur, 'create virtual table no_id_map using vss_index(a(2) with "Flat");')
+    execute_all(cur, 'create virtual table no_id_map using vss0(a(2) factory="Flat");')
     with self.assertRaisesRegex(sqlite3.OperationalError, ".*add_with_ids not implemented for this type of index.*"):
       execute_all(cur, """insert into no_id_map(rowid, a) select  100, json('[0, 1]')""")
-    
-    execute_all(cur, 'create virtual table no_id_map2 using vss_index(a(2) with "Flat,IDMap");')
+      db.commit()
+      
+
+    execute_all(cur, 'create virtual table no_id_map2 using vss0(a(2) factory="Flat,IDMap");')
     execute_all(cur, "insert into no_id_map2(rowid, a) select  100, json('[0, 1]')")
+    # fails because query references `a`, but cannot reconstruct the vector from the index bc only IDMap
     with self.assertRaisesRegex(sqlite3.OperationalError, ".*reconstruct not implemented for this type of index"):
-      execute_all(cur, "select * from no_id_map2;")
+      execute_all(cur, "select rowid, a from no_id_map2;")
+    # but this suceeds, because only the rowid column is referenced
+    execute_all(cur, "select rowid from no_id_map2;")
     
     with self.assertRaisesRegex(sqlite3.OperationalError, ".*could not parse index string invalid"):
-      execute_all(cur, 'create virtual table t1 using vss_index(a(2) with "invalid");')
-      execute_all(cur, "insert into t1(rowid, a) select  100, json('[0, 1]')")
-    
-    
+      execute_all(cur, 'create virtual table t1 using vss0(a(2) factory="invalid");')
     
 class TestCoverage(unittest.TestCase):                                      
   def test_coverage(self):                                                      
