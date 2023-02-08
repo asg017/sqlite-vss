@@ -369,7 +369,8 @@ static int shadow_data_insert(sqlite3*db, char * schema, char * name, sqlite3_in
       sqlite3_finalize(stmt);
       return SQLITE_ERROR;
     }
-    *retRowid = sqlite3_last_insert_rowid(db);
+    if(retRowid != NULL)
+      *retRowid = sqlite3_last_insert_rowid(db);
     sqlite3_free(q);
   }
   sqlite3_finalize(stmt);
@@ -1061,6 +1062,7 @@ static int vssIndexUpdate(
   sqlite_int64 *pRowid
 ) {
   vss_index_vtab *p = (vss_index_vtab*)pVTab;
+  // DELETE operation
   if (argc ==1 && sqlite3_value_type(argv[0]) != SQLITE_NULL) {
     sqlite3_int64 rowid_to_delete = sqlite3_value_int64(argv[0]);
     int rc;
@@ -1072,7 +1074,8 @@ static int vssIndexUpdate(
     }
     
   }
-  else if (argc > 1 && sqlite3_value_type(argv[0])== SQLITE_NULL) {
+  // INSERT operation
+  else if (argc > 1 && sqlite3_value_type(argv[0]) == SQLITE_NULL) {
     // if no operation, we adding it to the index
     bool noOperation = sqlite3_value_type(argv[2+VSS_INDEX_COLUMN_OPERATION]) == SQLITE_NULL;
     if (noOperation) {
@@ -1130,8 +1133,11 @@ static int vssIndexUpdate(
       }
     }
   }
+  // some UPDATE operations
   else {
-    //printf("xUpdate UNKNOWN \n");
+    sqlite3_free(pVTab->zErrMsg);
+    pVTab->zErrMsg = sqlite3_mprintf("UPDATE on vss0 virtual tables not supported yet.");
+    return SQLITE_ERROR;
   }
   return SQLITE_OK;
 }

@@ -153,8 +153,8 @@ class TestVss(unittest.TestCase):
     
     self.assertEqual(cur.lastrowid, 1004)
     self.assertEqual(execute_all(cur, "select rowid, length(idx) from x_index"), [
-      {'length(idx)': 170, 'rowid': 0}, 
-      {'length(idx)': 150, 'rowid': 1}
+      {'rowid': 0, 'length(idx)': 170}, 
+      {'rowid': 1, 'length(idx)': 150}
     ])
     self.assertEqual(execute_all(cur, "select rowid from x_data"), [
       {"rowid": 1000},
@@ -163,6 +163,7 @@ class TestVss(unittest.TestCase):
       {"rowid": 1003},
       {"rowid": 1004},
     ])
+    
     execute_all(cur, "delete from x where rowid = 1004")
     db.commit()
 
@@ -174,8 +175,8 @@ class TestVss(unittest.TestCase):
     ])
 
     self.assertEqual(execute_all(cur, "select rowid, length(idx) from x_index"), [
-      {'length(idx)': 154, 'rowid': 0}, 
-      {'length(idx)': 138, 'rowid': 1}
+      {'rowid': 0, 'length(idx)': 154}, 
+      {'rowid': 1, 'length(idx)': 138}
     ])
 
     def search(column, v, k):
@@ -225,6 +226,8 @@ class TestVss(unittest.TestCase):
       {'rowid': 1003, "a": "size: 2 [-1.000000, 0.000000]", "b": "size: 1 [4.000000]", "distance": None},
     ])
 
+    with self.assertRaisesRegex(sqlite3.OperationalError, "UPDATE on vss0 virtual tables not supported yet."):
+      execute_all(cur, 'update x set b = json(?) where rowid = ?', ['[444]', 1003])
     if sqlite3.sqlite_version_info[1] >= 41:
       self.assertEqual(
         execute_all(

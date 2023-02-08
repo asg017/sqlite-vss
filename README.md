@@ -53,6 +53,8 @@ See [`docs.md`](./docs.md) for a full API reference.
 - Only CPU Faiss indicies are supported, not GPU yet. Follow [#3](https://github.com/asg017/sqlite-vss/issues/3) for updates.
 - mmap'ed indices aren't supported yet, so indicies have to fit in RAM. Follow [#4](https://github.com/asg017/sqlite-vss/issues/4) for updates.
 - This extension is written in C++ and doesn't have fuzzy testing yet. Follow [#5](https://github.com/asg017/sqlite-vss/issues/5) for updates.
+- `UPDATE` statements on vss0 virtual tables are not supported, though `INSERT` and `DELETE` statements are. Follow [#7](https://github.com/asg017/sqlite-vss/issues/7) for updates.
+
 ---
 
 Still a work in progress, not meant to be widely shared!
