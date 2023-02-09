@@ -12,7 +12,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          submodules: true
+          submodules: 'recursive'
+          re
       - name: Cache sqlite build
         id: cache-sqlite-build
         uses: actions/cache@v3
@@ -28,7 +29,11 @@ jobs:
 
       # TODO how cache this?
       - run: sudo apt-get install -y cmake libgomp1
-      - run: cmake -B build; make -C build
+      - name: build sqlite-vector dependency
+        run: cmake -B build; make -C build
+        working-directory: vendor/sqlite-vector/
+      - name: build sqlite-vss
+        run: cmake -B build; make -C build
       - run: make test
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
@@ -61,7 +66,11 @@ jobs:
         with:
           path: build
           key: ${{ runner.os }}-build
-      - run: cmake -B build; make -C build
+      - name: build sqlite-vector dependency
+        run: cmake -B build; make -C build
+        working-directory: vendor/sqlite-vector/
+      - name: build sqlite-vss
+        run: cmake -B build; make -C build
         env:
           # https://stackoverflow.com/questions/48825416/missing-openmp-c-flags-openmp-c-lib-names
           CC: /usr/local/opt/llvm/bin/clang
