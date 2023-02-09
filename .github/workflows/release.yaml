@@ -79,12 +79,12 @@ jobs:
           path: build
           key: ${{ runner.os }}-build
       - run: make loadable-release
-        #env:
-        #  # https://stackoverflow.com/questions/48825416/missing-openmp-c-flags-openmp-c-lib-names
-        #  CC: /usr/local/opt/llvm/bin/clang
-        #  CXX: /usr/local/opt/llvm/bin/clang++
-        #  LDFLAGS: "-L/usr/local/opt/llvm/lib"
-        #  CPPFLAGS: "-I/usr/local/opt/llvm/include"
+        env:
+          # https://stackoverflow.com/questions/48825416/missing-openmp-c-flags-openmp-c-lib-names
+          CC: /usr/local/opt/llvm/bin/clang
+          CXX: /usr/local/opt/llvm/bin/clang++
+          LDFLAGS: "-L/usr/local/opt/llvm/lib"
+          CPPFLAGS: "-I/usr/local/opt/llvm/include"
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
