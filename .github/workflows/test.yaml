@@ -37,7 +37,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: sqlite-vss-ubuntu
-          path: dist/debug/vss0.so
+          path: dist/debug/*
   build-ubuntu-python:
     runs-on: ubuntu-20.04
     needs: [build-ubuntu-extension]
@@ -113,7 +113,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: sqlite-vss-macos
-          path: build/vss0.dylib
+          path: dist/debug/*
   build-macos-python:
     runs-on: macos-latest
     needs: [build-macos-extension]
