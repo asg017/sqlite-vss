@@ -13,7 +13,6 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: 'recursive'
-          re
       - name: Cache sqlite build
         id: cache-sqlite-build
         uses: actions/cache@v3
