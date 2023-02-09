@@ -1,4 +1,4 @@
-name: "release"
+name: "Release"
 on:
   release:
     types: [published]
@@ -6,13 +6,13 @@ on:
 permissions:
   contents: read
 jobs:
-  build-ubuntu:
-    name: Building ubuntu-20.04
+  build-ubuntu-extension:
+    name: Building ubuntu
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
         with:
-          submodules: true
+          submodules: recursive
       - name: Cache sqlite build
         id: cache-sqlite-build
         uses: actions/cache@v3
@@ -33,9 +33,27 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: sqlite-vss-ubuntu
-          path: build_release/vss0.so
-  build-macos:
-    name: Building macos-latest
+          path: dist/release/vss0.so
+  build-ubuntu-python:
+    runs-on: ubuntu-20.04
+    needs: [build-ubuntu-extension]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Download workflow artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: sqlite-vss-ubuntu
+          path: dist/release/
+      - uses: actions/setup-python@v3
+      - run: pip install wheel
+      - run: make python-release
+      - run: make datasette-release
+      - uses: actions/upload-artifact@v3
+        with:
+          name: sqlite-vss-ubuntu-wheels
+          path: dist/release/wheels/*.whl
+  .github/workflows/test.yaml
+    name: Building macos extension
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
@@ -61,20 +79,42 @@ jobs:
           path: build
           key: ${{ runner.os }}-build
       - run: make loadable-release
-        env:
-          # https://stackoverflow.com/questions/48825416/missing-openmp-c-flags-openmp-c-lib-names
-          CC: /usr/local/opt/llvm/bin/clang
-          CXX: /usr/local/opt/llvm/bin/clang++
-          LDFLAGS: "-L/usr/local/opt/llvm/lib"
-          CPPFLAGS: "-I/usr/local/opt/llvm/include"
+        #env:
+        #  # https://stackoverflow.com/questions/48825416/missing-openmp-c-flags-openmp-c-lib-names
+        #  CC: /usr/local/opt/llvm/bin/clang
+        #  CXX: /usr/local/opt/llvm/bin/clang++
+        #  LDFLAGS: "-L/usr/local/opt/llvm/lib"
+        #  CPPFLAGS: "-I/usr/local/opt/llvm/include"
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
           name: sqlite-vss-macos
-          path: build_release/vss0.dylib
-  upload:
-    name: upload
-    needs: [build-macos, build-ubuntu]
+          path: dist/release/vss0.dylib
+  build-macos-python:
+    runs-on: macos-latest
+    needs: [build-macos-extension]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Download workflow artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: sqlite-vss-macos
+          path: dist/release/
+      - uses: actions/setup-python@v3
+      - run: pip install wheel
+      - run: make python-release
+      - run: make datasette-release
+      - uses: actions/upload-artifact@v3
+        with:
+          name: sqlite-vss-macos-wheels
+          path: dist/releasee/wheels/*.whl
+  upload-release-assets:
+    name: Upload release assets
+    needs:
+      [
+        build-macos-extension,
+        build-ubuntu-extension,
+      ]
     permissions:
       contents: write
     runs-on: ubuntu-latest
@@ -89,3 +129,23 @@ jobs:
           script: |
             const script = require('.github/workflows/upload.js')
             await script({github, context})
+  upload_pypi:
+    needs:
+      [
+        build-ubuntu-python,
+        build-macos-python,
+      ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: sqlite-vss-ubuntu-wheels
+          path: dist
+      - uses: actions/download-artifact@v3
+        with:
+          name: sqlite-vss-macos-wheels
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          skip_existing: true

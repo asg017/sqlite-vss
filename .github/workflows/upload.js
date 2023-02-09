@@ -59,6 +59,7 @@ module.exports = async ({ github, context }) => {
       asset_name: `sqlite-vss-${VERSION}-macos-x86_64.tar.gz`,
     },
   ];
+  console.log(compiled_extensions);
 
   const extension_assets = await Promise.all(
     compiled_extensions.map(async (d) => {
@@ -67,10 +68,15 @@ module.exports = async ({ github, context }) => {
         .createHash("sha256")
         .update(extensionContents)
         .digest("hex");
+      console.log("ext_sha256", ext_sha256);
       const tar = await targz([{ name: d.name, data: extensionContents }]);
+      console.log("tar", tar);
 
       const tar_md5 = crypto.createHash("md5").update(tar).digest("base64");
       const tar_sha256 = crypto.createHash("sha256").update(tar).digest("hex");
+      console.log("tar_md5", tar_md5);
+      console.log("tar_sha256", tar_sha256);
+
       return {
         ext_sha256,
         tar_md5,
