@@ -20,7 +20,17 @@ total_count = db.execute("select count(*) from articles where headline_embedding
 
 def fill_headline_embeddings():
   while True:
-    batch = db.execute("select rowid, headline from articles where headline_embedding is null limit ?", [BATCH_SIZE]).fetchall()
+    batch = db.execute(
+      """
+        select 
+          rowid, 
+          headline 
+        from articles 
+        where headline_embedding is null 
+        limit ?
+      """, 
+      [BATCH_SIZE]
+    ).fetchall()
     
     if len(batch) == 0:
       break

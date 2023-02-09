@@ -272,10 +272,10 @@ static void VssRangeSearchParamsFunc(
 }
 
 static int write_index_insert(faiss::Index * index, sqlite3*db, char * schema, char * name, int i) {
+  printf("%ld\n", index->ntotal);
   faiss::VectorIOWriter * w = new faiss::VectorIOWriter();
   faiss::write_index(index, w);
   sqlite3_int64 nIn = w->data.size();
-  //printf("lol n=%ld\n", nIn);
 
   // First try to insert into xyz_index. If that fails with a rowid constraint error,
   // that means the index is already on disk, we just have to UPDATE instead.
@@ -332,17 +332,18 @@ static int write_index_insert(faiss::Index * index, sqlite3*db, char * schema, c
   if(result == SQLITE_DONE) {
     return SQLITE_OK;
   }
+  delete w;
   return result;
 }
 
 
 static int shadow_data_insert(sqlite3*db, char * schema, char * name, sqlite3_int64 *rowid, sqlite3_int64 *retRowid) {
   sqlite3_stmt *stmt;
-  sqlite3_str *query = sqlite3_str_new(0);
   if(rowid == NULL) {
-    sqlite3_str_appendf(query, "insert into \"%w\".\"%w_data\"(x) values (?)", schema, name);
-    char * q = sqlite3_str_finish(query);
+    char * q = sqlite3_mprintf("insert into \"%w\".\"%w_data\"(x) values (?)", schema, name);
     int rc = sqlite3_prepare_v2(db, q, -1, &stmt, 0);
+    sqlite3_free(q);
+
     if (rc != SQLITE_OK || stmt==0) {
       //printf("error prepping stmt: %s \n", sqlite3_errmsg(db));
       return SQLITE_ERROR;
@@ -353,11 +354,11 @@ static int shadow_data_insert(sqlite3*db, char * schema, char * name, sqlite3_in
       sqlite3_finalize(stmt);
       return SQLITE_ERROR;
     }
-    sqlite3_free(q);
   } else {
-    sqlite3_str_appendf(query, "insert into \"%w\".\"%w_data\"(rowid, x) values (?, ?);", schema, name);
-    char * q = sqlite3_str_finish(query);
+    char * q = sqlite3_mprintf("insert into \"%w\".\"%w_data\"(rowid, x) values (?, ?);", schema, name);
     int rc = sqlite3_prepare_v2(db, q, -1, &stmt, 0);
+    sqlite3_free(q);
+
     if (rc != SQLITE_OK || stmt==0) {
       //printf("error prepping stmt: %s \n", sqlite3_errmsg(db));
       return SQLITE_ERROR;
@@ -371,7 +372,6 @@ static int shadow_data_insert(sqlite3*db, char * schema, char * name, sqlite3_in
     }
     if(retRowid != NULL)
       *retRowid = sqlite3_last_insert_rowid(db);
-    sqlite3_free(q);
   }
   sqlite3_finalize(stmt);
   return SQLITE_OK;
@@ -695,6 +695,9 @@ static int vssIndexDisconnect(sqlite3_vtab *pVtab){
     
   }
   delete p->trainings;
+  delete p->insert_to_add_data;
+  delete p->insert_to_add_ids;
+  delete p->delete_to_delete_ids;
 
   sqlite3_free(p);
   return SQLITE_OK;
@@ -704,7 +707,7 @@ static int vssIndexDestroy(sqlite3_vtab *pVtab){
   vss_index_vtab *p = (vss_index_vtab*)pVtab;
   //printf("destroy\n");
   drop_shadow_tables(p->db, p->name);
-  sqlite3_free(p);
+  vssIndexDisconnect(pVtab);
   return SQLITE_OK;
 }
 
@@ -731,7 +734,6 @@ static int vssIndexClose(sqlite3_vtab_cursor *cur){
     pCur->range_search_result = 0;
   }
   if(pCur->stmt) sqlite3_finalize(pCur->stmt);
-  //printf("a\n");
   sqlite3_free(pCur);
   //printf("b\n");
   return SQLITE_OK;
@@ -1005,6 +1007,7 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
       if(!delete_ids->empty()) {
         faiss::IDSelectorBatch * selector = new faiss::IDSelectorBatch(delete_ids->size(), delete_ids->data());
         size_t numRemoved = p->indexes->at(i)->remove_ids(*selector);
+        delete selector;
         needsWriting= true;
       }
   }
@@ -1029,12 +1032,15 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
         }
         insert_ids->clear();
         insert_data->clear();
+        insert_ids->shrink_to_fit();
+        insert_data->shrink_to_fit();
         needsWriting= true;
       }
     }
   }
   if(needsWriting) {
     for(int i = 0; i < p->indexCount; i++) {
+      printf("writind index inser\n");
       int rc = write_index_insert(p->indexes->at(i), p->db, p->schema, p->name, i);
       if(rc != SQLITE_OK) {
         sqlite3_free(pVTab->zErrMsg);
@@ -1100,6 +1106,7 @@ static int vssIndexUpdate(
           if(!p->indexes->at(i)->is_trained) {
             sqlite3_free(pVTab->zErrMsg);
             pVTab->zErrMsg = sqlite3_mprintf("Index at i=%d requires training before inserting data.", i);
+            delete vec;
             return SQLITE_ERROR;
           }
 

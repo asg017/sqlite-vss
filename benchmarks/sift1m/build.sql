@@ -1,5 +1,5 @@
 
-.load vector0
+.load ./vector0
 
 create table sift as
   select 
