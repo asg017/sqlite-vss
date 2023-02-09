@@ -272,7 +272,6 @@ static void VssRangeSearchParamsFunc(
 }
 
 static int write_index_insert(faiss::Index * index, sqlite3*db, char * schema, char * name, int i) {
-  printf("%ld\n", index->ntotal);
   faiss::VectorIOWriter * w = new faiss::VectorIOWriter();
   faiss::write_index(index, w);
   sqlite3_int64 nIn = w->data.size();
@@ -1040,7 +1039,6 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
   }
   if(needsWriting) {
     for(int i = 0; i < p->indexCount; i++) {
-      printf("writind index inser\n");
       int rc = write_index_insert(p->indexes->at(i), p->db, p->schema, p->name, i);
       if(rc != SQLITE_OK) {
         sqlite3_free(pVTab->zErrMsg);
