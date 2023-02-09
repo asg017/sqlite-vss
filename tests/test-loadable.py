@@ -4,7 +4,7 @@ import time
 import os
 
 EXT_PATH="./dist/debug/vss0"
-EXT_VECTOR_PATH="vendor/sqlite-vector/build/vector0"
+EXT_VECTOR_PATH="./dist/debug/vector0"
 
 
 def connect(path=":memory:"):

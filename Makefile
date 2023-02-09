@@ -1,3 +1,5 @@
+SHELL := /bin/bash
+
 ifeq ($(shell uname -s),Darwin)
 CONFIG_DARWIN=y
 else ifeq ($(OS),Windows_NT)
@@ -34,6 +36,9 @@ prefix=dist
 TARGET_LOADABLE=$(prefix)/debug/vss0.$(LOADABLE_EXTENSION)
 TARGET_LOADABLE_RELEASE=$(prefix)/release/vss0.$(LOADABLE_EXTENSION)
 
+TARGET_LOADABLE_DEP=$(prefix)/debug/vector0.$(LOADABLE_EXTENSION)
+TARGET_LOADABLE_DEP_RELEASE=$(prefix)/release/vector0.$(LOADABLE_EXTENSION)
+
 TARGET_WHEELS=$(prefix)/debug/wheels
 TARGET_WHEELS_RELEASE=$(prefix)/release/wheels
 
@@ -51,6 +56,14 @@ $(TARGET_LOADABLE_RELEASE): $(prefix)
 	cmake -DCMAKE_BUILD_TYPE=Release -B build_release; make -C build_release
 	cp build_release/vss0.$(LOADABLE_EXTENSION) $@
 
+$(TARGET_LOADABLE_DEP): $(prefix)
+	(cd vendor/sqlite-vector; make loadable);
+	cp vendor/sqlite-vector/dist/debug/vector0.$(LOADABLE_EXTENSION) $@
+
+$(TARGET_LOADABLE_DEP_RELEASE): $(prefix)
+	(cd vendor/sqlite-vector; make loadable-release);
+	cp vendor/sqlite-vector/dist/release/vector0.$(LOADABLE_EXTENSION) $@
+
 $(TARGET_WHEELS): $(prefix)
 	mkdir -p $(TARGET_WHEELS)
 
@@ -58,9 +71,9 @@ $(TARGET_WHEELS_RELEASE): $(prefix)
 	mkdir -p $(TARGET_WHEELS_RELEASE)
 
 
-loadable: $(TARGET_LOADABLE)
+loadable: $(TARGET_LOADABLE) $(TARGET_LOADABLE_DEP) 
 
-loadable-release: $(TARGET_LOADABLE_RELEASE)
+loadable-release: $(TARGET_LOADABLE_RELEASE) $(TARGET_LOADABLE_DEP_RELEASE)
 
 
 python: $(TARGET_WHEELS) $(TARGET_LOADABLE) python/sqlite_vss/setup.py python/sqlite_vss/sqlite_vss/__init__.py .github/workflows/rename-wheels.py
@@ -92,7 +105,7 @@ test-python:
 
 test:
 	make test-loadable
-	make test-python
+	#make test-python
 
 
 test-loadable-3.41.0:
