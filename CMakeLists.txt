@@ -30,5 +30,5 @@ set_target_properties(sqlite-vss PROPERTIES PREFIX "")
 set_target_properties(sqlite-vss PROPERTIES PREFIX "")
 set_target_properties(sqlite-vss PROPERTIES OUTPUT_NAME "vss0")
 
-add_executable(xxx src/debug.cpp)
-target_link_libraries(xxx faiss_avx2)
+#add_executable(xxx src/debug.cpp)
+#target_link_libraries(xxx faiss_avx2)

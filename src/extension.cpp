@@ -1264,7 +1264,7 @@ extern "C" {
   #ifdef _WIN32
   __declspec(dllexport)
   #endif
-  int sqlite3_extension_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi) {
+  int sqlite3_vss_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi) {
     SQLITE_EXTENSION_INIT2(pApi);
     vector0_api * vector_api = vector0_api_from_db(db);
     if(vector_api == NULL) {

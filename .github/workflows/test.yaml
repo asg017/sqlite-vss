@@ -6,8 +6,8 @@ on:
 permissions:
   contents: read
 jobs:
-  test-ubuntu:
-    name: Testing ubuntu-20.04
+  build-ubuntu-extension:
+    name: Building ubuntu
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
@@ -29,18 +29,51 @@ jobs:
       # TODO how cache this?
       - run: sudo apt-get install -y cmake libgomp1
       - name: build sqlite-vector dependency
-        run: cmake -B build; make -C build
+        run: make loadable
         working-directory: vendor/sqlite-vector/
       - name: build sqlite-vss
-        run: cmake -B build; make -C build
-      - run: make test
+        run: make loadable
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
           name: sqlite-vss-ubuntu
-          path: build/vss0.so
-  test-macos:
-    name: Testing macos-latest
+          path: dist/debug/vss0.so
+  build-ubuntu-python:
+    runs-on: ubuntu-20.04
+    needs: [build-ubuntu-extension]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Download workflow artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: sqlite-vss-ubuntu
+          path: dist/debug/
+      - uses: actions/setup-python@v3
+      - run: pip install wheel
+      - run: make python
+      - run: make datasette
+      - uses: actions/upload-artifact@v3
+        with:
+          name: sqlite-vss-ubuntu-wheels
+          path: dist/debug/wheels/*.whl
+  test-ubuntu:
+    runs-on: ubuntu-20.04
+    needs: [build-ubuntu-extension, build-ubuntu-python]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/download-artifact@v3
+        with:
+          name: sqlite-vss-ubuntu
+          path: dist/debug/
+      - uses: actions/download-artifact@v3
+        with:
+          name: sqlite-vss-ubuntu-wheels
+          path: dist/debug/
+      - run: pip install --find-links dist/debug/ sqlite_vss
+      - run: make test-loadable
+      - run: make test-python
+  build-macos-extension:
+    name: Building macos-latest
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
@@ -58,7 +91,7 @@ jobs:
       - if: steps.cache-sqlite-build.outputs.cache-hit != 'true'
         working-directory: vendor/sqlite
         run: ./configure && make
-      - run: brew install llvm
+      #- run: brew install llvm
       - name: Cache cmake build
         id: cache-cmake-build
         uses: actions/cache@v3
@@ -69,15 +102,50 @@ jobs:
         run: cmake -B build; make -C build
         working-directory: vendor/sqlite-vector/
       - name: build sqlite-vss
-        run: cmake -B build; make -C build
-        env:
-          # https://stackoverflow.com/questions/48825416/missing-openmp-c-flags-openmp-c-lib-names
-          CC: /usr/local/opt/llvm/bin/clang
-          CXX: /usr/local/opt/llvm/bin/clang++
-          LDFLAGS: "-L/usr/local/opt/llvm/lib"
-          CPPFLAGS: "-I/usr/local/opt/llvm/include"
+        run: make loadable
+        #env:
+        #  # https://stackoverflow.com/questions/48825416/missing-openmp-c-flags-openmp-c-lib-names
+        #  CC: /usr/local/opt/llvm/bin/clang
+        #  CXX: /usr/local/opt/llvm/bin/clang++
+        #  LDFLAGS: "-L/usr/local/opt/llvm/lib"
+        #  CPPFLAGS: "-I/usr/local/opt/llvm/include"
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
           name: sqlite-vss-macos
           path: build/vss0.dylib
+  build-macos-python:
+    runs-on: macos-latest
+    needs: [build-macos-extension]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Download workflow artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: sqlite-vss-macos
+          path: dist/debug/
+      - uses: actions/setup-python@v3
+      - run: pip install wheel
+      - run: make python
+      - run: make datasette
+      - uses: actions/upload-artifact@v3
+        with:
+          name: sqlite-vss-macos-wheels
+          path: dist/debug/wheels/*.whl
+  test-macos:
+    runs-on: macos-latest
+    needs: [build-macos-extension, build-macos-python]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/download-artifact@v3
+        with:
+          name: sqlite-vss-macos
+          path: dist/debug/
+      - uses: actions/download-artifact@v3
+        with:
+          name: sqlite-vss-macos-wheels
+          path: dist/debug/wheels
+      - run: /usr/local/opt/python@3/libexec/bin/pip install --find-links dist/debug/wheels sqlite_vector
+      - run: find dist
+      - run: make test-loadable python=/usr/local/opt/python@3/libexec/bin/python
+      - run: make test-python python=/usr/local/opt/python@3/libexec/bin/python

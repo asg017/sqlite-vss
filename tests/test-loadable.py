@@ -3,7 +3,7 @@ import unittest
 import time
 import os
 
-EXT_PATH="./build/vss0"
+EXT_PATH="./dist/debug/vss0"
 EXT_VECTOR_PATH="vendor/sqlite-vector/build/vector0"
 
 
