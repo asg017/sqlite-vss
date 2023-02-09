@@ -52,6 +52,7 @@ jobs:
         with:
           name: sqlite-vss-ubuntu-wheels
           path: dist/release/wheels/*.whl
+  build-macos-extension:
     name: Building macos extension
     runs-on: macos-latest
     steps:
