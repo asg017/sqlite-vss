@@ -57,6 +57,7 @@ begin;
 
 delete from vss_articles 
   where rowid between 100 and 200;
+
 insert into vss_articles(rowd, headline_embedding, description_embedding)
   values (:rowid, :headline_embedding, :description_embedding)
 
@@ -78,14 +79,6 @@ This IVF will require training! You can define training data with a `INSERT` com
 insert into vss_ivf_articles(operation, headline_embedding, description_embedding)
   select 
     'training',
-    headline_embedding,
-    description_embedding
-  from articles;
-
--- then insert the index data
-insert into vss_ivf_articles(rowid, headline_embedding, description_embedding)
-  select 
-    rowid,
     headline_embedding,
     description_embedding
   from articles;
@@ -115,7 +108,7 @@ If you want to use `sqlite-vss` as a [Runtime-loadable extension](https://www.sq
 `sqlite-vector` is a required dependency, so also make sure to [install that loadable extension](https://github.com/asg017/sqlite-vector#Installing) before loading `vss0`.
 
 > **Note:**
-> The `0` in the filename (`vss0.dylib`/ `vss0.so`/`vss0.dll`) denotes the major version of `sqlite-vss`. Currently `sqlite-vss` is pre v1, so expect breaking changes in future versions.
+> The `0` in the filename (`vss0.dylib`/ `vss0.so`) denotes the major version of `sqlite-vss`. Currently `sqlite-vss` is pre v1, so expect breaking changes in future versions.
 
 For example, if you are using the [SQLite CLI](https://www.sqlite.org/cli.html), you can load the library like so:
 
