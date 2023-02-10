@@ -1,6 +1,6 @@
 from setuptools import setup
 
-VERSION = "0.0.1-alpha.7"
+VERSION = "0.0.1-alpha.8"
 
 setup(
     name="datasette-sqlite-vss",
