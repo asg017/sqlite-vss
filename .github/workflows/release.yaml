@@ -107,7 +107,7 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: sqlite-vss-macos-wheels
-          path: dist/releasee/wheels/*.whl
+          path: dist/release/wheels/*.whl
   upload-release-assets:
     name: Upload release assets
     needs:

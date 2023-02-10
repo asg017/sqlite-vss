@@ -389,7 +389,47 @@ class TestVss(unittest.TestCase):
     
     with self.assertRaisesRegex(sqlite3.OperationalError, ".*could not parse index string invalid"):
       execute_all(cur, 'create virtual table t1 using vss0(a(2) factory="invalid");')
+  def test_vss_training(self):
+    import random
+    import json
+    cur = db.cursor()
+    execute_all(
+      cur, 
+      'create virtual table with_training using vss0(a(4) factory="IVF10,Flat,IDMap2", b(4) factory="IVF10,Flat,IDMap2")'
+    )
+    data = list(map(lambda x: [random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1)], range(0, 1000)))
+    execute_all(
+      cur, 
+      """
+        insert into with_training(operation, a, b) 
+          select 
+            'training',
+            value,
+            value
+          from json_each(?)
+      """,
+      [json.dumps(data)]
+    )
+    db.commit()
+    self.assertEqual(cur.execute('select count(*) from with_training').fetchone()[0], 0)
+
+    execute_all(
+      cur, 
+      """
+        insert into with_training(rowid, a, b) 
+          select 
+            key,
+            value,
+            value
+          from json_each(?)
+      """,
+      [json.dumps(data)]
+    )
+    self.assertEqual(cur.execute('select count(*) from with_training').fetchone()[0], 1000)
+    db.commit()
+    self.assertEqual(cur.execute('select count(*) from with_training').fetchone()[0], 1000)
     
+
 class TestCoverage(unittest.TestCase):                                      
   def test_coverage(self):                                                      
     test_methods = [method for method in dir(TestVss) if method.startswith('test_vss')]

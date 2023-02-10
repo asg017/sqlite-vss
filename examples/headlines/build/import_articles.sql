@@ -13,10 +13,10 @@ create table articles(
 
 insert into articles(headline, description, link, category, authors, date)
   select
-    json_extract(line, '$.headline')           as headline,
-    json_extract(line, '$.short_description')  as description,
-    json_extract(line, '$.link')               as link,
-    json_extract(line, '$.category')           as category,
-    json_extract(line, '$.authors')            as authors,
-    json_extract(line, '$.date')               as date
+    line ->> '$.headline'           as headline,
+    line ->> '$.short_description'  as description,
+    line ->> '$.link'               as link,
+    line ->> '$.category'           as category,
+    line ->> '$.authors'            as authors,
+    line ->> '$.date'               as date
   from lines_read('News_Category_Dataset_v3.json');

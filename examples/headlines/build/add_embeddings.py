@@ -1,5 +1,4 @@
 import sqlite3
-import json
 import sys
 
 print(sys.argv)
@@ -45,10 +44,10 @@ def fill_headline_embeddings():
       db.execute(
         """
           update articles 
-          set headline_embedding = vector_to_blob(vector_from_json(?)) 
+          set headline_embedding = ?
           where rowid = ?
         """, 
-        [json.dumps(embedding.tolist()), rowid]
+        [embedding.tobytes(), rowid]
       )
     
     db.commit()
@@ -59,7 +58,7 @@ def fill_description_embedding():
       """
         select 
           rowid, 
-          headline 
+          description 
         from articles 
         where description_embedding is null 
         limit ?
@@ -80,10 +79,10 @@ def fill_description_embedding():
       db.execute(
         """
           update articles 
-          set description_embedding = vector_to_blob(vector_from_json(?)) 
+          set description_embedding = ?
           where rowid = ?
         """, 
-        [json.dumps(embedding.tolist()), rowid]
+        [embedding.tobytes(), rowid]
       )
     
     db.commit()
