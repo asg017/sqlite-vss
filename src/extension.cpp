@@ -813,7 +813,7 @@ static int vssIndexFilter(
     // https://sqlite.org/forum/info/6b32f818ba1d97ef
     else if(sqlite3_libversion_number() < 3041000) {
       sqlite3_free(pVtabCursor->pVtab->zErrMsg);
-      pVtabCursor->pVtab->zErrMsg = sqlite3_mprintf("vss_search() only support vss_search_params() as a 2nd parameter for SQLite versions below 3.41.0");
+      pVtabCursor->pVtab->zErrMsg = sqlite3_mprintf("vss_search() only support vss_search_params() as a 2nd parameter for SQLite versions at or above 3.41.0");
       return SQLITE_ERROR;
     }
     else if ((query_vector = pCur->table->vector_api->xValueAsVector(argv[0])) != NULL) {
