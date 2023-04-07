@@ -54,6 +54,8 @@ jobs:
   test-ubuntu:
     runs-on: ubuntu-20.04
     needs: [build-ubuntu-extension, build-ubuntu-python]
+    env:
+      DENO_DIR: deno_cache
     steps:
       - uses: actions/checkout@v3
       - uses: actions/download-artifact@v3
