@@ -1,6 +1,6 @@
 [submodule "vendor/faiss"]
 	path = vendor/faiss
 	url = https://github.com/facebookresearch/faiss
-[submodule "vendor/sqlite-vector"]
-	path = vendor/sqlite-vector
-	url = https://github.com/asg017/sqlite-vector.git
+[submodule "vendor/json"]
+	path = vendor/json
+	url = https://github.com/nlohmann/json.git
