@@ -137,7 +137,8 @@ jobs:
         with:
           name: sqlite-vss-macos-wheels
           path: dist/debug/wheels
-      - run: /usr/local/opt/python@3/libexec/bin/pip install --find-links dist/debug/wheels sqlite_vector
+      - run: brew install libomp
+      - run: /usr/local/opt/python@3/libexec/bin/pip install --find-links dist/debug/wheels sqlite_vss
       - run: find dist
       - run: make test-loadable python=/usr/local/opt/python@3/libexec/bin/python
       - run: make test-python python=/usr/local/opt/python@3/libexec/bin/python
