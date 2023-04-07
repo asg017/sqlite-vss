@@ -1,6 +1,10 @@
 from setuptools import setup
 
-VERSION = "0.0.1-alpha.8"
+version = {}
+with open("datasette_sqlite_vss/version.py") as fp:
+    exec(fp.read(), version)
+
+VERSION = version['__version__']
 
 setup(
     name="datasette-sqlite-vss",

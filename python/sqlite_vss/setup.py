@@ -2,7 +2,11 @@ from setuptools import setup, Extension
 import os
 import platform
 
-VERSION = "0.0.1-alpha.8"
+version = {}
+with open("sqlite_vss/version.py") as fp:
+    exec(fp.read(), version)
+
+VERSION = version['__version__']
 
 system = platform.system()
 machine = platform.machine()
