@@ -74,13 +74,15 @@ loadable-release: $(TARGET_LOADABLE_RELEASE)
 
 
 python: $(TARGET_WHEELS) $(TARGET_LOADABLE) python/sqlite_vss/setup.py python/sqlite_vss/sqlite_vss/__init__.py .github/workflows/rename-wheels.py
-	cp $(TARGET_LOADABLE) $(INTERMEDIATE_PYPACKAGE_EXTENSION) 
+	cp $(TARGET_LOADABLE_VECTOR) $(INTERMEDIATE_PYPACKAGE_EXTENSION) 
+	cp $(TARGET_LOADABLE_VSS) $(INTERMEDIATE_PYPACKAGE_EXTENSION) 
 	rm $(TARGET_WHEELS)/sqlite_vss* || true
 	pip3 wheel python/sqlite_vss/ -w $(TARGET_WHEELS)
 	python3 .github/workflows/rename-wheels.py $(TARGET_WHEELS) $(RENAME_WHEELS_ARGS)
 
 python-release: $(TARGET_LOADABLE_RELEASE) $(TARGET_WHEELS_RELEASE) python/sqlite_vss/setup.py python/sqlite_vss/sqlite_vss/__init__.py .github/workflows/rename-wheels.py
-	cp $(TARGET_LOADABLE_RELEASE)  $(INTERMEDIATE_PYPACKAGE_EXTENSION) 
+	cp $(TARGET_LOADABLE_RELEASE_VECTOR) $(INTERMEDIATE_PYPACKAGE_EXTENSION) 
+	cp $(TARGET_LOADABLE_RELEASE_VSS) $(INTERMEDIATE_PYPACKAGE_EXTENSION) 
 	rm $(TARGET_WHEELS_RELEASE)/sqlite_vss* || true
 	pip3 wheel python/sqlite_vss/ -w $(TARGET_WHEELS_RELEASE)
 	python3 .github/workflows/rename-wheels.py $(TARGET_WHEELS_RELEASE) $(RENAME_WHEELS_ARGS)
