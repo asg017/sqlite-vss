@@ -66,8 +66,8 @@ jobs:
           name: sqlite-vss-ubuntu-wheels
           path: dist/debug/
       - run: pip install --find-links dist/debug/ sqlite_vss
-      #- run: make test-loadable
-      #- run: make test-python
+      - run: make test-loadable
+      - run: make test-python
   build-macos-extension:
     name: Building macos-latest
     runs-on: macos-latest
