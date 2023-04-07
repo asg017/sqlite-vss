@@ -90,8 +90,8 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('deno/deno.lock') }}
       - run: make test-deno
         env:
-          DENO_SQLITE_VECTOR_PATH: ${{ github.workspace }}/dist/vector0
-          DENO_SQLITE_VSS_PATH: ${{ github.workspace }}/dist/vss0
+          DENO_SQLITE_VECTOR_PATH: ${{ github.workspace }}/dist/debug/vector0
+          DENO_SQLITE_VSS_PATH: ${{ github.workspace }}/dist/debug/vss0
   build-macos-extension:
     name: Building macos-latest
     runs-on: macos-latest
