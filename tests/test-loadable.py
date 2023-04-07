@@ -3,11 +3,8 @@ import unittest
 import time
 import os
 
-#EXT_PATH="./dist/debug/vss0"
-#EXT_VECTOR_PATH="./dist/debug/vector0"
-EXT_VSS_PATH="./build/vss0"
-EXT_VECTOR_PATH="./build/vector0"
-
+EXT_VSS_PATH="./dist/debug/vss0"
+EXT_VECTOR_PATH="./dist/debug/vector0"
 
 def connect(path=":memory:"):
   db = sqlite3.connect(path)
