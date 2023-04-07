@@ -44,7 +44,7 @@ TARGET_LOADABLE_RELEASE=$(TARGET_LOADABLE_RELEASE_VECTOR) $(TARGET_LOADABLE_RELE
 TARGET_WHEELS=$(prefix)/debug/wheels
 TARGET_WHEELS_RELEASE=$(prefix)/release/wheels
 
-INTERMEDIATE_PYPACKAGE_EXTENSION=python/sqlite_vss/sqlite_vss/vss0.$(LOADABLE_EXTENSION)
+INTERMEDIATE_PYPACKAGE_EXTENSION=python/sqlite_vss/sqlite_vss/
 
 $(prefix):
 	mkdir -p $(prefix)/debug
