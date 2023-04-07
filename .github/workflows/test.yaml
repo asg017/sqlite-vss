@@ -68,6 +68,27 @@ jobs:
       - run: pip install --find-links dist/debug/ sqlite_vss
       - run: make test-loadable
       - run: make test-python
+      # for test-npm
+      - uses: actions/setup-node@v3
+        with:
+          cache: "npm"
+          cache-dependency-path: npm/sqlite-vss/package.json
+      - run: npm install
+        working-directory: npm/sqlite-vss
+      - run: make test-npm
+      # for test-deno
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.30
+      - name: Cache Deno dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.DENO_DIR }}
+          key: ${{ runner.os }}-${{ hashFiles('deno/deno.lock') }}
+      - run: make test-deno
+        env:
+          DENO_SQLITE_VECTOR_PATH: ${{ github.workspace }}/dist/vector0
+          DENO_SQLITE_VSS_PATH: ${{ github.workspace }}/dist/vss0
   build-macos-extension:
     name: Building macos-latest
     runs-on: macos-latest
