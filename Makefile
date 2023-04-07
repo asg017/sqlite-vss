@@ -104,7 +104,7 @@ test-python:
 
 test:
 	make test-loadable
-	#make test-python
+	make test-python
 
 
 test-loadable-3.41.0:
