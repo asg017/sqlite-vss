@@ -33,11 +33,13 @@ endif
 
 prefix=dist
 
-TARGET_LOADABLE=$(prefix)/debug/vss0.$(LOADABLE_EXTENSION)
-TARGET_LOADABLE_RELEASE=$(prefix)/release/vss0.$(LOADABLE_EXTENSION)
+TARGET_LOADABLE_VECTOR=$(prefix)/debug/vector0.$(LOADABLE_EXTENSION)
+TARGET_LOADABLE_VSS=$(prefix)/debug/vss0.$(LOADABLE_EXTENSION)
+TARGET_LOADABLE=$(TARGET_LOADABLE_VECTOR) $(TARGET_LOADABLE_VSS)
 
-TARGET_LOADABLE_DEP=$(prefix)/debug/vector0.$(LOADABLE_EXTENSION)
-TARGET_LOADABLE_DEP_RELEASE=$(prefix)/release/vector0.$(LOADABLE_EXTENSION)
+TARGET_LOADABLE_RELEASE_VSS=$(prefix)/release/vss0.$(LOADABLE_EXTENSION)
+TARGET_LOADABLE_RELEASE_VECTOR=$(prefix)/release/vector0.$(LOADABLE_EXTENSION)
+TARGET_LOADABLE_RELEASE=$(TARGET_LOADABLE_RELEASE_VECTOR) $(TARGET_LOADABLE_RELEASE_VSS)
 
 TARGET_WHEELS=$(prefix)/debug/wheels
 TARGET_WHEELS_RELEASE=$(prefix)/release/wheels
@@ -48,21 +50,16 @@ $(prefix):
 	mkdir -p $(prefix)/debug
 	mkdir -p $(prefix)/release
 
-$(TARGET_LOADABLE): $(prefix) src/extension.cpp
+$(TARGET_LOADABLE): $(prefix) src/vss-extension.cpp src/vector-extension.cpp
 	cmake -B build; make -C build
-	cp build/vss0.$(LOADABLE_EXTENSION) $@
+	cp build/vector0.$(LOADABLE_EXTENSION) $(TARGET_LOADABLE_VECTOR)
+	cp build/vss0.$(LOADABLE_EXTENSION) $(TARGET_LOADABLE_VSS)
 
 $(TARGET_LOADABLE_RELEASE): $(prefix)
 	cmake -DCMAKE_BUILD_TYPE=Release -B build_release; make -C build_release
-	cp build_release/vss0.$(LOADABLE_EXTENSION) $@
+	cp build_release/vector0.$(LOADABLE_EXTENSION) $(TARGET_LOADABLE_RELEASE_VECTOR)
+	cp build_release/vss0.$(LOADABLE_EXTENSION) $(TARGET_LOADABLE_RELEASE_VSS)
 
-$(TARGET_LOADABLE_DEP): $(prefix)
-	(cd vendor/sqlite-vector; make loadable);
-	cp vendor/sqlite-vector/dist/debug/vector0.$(LOADABLE_EXTENSION) $@
-
-$(TARGET_LOADABLE_DEP_RELEASE): $(prefix)
-	(cd vendor/sqlite-vector; make loadable-release);
-	cp vendor/sqlite-vector/dist/release/vector0.$(LOADABLE_EXTENSION) $@
 
 $(TARGET_WHEELS): $(prefix)
 	mkdir -p $(TARGET_WHEELS)
@@ -71,9 +68,9 @@ $(TARGET_WHEELS_RELEASE): $(prefix)
 	mkdir -p $(TARGET_WHEELS_RELEASE)
 
 
-loadable: $(TARGET_LOADABLE) $(TARGET_LOADABLE_DEP) 
+loadable: $(TARGET_LOADABLE)
 
-loadable-release: $(TARGET_LOADABLE_RELEASE) $(TARGET_LOADABLE_DEP_RELEASE)
+loadable-release: $(TARGET_LOADABLE_RELEASE)
 
 
 python: $(TARGET_WHEELS) $(TARGET_LOADABLE) python/sqlite_vss/setup.py python/sqlite_vss/sqlite_vss/__init__.py .github/workflows/rename-wheels.py
