@@ -1,5 +1,7 @@
 #!/bin/bash
-wget https://www.sqlite.org/2022/sqlite-autoconf-3400100.tar.gz
-tar -xvzf sqlite-autoconf-3400100.tar.gz
-rm sqlite-autoconf-3400100.tar.gz
-mv sqlite-autoconf-3400100/ sqlite
+VENDOR_DIR=$(dirname "$0")
+
+wget https://www.sqlite.org/2022/sqlite-autoconf-3400100.tar.gz -O $VENDOR_DIR/sqlite.tar.gz
+tar -xvzf $VENDOR_DIR/sqlite.tar.gz
+rm $VENDOR_DIR/sqlite.tar.gz
+mv sqlite-autoconf-3400100/ $VENDOR_DIR/sqlite

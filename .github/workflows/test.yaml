@@ -20,8 +20,7 @@ jobs:
           path: vendor/sqlite
           key: ${{ runner.os }}-${{ hashFiles('vendor/get_sqlite.sh') }}
       - if: steps.cache-sqlite-build.outputs.cache-hit != 'true'
-        working-directory: vendor
-        run: ./get_sqlite.sh
+        run: ./vendor/get_sqlite.sh
       - if: steps.cache-sqlite-build.outputs.cache-hit != 'true'
         working-directory: vendor/sqlite
         run: ./configure && make
@@ -75,8 +74,8 @@ jobs:
           cache-dependency-path: npm/sqlite-vss/package.json
       - run: npm install
         working-directory: npm/sqlite-vss
-      - run: cp dist/vss0.so npm/sqlite-vss-linux-x64/lib
-      - run: cp dist/vector0.so npm/sqlite-vss-linux-x64/lib
+      - run: cp dist/debug/vss0.so npm/sqlite-vss-linux-x64/lib
+      - run: cp dist/debug/vector0.so npm/sqlite-vss-linux-x64/lib
       - run: make test-npm
       # for test-deno
       - uses: denoland/setup-deno@v1
@@ -105,8 +104,7 @@ jobs:
           path: vendor/sqlite
           key: ${{ runner.os }}-${{ hashFiles('vendor/get_sqlite.sh') }}
       - if: steps.cache-sqlite-build.outputs.cache-hit != 'true'
-        working-directory: vendor
-        run: ./get_sqlite.sh
+        run: ./vendor/get_sqlite.sh
       - if: steps.cache-sqlite-build.outputs.cache-hit != 'true'
         working-directory: vendor/sqlite
         run: ./configure && make
