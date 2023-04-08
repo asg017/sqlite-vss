@@ -93,8 +93,8 @@ jobs:
           DENO_SQLITE_VECTOR_PATH: ${{ github.workspace }}/dist/debug/vector0
           DENO_SQLITE_VSS_PATH: ${{ github.workspace }}/dist/debug/vss0
   build-macos-extension:
-    name: Building macos-latest
-    runs-on: macos-latest
+    name: Building MacOS extension
+    runs-on: macos-11
     steps:
       - uses: actions/checkout@v3
         with:
