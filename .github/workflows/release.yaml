@@ -31,7 +31,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: sqlite-vss-ubuntu
+          name: sqlite-vss-linux_x86
           path: dist/release/*.so
   build-linux_x86-python:
     runs-on: ubuntu-20.04
@@ -41,7 +41,7 @@ jobs:
       - name: Download workflow artifacts
         uses: actions/download-artifact@v3
         with:
-          name: sqlite-vss-ubuntu
+          name: sqlite-vss-linux_x86
           path: dist/release/
       - uses: actions/setup-python@v3
       - run: pip install wheel
@@ -49,7 +49,7 @@ jobs:
       - run: make datasette-release
       - uses: actions/upload-artifact@v3
         with:
-          name: sqlite-vss-ubuntu-wheels
+          name: sqlite-vss-linux_x86-wheels
           path: dist/release/wheels/*.whl
   build-macos-extension:
     name: Building macos extension
@@ -177,7 +177,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v3
         with:
-          name: sqlite-vss-ubuntu-wheels
+          name: sqlite-vss-linux_x86-wheels
           path: dist
       - uses: actions/download-artifact@v3
         with:

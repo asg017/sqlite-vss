@@ -83,7 +83,7 @@ python: $(TARGET_WHEELS) $(TARGET_LOADABLE) python/sqlite_vss/setup.py python/sq
 	python3 scripts/rename-wheels.py $(TARGET_WHEELS) $(RENAME_WHEELS_ARGS)
 	echo "✅ generated python wheel"
 
-python-release: $(TARGET_LOADABLE_RELEASE) $(TARGET_WHEELS_RELEASE) python/sqlite_vss/setup.py python/sqlite_vss/sqlite_vss/__init__.py .github/workflows/rename-wheels.py
+python-release: $(TARGET_LOADABLE_RELEASE) $(TARGET_WHEELS_RELEASE) python/sqlite_vss/setup.py python/sqlite_vss/sqlite_vss/__init__.py scripts/rename-wheels.py
 	cp $(TARGET_LOADABLE_RELEASE_VECTOR) $(INTERMEDIATE_PYPACKAGE_EXTENSION) 
 	cp $(TARGET_LOADABLE_RELEASE_VSS) $(INTERMEDIATE_PYPACKAGE_EXTENSION) 
 	rm $(TARGET_WHEELS_RELEASE)/sqlite_vss* || true
