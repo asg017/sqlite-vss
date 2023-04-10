@@ -13,14 +13,14 @@ import * as sqlite_vss from "https://deno.land/x/sqlite_vss@v0.0.2-alpha.2/mod.t
 
 const db = new Database(":memory:");
 
-  db.enableLoadExtension = true;
-  db.loadExtension(sqlite_vss.getLoadablePath());
+db.enableLoadExtension = true;
+sqlite_vss.load(db);
 
-  const [version] = db
-    .prepare("select vss_version()")
-    .value<[string]>()!;
+const [version] = db
+  .prepare("select vss_version()")
+  .value<[string]>()!;
 
-  console.log(version);
+console.log(version);
 
 ```
 

@@ -6,23 +6,23 @@
 npm install sqlite-vss
 ```
 
-The `sqlite-vss` package is meant to be used with Node SQLite clients like [`better-sqlite3`](https://github.com/WiseLibs/better-sqlite3) and [`node-sqlite3`](https://github.com/TryGhost/node-sqlite3). For `better-sqlite3`, call [`.loadExtension()`](https://github.com/WiseLibs/better-sqlite3/blob/master/docs/api.md#loadextensionpath-entrypoint---this) on your database object, passing in [`getLoadablePath()`](#getLoadablePath).
+The `sqlite-vss` package is meant to be used with Node SQLite clients like [`better-sqlite3`](https://github.com/WiseLibs/better-sqlite3) and [`node-sqlite3`](https://github.com/TryGhost/node-sqlite3).
 
 ```js
+// using sqlite-vss with better-sqlite3
 import Database from "better-sqlite3";
 import * as sqlite_vss from "sqlite-vss";
 
 const db = new Database(":memory:");
 
-db.loadExtension(sqlite_vss.getLoadablePath());
+sqlite_vss.load(db);
 
 const version = db.prepare("select vss_version()").pluck().get();
 console.log(version); // "v0.2.0"
 ```
 
-For `node-sqlite3`, call the similarly named [`.loadExtension()`](https://github.com/TryGhost/node-sqlite3/wiki/API#loadextensionpath--callback) method on your database object, and pass in [`getLoadablePath()`](#getLoadablePath).
-
 ```js
+// using sqlite-vss with node-sqlite3
 import sqlite3 from "sqlite3";
 import * as sqlite_vss from "sqlite-vss";
 
@@ -31,7 +31,7 @@ const db = new sqlite3.Database(":memory:");
 db.loadExtension(sqlite_vss.getLoadablePath());
 
 db.get("select vss_version()", (err, row) => {
-  console.log(row); // {json_schema_version(): "v0.2.0"}
+  console.log(row); // {vss_version(): "v0.2.0"}
 });
 ```
 

@@ -56,3 +56,14 @@ export function getVectorLoadablePath() {
 export function getVssLoadablePath() {
   return loadablePathResolver("vss0");
 }
+
+export function loadVector(db) {
+  db.loadExtension(getVectorLoadablePath());
+}
+export function loadVss(db) {
+  db.loadExtension(getVssLoadablePath());
+}
+export function load(db) {
+  loadVector(db);
+  loadVss(db);
+}
