@@ -3,7 +3,7 @@
 #define SQLITE_VSS_VERSION_PATCH @sqlite-vss_VERSION_PATCH@
 #define SQLITE_VSS_VERSION_BUILD @sqlite-vss_VERSION_TWEAK@
 
-#ifdef SQLITE_VSS_VERSION_BUILD
+#ifdef SQLITE_VSS_VERSION_TWEAK
     #define SQLITE_VSS_VERSION "v@sqlite-vss_VERSION_MAJOR@.@sqlite-vss_VERSION_MINOR@.@sqlite-vss_VERSION_PATCH@-alpha.@sqlite-vss_VERSION_TWEAK@"
 #else
     #define SQLITE_VSS_VERSION "v@sqlite-vss_VERSION_MAJOR@.@sqlite-vss_VERSION_MINOR@.@sqlite-vss_VERSION_PATCH@"
