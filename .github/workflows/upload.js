@@ -25,21 +25,26 @@ const extension = {
   ],
 };
 
-function targz(files) {
-  return new Promise((resolve, reject) => {
-    console.log("targz files: ", files[0].name, files[0]);
+async function targz(files) {
+  console.log("targz files: ", files[0].name, files[0]);
 
-    const tarStream = tar.pack();
+  const tarStream = tar.pack();
 
-    for (const file of files) {
-      tarStream.entry({ name: file.name }, file.data);
-    }
+  for (const file of files) {
+    await new Promise((resolve, reject) => {
+      tarStream.entry({ name: file.name }, file.data, (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  }
 
-    tarStream.finalize();
+  tarStream.finalize();
 
-    const gzip = zlib.createGzip();
+  const gzip = zlib.createGzip();
 
-    const chunks = [];
+  const chunks = [];
+  return await new Promise((resolve, reject) => {
     tarStream
       .pipe(gzip)
       .on("data", (chunk) => {
