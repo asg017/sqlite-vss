@@ -5,46 +5,56 @@ const tar = require("tar-fs");
 const { basename } = require("path");
 
 const PROJECT = "sqlite-vss";
-const extension = {
+const vss = {
   name: "vss0",
   description: "",
   platforms: [
     {
-      paths: [
-        "sqlite-vss-linux_x86/vss0.so",
-        "sqlite-vss-linux_x86/vector0.so",
-      ],
+      path: "sqlite-vss-linux_x86/vss0.so",
       os: "linux",
       cpu: "x86_64",
     },
     {
-      paths: ["sqlite-vss-macos/vector0.dylib", "sqlite-vss-macos/vss0.dylib"],
+      path: "sqlite-vss-macos/vss0.dylib",
+      os: "darwin",
+      cpu: "x86_64",
+    },
+  ],
+};
+const vector = {
+  name: "vector0",
+  description: "",
+  platforms: [
+    {
+      path: "sqlite-vss-linux_x86/vector0.so",
+      os: "linux",
+      cpu: "x86_64",
+    },
+    {
+      path: "sqlite-vss-macos/vector0.dylib",
       os: "darwin",
       cpu: "x86_64",
     },
   ],
 };
 
-async function targz(files) {
-  console.log("targz files: ", files[0].name, files[0]);
+const extensions = [vector, vss];
 
-  const tarStream = tar.pack();
+function targz(files) {
+  return new Promise((resolve, reject) => {
+    console.log("targz files: ", files[0].name, files[0]);
 
-  for (const file of files) {
-    await new Promise((resolve, reject) => {
-      tarStream.entry({ name: file.name }, file.data, (err) => {
-        if (err) reject(err);
-        else resolve();
-      });
-    });
-  }
+    const tarStream = tar.pack();
 
-  tarStream.finalize();
+    for (const file of files) {
+      tarStream.entry({ name: file.name }, file.data);
+    }
 
-  const gzip = zlib.createGzip();
+    tarStream.finalize();
 
-  const chunks = [];
-  return await new Promise((resolve, reject) => {
+    const gzip = zlib.createGzip();
+
+    const chunks = [];
     tarStream
       .pipe(gzip)
       .on("data", (chunk) => {
@@ -72,19 +82,14 @@ module.exports = async ({ github, context }) => {
   });
   const release_id = release.data.id;
 
-  async function uploadPlatform(platform) {
-    const { paths, os, cpu } = platform;
+  async function uploadPlatform(extension_name, platform) {
+    const { path, os, cpu } = platform;
 
-    const tar = await targz(
-      await Promise.all(
-        paths.map(async (path) => ({
-          name: basename(path),
-          contents: await fs.readFile(path),
-        }))
-      )
-    );
+    const artifact = basename(path);
+    const contents = await fs.readFile(path);
+    const tar = await targz([{ name: artifact, data: contents }]);
 
-    const asset_name = `${PROJECT}-${VERSION}-${os}-${cpu}.tar.gz`;
+    const asset_name = `${PROJECT}-${VERSION}-${extension_name}-${os}-${cpu}.tar.gz`;
     const asset_md5 = crypto.createHash("md5").update(tar).digest("base64");
     const asset_sha256 = crypto.createHash("sha256").update(tar).digest("hex");
 
@@ -107,14 +112,19 @@ module.exports = async ({ github, context }) => {
 
   const spm_json = {
     version: 0,
-    extensions: {
-      [extension.name]: {
-        description: extension.description,
-        platforms: await Promise.all(
-          extension.platforms.map((platform) => uploadPlatform(platform))
-        ),
-      },
-    },
+    extensions: Object.fromEntries(
+      await Promise.all(
+        extensions.map(async ({ name, description, platforms }) => [
+          name,
+          {
+            description,
+            platforms: await Promise.all(
+              platforms.map((platform) => uploadPlatform(name, platform))
+            ),
+          },
+        ])
+      )
+    ),
   };
 
   await github.rest.repos.uploadReleaseAsset({
