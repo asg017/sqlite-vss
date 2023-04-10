@@ -1,6 +1,6 @@
 {
   "name": "sqlite-vss",
-  "version": "0.0.2-alpha.4",
+  "version": "0.0.2-alpha.5",
   "github": "https://github.com/asg017/sqlite-vss",
   "tasks": {
     "test": "deno test --unstable -A test.ts"
