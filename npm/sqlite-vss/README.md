@@ -42,8 +42,6 @@ See [the full API Reference](#api-reference) for the Node API, and [`docs.md`](.
 Since the underlying `vss0` SQLite extension is pre-compiled, the `sqlite-vss` NPM package only works on a few "platforms" (operating systems + CPU architectures). These platforms include:
 
 - `darwin-x64` (MacOS x86_64)
-- `darwin-arm64` (MacOS M1 and M2 chips)
-- `win32-x64` (Windows x86_64)
 - `linux-x64` (Linux x86_64)
 
 To see which platform your machine is, check the [`process.arch`](https://nodejs.org/api/process.html#processarch) and [`process.platform`](https://nodejs.org/api/process.html#processplatform) values like so:

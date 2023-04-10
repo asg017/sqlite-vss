@@ -6,7 +6,7 @@ on:
 permissions:
   contents: read
 jobs:
-  build-ubuntu-extension:
+  build-linux_x86-extension:
     name: Building ubuntu
     runs-on: ubuntu-20.04
     steps:
@@ -32,10 +32,10 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: sqlite-vss-ubuntu
-          path: dist/release/vss0.so
-  build-ubuntu-python:
+          path: dist/release/*.so
+  build-linux_x86-python:
     runs-on: ubuntu-20.04
-    needs: [build-ubuntu-extension]
+    needs: [build-linux_x86-extension]
     steps:
       - uses: actions/checkout@v3
       - name: Download workflow artifacts
@@ -87,7 +87,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: sqlite-vss-macos
-          path: dist/release/vss0.dylib
+          path: dist/release/*.dylib
   build-macos-python:
     runs-on: macos-latest
     needs: [build-macos-extension]
@@ -108,7 +108,7 @@ jobs:
           path: dist/release/wheels/*.whl
   upload-release-assets:
     name: Upload release assets
-    needs: [build-macos-extension, build-ubuntu-extension]
+    needs: [build-macos-extension, build-linux_x86-extension]
     permissions:
       contents: write
     runs-on: ubuntu-latest
@@ -123,8 +123,56 @@ jobs:
           script: |
             const script = require('.github/workflows/upload.js')
             await script({github, context})
+  upload-deno:
+    name: Upload Deno release assets
+    needs: [build-macos-extension, build-linux_x86-extension]
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Download workflow artifacts
+        uses: actions/download-artifact@v2
+      - uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const script = require('.github/workflows/upload-deno-assets.js')
+            await script({github, context})
+  upload-npm:
+    needs: [build-macos-extension, build-linux_x86-extension]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Download workflow artifacts
+        uses: actions/download-artifact@v2
+      - run: |
+          cp sqlite-vss-linux_x86/vector0.so npm/sqlite-vss-linux-x64/lib/vector0.so
+          cp sqlite-vss-macos/vector0.dylib npm/sqlite-vss-darwin-x64/lib/vector0.dylib
+          cp sqlite-vss-linux_x86/vss0.so npm/sqlite-vss-linux-x64/lib/vss0.so
+          cp sqlite-vss-macos/vss0.dylib npm/sqlite-vss-darwin-x64/lib/vss0.dylib
+      - name: Install node
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16"
+          registry-url: "https://registry.npmjs.org"
+      - name: Publish NPM sqlite-vss-linux-x64
+        working-directory: npm/sqlite-vss-linux-x64
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish NPM sqlite-vss-darwin-x64
+        working-directory: npm/sqlite-vss-darwin-x64
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish NPM sqlite-vss
+        working-directory: npm/sqlite-vss
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
   upload_pypi:
-    needs: [build-ubuntu-python, build-macos-python]
+    needs: [build-linux_x86-python, build-macos-python]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v3

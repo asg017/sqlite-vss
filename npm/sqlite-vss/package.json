@@ -21,10 +21,8 @@
     "*.dll"
   ],
   "optionalDependencies": {
-    "sqlite-vss-darwin-arm64": "0.0.1-alpha.8",
     "sqlite-vss-darwin-x64": "0.0.1-alpha.8",
-    "sqlite-vss-linux-x64": "0.0.1-alpha.8",
-    "sqlite-vss-windows-x64": "0.0.1-alpha.8"
+    "sqlite-vss-linux-x64": "0.0.1-alpha.8"
   },
   "devDependencies": {
     "better-sqlite3": "^8.1.0",
