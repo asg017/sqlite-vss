@@ -2,6 +2,28 @@ const fs = require("fs").promises;
 const crypto = require("crypto");
 const zlib = require("zlib");
 const tar = require("tar-fs");
+const { basename } = require("path");
+
+const PROJECT = "sqlite-vss";
+const extension = {
+  name: "vss0",
+  description: "",
+  platforms: [
+    {
+      paths: [
+        "sqlite-vss-linux_x86/vss0.so",
+        "sqlite-vss-linux_x86/vector0.so",
+      ],
+      os: "linux",
+      cpu: "x86_64",
+    },
+    {
+      paths: ["sqlite-vss-macos/vector0.dylib", "sqlite-vss-macos/vss0.dylib"],
+      os: "darwin",
+      cpu: "x86_64",
+    },
+  ],
+};
 
 function targz(files) {
   return new Promise((resolve, reject) => {
@@ -25,7 +47,6 @@ function targz(files) {
       })
       .on("end", () => {
         const buffer = Buffer.concat(chunks);
-        console.log(buffer);
         resolve(buffer);
       })
       .on("error", reject);
@@ -37,89 +58,65 @@ module.exports = async ({ github, context }) => {
     repo: { owner, repo },
     sha,
   } = context;
-  console.log(process.env.GITHUB_REF);
+  const VERSION = process.env.GITHUB_REF_NAME;
+
   const release = await github.rest.repos.getReleaseByTag({
     owner,
     repo,
     tag: process.env.GITHUB_REF.replace("refs/tags/", ""),
   });
-  console.log("release id: ", release.data.id);
-  const VERSION = process.env.GITHUB_REF_NAME;
   const release_id = release.data.id;
 
-  const compiled_extensions = [
-    {
-      name: "vss0.so",
-      path: "sqlite-vss-ubuntu/vss0.so",
-      asset_name: `sqlite-vss-${VERSION}-ubuntu-x86_64.tar.gz`,
+  async function uploadPlatform(platform) {
+    const { paths, os, cpu } = platform;
+
+    const tar = await targz(
+      await Promise.all(
+        paths.map(async (path) => ({
+          name: basename(path),
+          contents: await fs.readFile(path),
+        }))
+      )
+    );
+
+    const asset_name = `${PROJECT}-${VERSION}-${os}-${cpu}.tar.gz`;
+    const asset_md5 = crypto.createHash("md5").update(tar).digest("base64");
+    const asset_sha256 = crypto.createHash("sha256").update(tar).digest("hex");
+
+    await github.rest.repos.uploadReleaseAsset({
+      owner,
+      repo,
+      release_id,
+      name: asset_name,
+      data: tar,
+    });
+
+    return {
+      os,
+      cpu,
+      asset_name,
+      asset_sha256,
+      asset_md5,
+    };
+  }
+
+  const spm_json = {
+    version: 0,
+    extensions: {
+      [extension.name]: {
+        description: extension.description,
+        platforms: await Promise.all(
+          extension.platforms.map((platform) => uploadPlatform(platform))
+        ),
+      },
     },
-    {
-      name: "vss0.dylib",
-      path: "sqlite-vss-macos/vss0.dylib",
-      asset_name: `sqlite-vss-${VERSION}-macos-x86_64.tar.gz`,
-    },
-  ];
-  console.log(compiled_extensions);
-
-  const extension_assets = await Promise.all(
-    compiled_extensions.map(async (d) => {
-      const extensionContents = await fs.readFile(d.path);
-      const ext_sha256 = crypto
-        .createHash("sha256")
-        .update(extensionContents)
-        .digest("hex");
-      console.log("ext_sha256", ext_sha256);
-      const tar = await targz([{ name: d.name, data: extensionContents }]);
-      console.log("tar", tar);
-
-      const tar_md5 = crypto.createHash("md5").update(tar).digest("base64");
-      const tar_sha256 = crypto.createHash("sha256").update(tar).digest("hex");
-      console.log("tar_md5", tar_md5);
-      console.log("tar_sha256", tar_sha256);
-
-      return {
-        ext_sha256,
-        tar_md5,
-        tar_sha256,
-        tar,
-        asset_name: d.asset_name,
-      };
-    })
-  );
-  console.log("assets length: ", extension_assets.length);
-  const checksum = {
-    extensions: Object.fromEntries(
-      extension_assets.map((d) => [
-        d.asset_name,
-        {
-          asset_sha265: d.tar_sha256,
-          asset_md5: d.tar_md5,
-          extension_sha256: d.ext_sha256,
-        },
-      ])
-    ),
   };
-  console.log("checksum", checksum);
 
   await github.rest.repos.uploadReleaseAsset({
     owner,
     repo,
     release_id,
     name: "spm.json",
-    data: JSON.stringify(checksum),
+    data: JSON.stringify(spm_json),
   });
-
-  await Promise.all(
-    extension_assets.map(async (d) => {
-      console.log("uploading ", d.asset_name);
-      await github.rest.repos.uploadReleaseAsset({
-        owner,
-        repo,
-        release_id,
-        name: d.asset_name,
-        data: d.tar,
-      });
-    })
-  );
-  return;
 };
