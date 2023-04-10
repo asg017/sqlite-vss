@@ -19,6 +19,7 @@ RUN ./configure
 RUN make
 ENV LD_LIBRARY_PATH=/sqlite/sqlite-snapshot-202302081247/.libs
 
+#  TODO outdated, use the datasette-sqlite-vss plugin instead
 
 WORKDIR /app
 RUN curl -L 'https://github.com/asg017/sqlite-vss/releases/download/v0.0.1-alpha.7/sqlite-vss-v0.0.1-alpha.7-ubuntu-x86_64.tar.gz' \

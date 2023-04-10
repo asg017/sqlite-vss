@@ -4,26 +4,74 @@ As a reminder, `sqlite-vss` is still young, so breaking changes should be expect
 
 ## Building `sqlite-vss` yourself
 
-If
+If there isn't a prebuilt `sqlite-vss` build for your operating system or CPU architecture, you can try building `sqlite-vss` yourself. It'll require a C++ compiler, cmake, and possibly a few other libraries to build correctly.
+
+Below are the general steps to build `sqlite-vss`. Your operating system may require a few more libraries or setup instructions, so some tips are listed below under [Platform-specific compiling tips](#platform-specific-compiling-tips).
+
+To start, clone this repository and its submodules.
 
 ```
 git clone --recurse-submodules https://github.com/asg017/sqlite-vss.git
-
 cd sqlite-vss
+```
 
+Next, you'll need to build a vendored version of SQLite under `vendor/sqlite`. To retrieve the SQLite amalgammation, run the `./vendor/get_sqlite.sh` script:
+
+```
 ./vendor/get_sqlite.sh
+```
 
+Then navigate to the newly built `vendor/sqlite` directory and build the SQLite library.
+
+```
 cd vendor/sqlite
 ./configure && make
+```
 
-cd ../../
+Now that all dependencies are downloaded and configured, you can build the `sqlite-vss` extension! Run either `make loadable` or `make loadable-release` to build a loadable SQLite extension.
 
+```
 # build a debug version of `sqlite-vss`. Faster to compile, slow at runtime
 make loadable
 
 # build a release version of `sqlite-vss`. Slow to compile, but fast at runtime
 make loadable-release
+```
 
+If you ran `make loadable`, then under `dist/debug` you'll find debug version of `vector0` and `vss0`, with file extensions `.dylib`, `.so`, or `.dll`, depending on your operating system. If you ran `make loadable-release`, you'll find optimized version of `vector0` and `vss`under `dist/release`.
+
+### Platform-specific compiling tips
+
+#### MacOS (x86_64)
+
+On Macs, you may need to install and use `llvm` for compilation. It can be install with brew:
+
+```
+brew install llvm
+```
+
+Additionally, if you see other cryptic compiling errors, you may need to explicitly state to use the `llvm` compilers, with flags like so:
+
+```
+export CC=/usr/local/opt/llvm/bin/clang
+export CXX=/usr/local/opt/llvm/bin/clang++
+export LDFLAGS="-L/usr/local/opt/llvm/lib"
+export CPPFLAGS="-I/usr/local/opt/llvm/include"
+```
+
+If you come across any problems, please file an issue!
+
+#### MacOS (M1/M2 arm)
+
+I haven't tried compiling `sqlite-vss` on a M1 Mac yet, but others have reported success. See the above instructions if you have problems, or file an issue.
+
+#### Linux (x86_64)
+
+You most likely will need to install the following libraries before compiling:
+
+```
+sudo apt-get update
+sudo apt-get install libgomp1 libatlas-base-dev liblapack-dev
 ```
 
 ## API Reference
@@ -67,7 +115,7 @@ insert into vss_xyz(rowid, headline_embedding, description_embedding)
   select rowid, headline_embedding, description_embedding from xyz;
 ```
 
-The vectors themselves can be any [float format supported by `sqlite-vectors`](https://github.com/asg017/sqlite-vector/blob/main/docs.md#float-vector-format), including JSON and in "raw bytes". The rowid is optional, but if your `vss_xyz` table is linked to a `xyz` table, its a good idea to use the same rowids for `JOIN`s later.
+The vectors themselves can be any JSON or "raw bytes". The rowid is optional, but if your `vss_xyz` table is linked to a `xyz` table, its a good idea to use the same rowids for `JOIN`s later.
 
 In order for the data to actually insert and appear in the index, make sure to `COMMIT` your inserted data. This is automatically done when using the SQLite CLI, but client libraries like Python will require explicit `.commit()` calls.
 
