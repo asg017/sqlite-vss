@@ -1,5 +1,6 @@
 SHELL := /bin/bash
 VERSION=$(shell cat VERSION)
+CMAKE_VERSION=$(shell sed 's/-alpha//g' VERSION)
 
 ifeq ($(shell uname -s),Darwin)
 CONFIG_DARWIN=y
@@ -52,12 +53,12 @@ $(prefix):
 	mkdir -p $(prefix)/release
 
 $(TARGET_LOADABLE): $(prefix) src/vss-extension.cpp src/vector-extension.cpp src/sqlite-vss.h.in
-	cmake -B build; make -C build
+	SQLITE_VSS_CMAKE_VERSION=$(CMAKE_VERSION) cmake -B build; make -C build
 	cp build/vector0.$(LOADABLE_EXTENSION) $(TARGET_LOADABLE_VECTOR)
 	cp build/vss0.$(LOADABLE_EXTENSION) $(TARGET_LOADABLE_VSS)
 
 $(TARGET_LOADABLE_RELEASE): $(prefix)
-	cmake -DCMAKE_BUILD_TYPE=Release -B build_release; make -C build_release
+	SQLITE_VSS_CMAKE_VERSION=$(CMAKE_VERSION) cmake -DCMAKE_BUILD_TYPE=Release -B build_release; make -C build_release
 	cp build_release/vector0.$(LOADABLE_EXTENSION) $(TARGET_LOADABLE_RELEASE_VECTOR)
 	cp build_release/vss0.$(LOADABLE_EXTENSION) $(TARGET_LOADABLE_RELEASE_VSS)
 

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.17 FATAL_ERROR)
-project(sqlite-vss VERSION 0.0.1.8)
-project(sqlite-vector VERSION 0.0.1.8)
+project(sqlite-vss VERSION $ENV{SQLITE_VSS_CMAKE_VERSION})
+project(sqlite-vector VERSION $ENV{SQLITE_VSS_CMAKE_VERSION})
 
 configure_file(src/sqlite-vss.h.in sqlite-vss.h)
 
