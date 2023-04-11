@@ -130,7 +130,7 @@ jobs:
           name: sqlite-vss-macos
           path: dist/debug/*
   build-macos-arm-extension:
-    name: Building MacOS extension
+    name: Building MacOS arm extension
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v3
@@ -153,14 +153,14 @@ jobs:
         uses: actions/cache@v3
         with:
           path: build
-          key: ${{ runner.os }}-build
+          key: ${{ runner.os }}-build-todochangeme
       - run: make loadable
         env:
           # https://stackoverflow.com/questions/48825416/missing-openmp-c-flags-openmp-c-lib-names
-          CC: /usr/local/opt/llvm/bin/clang
-          CXX: /usr/local/opt/llvm/bin/clang++
-          LDFLAGS: "-L/usr/local/opt/llvm/lib"
-          CPPFLAGS: "-I/usr/local/opt/llvm/include"
+          CC: /opt/homebrew/opt/llvm/bin/clang
+          CXX: /opt/homebrew/opt/llvm/bin/clang++
+          LDFLAGS: "-L/opt/homebrew/opt/llvm/lib"
+          CPPFLAGS: "-I/opt/homebrew/opt/llvm/include"
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
