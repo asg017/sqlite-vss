@@ -6,8 +6,8 @@ on:
 permissions:
   contents: read
 jobs:
-  build-ubuntu-extension:
-    name: Building ubuntu
+  build-linux_x86-extension:
+    name: Building linux_x86
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
@@ -31,17 +31,17 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: sqlite-vss-ubuntu
+          name: sqlite-vss-linux_x86
           path: dist/debug/*
-  build-ubuntu-python:
-    runs-on: ubuntu-20.04
-    needs: [build-ubuntu-extension]
+  build-linux_x86-python:
+    runs-on: ubuntu-latest
+    needs: [build-linux_x86-extension]
     steps:
       - uses: actions/checkout@v3
       - name: Download workflow artifacts
         uses: actions/download-artifact@v3
         with:
-          name: sqlite-vss-ubuntu
+          name: sqlite-vss-linux_x86
           path: dist/debug/
       - uses: actions/setup-python@v3
       - run: pip install wheel
@@ -49,22 +49,22 @@ jobs:
       - run: make datasette
       - uses: actions/upload-artifact@v3
         with:
-          name: sqlite-vss-ubuntu-wheels
+          name: sqlite-vss-linux_x86-wheels
           path: dist/debug/wheels/*.whl
-  test-ubuntu:
-    runs-on: ubuntu-20.04
-    needs: [build-ubuntu-extension, build-ubuntu-python]
+  test-linux_x86:
+    runs-on: ubuntu-latest
+    needs: [build-linux_x86-extension, build-linux_x86-python]
     env:
       DENO_DIR: deno_cache
     steps:
       - uses: actions/checkout@v3
       - uses: actions/download-artifact@v3
         with:
-          name: sqlite-vss-ubuntu
+          name: sqlite-vss-linux_x86
           path: dist/debug/
       - uses: actions/download-artifact@v3
         with:
-          name: sqlite-vss-ubuntu-wheels
+          name: sqlite-vss-linux_x86-wheels
           path: dist/debug/
       - run: pip install --find-links dist/debug/ sqlite_vss
       - run: make test-loadable
@@ -92,7 +92,7 @@ jobs:
         env:
           DENO_SQLITE_VECTOR_PATH: ${{ github.workspace }}/dist/debug/vector0
           DENO_SQLITE_VSS_PATH: ${{ github.workspace }}/dist/debug/vss0
-  build-macos-extension:
+  build-macos_x86-extension:
     name: Building MacOS extension
     runs-on: macos-11
     steps:
@@ -129,8 +129,8 @@ jobs:
         with:
           name: sqlite-vss-macos
           path: dist/debug/*
-  build-macos-arm-extension:
-    name: Building MacOS arm extension
+  build-macos-aarch64-extension:
+    name: Building MacOS aarch64 extension
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v3
@@ -147,7 +147,8 @@ jobs:
       - if: steps.cache-sqlite-build.outputs.cache-hit != 'true'
         working-directory: vendor/sqlite
         run: ./configure && make
-      - run: brew install llvm
+      # already on runner?
+      #- run: brew install llvm
       - name: Cache cmake build
         id: cache-cmake-build
         uses: actions/cache@v3
@@ -164,11 +165,11 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: sqlite-vss-macos-arm
+          name: sqlite-vss-macos-aarch64
           path: dist/debug/*
-  build-macos-python:
+  build-macos_x86-python:
     runs-on: macos-latest
-    needs: [build-macos-extension]
+    needs: [build-macos_x86-extension]
     steps:
       - uses: actions/checkout@v3
       - name: Download workflow artifacts
@@ -184,9 +185,9 @@ jobs:
         with:
           name: sqlite-vss-macos-wheels
           path: dist/debug/wheels/*.whl
-  test-macos:
+  test-macos_x86:
     runs-on: macos-latest
-    needs: [build-macos-extension, build-macos-python]
+    needs: [build-macos_x86-extension, build-macos_x86-python]
     # can't get automated tests on macos to work yet :(
     if: false
     steps:
