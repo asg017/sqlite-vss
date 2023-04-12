@@ -211,6 +211,7 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('vendor/get_sqlite.sh') }}
       - if: steps.cache-sqlite-build.outputs.cache-hit != 'true'
         run: ./vendor/get_sqlite.sh
+        shell: bash
       - if: steps.cache-sqlite-build.outputs.cache-hit != 'true'
         working-directory: vendor\sqlite
         run: nmake -f Makefile.vc
