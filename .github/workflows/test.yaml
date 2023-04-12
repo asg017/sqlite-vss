@@ -149,12 +149,14 @@ jobs:
         run: ./configure && make
       # already on runner?
       #- run: brew install llvm
-      - name: Cache cmake build
-        id: cache-cmake-build
-        uses: actions/cache@v3
-        with:
-          path: build
-          key: ${{ runner.os }}-build-todochangeme
+      
+      # I think caching cmake doesnt work
+      #- name: Cache cmake build
+      #  id: cache-cmake-build
+      #  uses: actions/cache@v3
+      #  with:
+      #    path: build
+      #    key: ${{ runner.os }}-build-todochangeme
       - run: make loadable
         env:
           # https://stackoverflow.com/questions/48825416/missing-openmp-c-flags-openmp-c-lib-names
