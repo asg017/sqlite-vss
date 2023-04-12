@@ -212,8 +212,8 @@ jobs:
       - if: steps.cache-sqlite-build.outputs.cache-hit != 'true'
         run: ./vendor/get_sqlite.sh
       - if: steps.cache-sqlite-build.outputs.cache-hit != 'true'
-        working-directory: vendor/sqlite
-        run: ./configure && make
+        working-directory: vendor\sqlite
+        run: nmake -f Makefile.vc
       - run: make loadable
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
