@@ -18,12 +18,12 @@ const compiled_extensions = [
     name: "deno-darwin-aarch64.vss0.dylib",
   },
   {
-    path: "sqlite-vss-linux_x86/vector0.so",
+    path: "sqlite-vss-linux_x86_64/vector0.so",
     name: "deno-linux-x86_64.vector0.so",
   },
-    path: "sqlite-vss-linux_x86/vss0.so",
   {
-    name: "deno-linux-x86_64.vss0.so",
+    path: "sqlite-vss-linux_x86_64/vss0.so",
+    name: "deno-linux-linux-x86_64.vss0.so",
   },
 ];
 
