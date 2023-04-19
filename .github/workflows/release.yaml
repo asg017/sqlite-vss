@@ -132,7 +132,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: sqlite-vss-macos-aarch64
+          name: sqlite-vss-macos_aarch64
           path: dist/release/*
   build-macos-aarch64-python:
     runs-on: macos-latest

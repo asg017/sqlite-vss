@@ -10,7 +10,7 @@ const vss = {
   description: "",
   platforms: [
     {
-      path: "sqlite-vss-linux_x86/vss0.so",
+      path: "sqlite-vss-linux_x86_64/vss0.so",
       os: "linux",
       cpu: "x86_64",
     },
@@ -31,7 +31,7 @@ const vector = {
   description: "",
   platforms: [
     {
-      path: "sqlite-vss-linux_x86/vector0.so",
+      path: "sqlite-vss-linux_x86_64/vector0.so",
       os: "linux",
       cpu: "x86_64",
     },
