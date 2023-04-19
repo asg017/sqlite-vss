@@ -13,6 +13,7 @@ try {
     vectorPath = await download({
       url: {
         darwin: {
+          aarch64: `${BASE}/deno-darwin-aarch64.vector0.dylib`,
           x86_64: `${BASE}/deno-darwin-x86_64.vector0.dylib`,
         },
         linux: {
@@ -33,6 +34,7 @@ try {
     vssPath = await download({
       url: {
         darwin: {
+          aarch64: `${BASE}/deno-darwin-aarch64.vss0.dylib`,
           x86_64: `${BASE}/deno-darwin-x86_64.vss0.dylib`,
         },
         linux: {

@@ -14,7 +14,7 @@ machine = platform.machine()
 print(system, machine)
 
 if system == 'Darwin':
-  if machine not in ['x86_64']: #, 'arm64']:
+  if machine not in ['x86_64', 'arm64']:
     raise Exception("unsupported platform")  
 elif system == 'Linux':
   if machine not in ['x86_64']:

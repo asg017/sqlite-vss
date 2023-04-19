@@ -6,7 +6,7 @@ on:
 permissions:
   contents: read
 jobs:
-  build-linux_x86-extension:
+  build-linux_x86_64-extension:
     name: Building ubuntu
     runs-on: ubuntu-20.04
     steps:
@@ -31,17 +31,17 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: sqlite-vss-linux_x86
+          name: sqlite-vss-linux_x86_64
           path: dist/release/*.so
-  build-linux_x86-python:
+  build-linux_x86_64-python:
     runs-on: ubuntu-20.04
-    needs: [build-linux_x86-extension]
+    needs: [build-linux_x86_64-extension]
     steps:
       - uses: actions/checkout@v3
       - name: Download workflow artifacts
         uses: actions/download-artifact@v3
         with:
-          name: sqlite-vss-linux_x86
+          name: sqlite-vss-linux_x86_64
           path: dist/release/
       - uses: actions/setup-python@v3
       - run: pip install wheel
@@ -49,9 +49,9 @@ jobs:
       - run: make datasette-release
       - uses: actions/upload-artifact@v3
         with:
-          name: sqlite-vss-linux_x86-wheels
+          name: sqlite-vss-linux_x86_64-wheels
           path: dist/release/wheels/*.whl
-  build-macos-extension:
+  build-macos_x86_64-extension:
     name: Building macos extension
     runs-on: macos-latest
     steps:
@@ -86,11 +86,11 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: sqlite-vss-macos
+          name: sqlite-vss-macos_x86_64
           path: dist/release/*.dylib
-  build-macos-python:
+  build-macos_x86_64-python:
     runs-on: macos-latest
-    needs: [build-macos-extension]
+    needs: [build-macos_x86_64-extension]
     steps:
       - uses: actions/checkout@v3
       - name: Download workflow artifacts
@@ -106,9 +106,59 @@ jobs:
         with:
           name: sqlite-vss-macos-wheels
           path: dist/release/wheels/*.whl
+  build-macos-aarch64-extension:
+    runs-on: [self-hosted, mm1]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: "recursive"
+      - name: Cache sqlite build
+        id: cache-sqlite-build
+        uses: actions/cache@v3
+        with:
+          path: vendor/sqlite
+          key: ${{ runner.os }}-${{ hashFiles('vendor/get_sqlite.sh') }}
+      - if: steps.cache-sqlite-build.outputs.cache-hit != 'true'
+        run: ./vendor/get_sqlite.sh
+      - if: steps.cache-sqlite-build.outputs.cache-hit != 'true'
+        working-directory: vendor/sqlite
+        run: ./configure && make
+      - run: make loadable-release
+        env:
+          CC: /opt/homebrew/opt/llvm/bin/clang
+          CXX: /opt/homebrew/opt/llvm/bin/clang++
+          LDFLAGS: "-L/opt/homebrew/opt/llvm/lib"
+          CPPFLAGS: "-I/opt/homebrew/opt/llvm/include"
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: sqlite-vss-macos-aarch64
+          path: dist/release/*
+  build-macos-aarch64-python:
+    runs-on: macos-latest
+    needs: [build-macos-aarch64-extension]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/download-artifact@v3
+        with:
+          name: sqlite-vss-macos-aarch64
+          path: dist/release/
+      - uses: actions/setup-python@v3
+      - run: pip install wheel
+      - run: make python-release IS_MACOS_ARM=1
+      - run: make datasette-release
+      - uses: actions/upload-artifact@v3
+        with:
+          name: sqlite-vss-macos-wheels
+          path: dist/release/wheels/*.whl
   upload-release-assets:
     name: Upload release assets
-    needs: [build-macos-extension, build-linux_x86-extension]
+    needs:
+      [
+        build-macos_x86_64-extension,
+        build-macos-aarch64-extension,
+        build-linux_x86_64-extension,
+      ]
     permissions:
       contents: write
     runs-on: ubuntu-latest
@@ -125,7 +175,12 @@ jobs:
             await script({github, context})
   upload-deno:
     name: Upload Deno release assets
-    needs: [build-macos-extension, build-linux_x86-extension]
+    needs:
+      [
+        build-macos_x86_64-extension,
+        build-macos-aarch64-extension,
+        build-linux_x86_64-extension,
+      ]
     permissions:
       contents: write
     runs-on: ubuntu-latest
@@ -140,17 +195,26 @@ jobs:
             const script = require('.github/workflows/upload-deno-assets.js')
             await script({github, context})
   upload-npm:
-    needs: [build-macos-extension, build-linux_x86-extension]
+    needs:
+      [
+        build-macos_x86_64-extension,
+        build-macos-aarch64-extension,
+        build-linux_x86_64-extension,
+      ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - name: Download workflow artifacts
         uses: actions/download-artifact@v2
       - run: |
-          cp sqlite-vss-linux_x86/vector0.so npm/sqlite-vss-linux-x64/lib/vector0.so
-          cp sqlite-vss-macos/vector0.dylib npm/sqlite-vss-darwin-x64/lib/vector0.dylib
-          cp sqlite-vss-linux_x86/vss0.so npm/sqlite-vss-linux-x64/lib/vss0.so
-          cp sqlite-vss-macos/vss0.dylib npm/sqlite-vss-darwin-x64/lib/vss0.dylib
+          cp sqlite-vss-linux_x86_64/vector0.so npm/sqlite-vss-linux-x64/lib/vector0.so
+          cp sqlite-vss-linux_x86_64/vss0.so npm/sqlite-vss-linux-x64/lib/vss0.so
+
+          cp sqlite-vss-macos_x86_64/vector0.dylib npm/sqlite-vss-darwin-x64/lib/vector0.dylib
+          cp sqlite-vss-macos_x86_64/vss0.dylib npm/sqlite-vss-darwin-x64/lib/vss0.dylib
+
+          cp sqlite-vss-macos_aarch64/vector0.dylib npm/sqlite-vss-darwin-arm64/lib/vector0.dylib
+          cp sqlite-vss-macos_aarch64/vss0.dylib npm/sqlite-vss-darwin-arm64/lib/vss0.dylib
       - name: Install node
         uses: actions/setup-node@v3
         with:
@@ -172,12 +236,17 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
   upload_pypi:
-    needs: [build-linux_x86-python, build-macos-python]
+    needs:
+      [
+        build-linux_x86_64-python,
+        build-macos_x86_64-python,
+        build-macos-aarch64-python,
+      ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v3
         with:
-          name: sqlite-vss-linux_x86-wheels
+          name: sqlite-vss-linux_x86_64-wheels
           path: dist
       - uses: actions/download-artifact@v3
         with:

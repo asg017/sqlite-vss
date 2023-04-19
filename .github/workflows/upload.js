@@ -15,9 +15,14 @@ const vss = {
       cpu: "x86_64",
     },
     {
-      path: "sqlite-vss-macos/vss0.dylib",
+      path: "sqlite-vss-macos_x86_64/vss0.dylib",
       os: "darwin",
       cpu: "x86_64",
+    },
+    {
+      path: "sqlite-vss-macos_aarch64/vss0.dylib",
+      os: "darwin",
+      cpu: "aarch64",
     },
   ],
 };
@@ -31,9 +36,14 @@ const vector = {
       cpu: "x86_64",
     },
     {
-      path: "sqlite-vss-macos/vector0.dylib",
+      path: "sqlite-vss-macos_x86_64/vector0.dylib",
       os: "darwin",
       cpu: "x86_64",
+    },
+    {
+      path: "sqlite-vss-macos_aarch64/vector0.dylib",
+      os: "darwin",
+      cpu: "aarch64",
     },
   ],
 };

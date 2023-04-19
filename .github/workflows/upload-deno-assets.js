@@ -2,19 +2,27 @@ const fs = require("fs").promises;
 
 const compiled_extensions = [
   {
-    path: "sqlite-vss-macos/vector0.dylib",
+    path: "sqlite-vss-macos_x86_64/vector0.dylib",
     name: "deno-darwin-x86_64.vector0.dylib",
+  },
+  {
+    path: "sqlite-vss-macos_x86_64/vss0.dylib",
+    name: "deno-darwin-x86_64.vss0.dylib",
+  },
+  {
+    path: "sqlite-vss-macos_aarch64/vector0.dylib",
+    name: "deno-darwin-aarch64.vector0.dylib",
+  },
+  {
+    path: "sqlite-vss-aarch64/vss0.dylib",
+    name: "deno-darwin-aarch64.vss0.dylib",
   },
   {
     path: "sqlite-vss-linux_x86/vector0.so",
     name: "deno-linux-x86_64.vector0.so",
   },
-  {
-    path: "sqlite-vss-macos/vss0.dylib",
-    name: "deno-darwin-x86_64.vss0.dylib",
-  },
-  {
     path: "sqlite-vss-linux_x86/vss0.so",
+  {
     name: "deno-linux-x86_64.vss0.so",
   },
 ];

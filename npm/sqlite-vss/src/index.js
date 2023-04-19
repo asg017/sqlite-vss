@@ -5,6 +5,7 @@ import { statSync } from "node:fs";
 
 const supportedPlatforms = [
   ["darwin", "x64"],
+  ["darwin", "arm64"],
   ["linux", "x64"],
 ];
 
