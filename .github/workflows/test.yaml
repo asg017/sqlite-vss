@@ -205,7 +205,7 @@ jobs:
         with:
           name: ${{ env.ARTIFACT-MACOS-AARCH64-EXTENSION }}
           path: dist/debug/
-      - run: pip install wheel
+      - run: pip3 install wheel
       - run: make python IS_MACOS_ARM=1
       - run: make datasette
       - uses: actions/upload-artifact@v3
