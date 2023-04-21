@@ -126,7 +126,7 @@ import sqlite_vss
 
 db = sqlite3.connect(':memory:')
 db.enable_load_extension(True)
-sqlite_vs.load(db)
+sqlite_vss.load(db)
 
 version, = db.execute('select vss_version()').fetchone()
 print(version)

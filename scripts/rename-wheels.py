@@ -26,7 +26,10 @@ for filename in os.listdir(wheel_dir):
     
   )
   if is_macos_arm_build:
-    new_filename = new_filename.replace('macosx_12_0_universal2', 'macosx_11_0_arm64')
+    new_filename = (new_filename
+    .replace('macosx_12_0_universal2', 'macosx_11_0_arm64')
+    .replace('macosx_13_0_universal2', 'macosx_11_0_arm64')
+  )
   else:
     new_filename = (new_filename
     .replace('macosx_12_0_universal2', 'macosx_10_6_x86_64')
