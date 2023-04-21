@@ -10,17 +10,17 @@ const vss = {
   description: "",
   platforms: [
     {
-      path: "sqlite-vss-linux_x86_64/vss0.so",
+      path: `${process.env["ARTIFACT-LINUX-X86_64-EXTENSION"]}/vss0.so`,
       os: "linux",
       cpu: "x86_64",
     },
     {
-      path: "sqlite-vss-macos_x86_64/vss0.dylib",
+      path: `${process.env["ARTIFACT-MACOS-X86_64-EXTENSION"]}/vss0.dylib`,
       os: "darwin",
       cpu: "x86_64",
     },
     {
-      path: "sqlite-vss-macos_aarch64/vss0.dylib",
+      path: `${process.env["ARTIFACT-MACOS-AARCH64-EXTENSION"]}/vss0.dylib`,
       os: "darwin",
       cpu: "aarch64",
     },
@@ -31,17 +31,17 @@ const vector = {
   description: "",
   platforms: [
     {
-      path: "sqlite-vss-linux_x86_64/vector0.so",
+      path: `${process.env["ARTIFACT-LINUX-X86_64-EXTENSION"]}/vector0.so`,
       os: "linux",
       cpu: "x86_64",
     },
     {
-      path: "sqlite-vss-macos_x86_64/vector0.dylib",
+      path: `${process.env["ARTIFACT-MACOS-X86_64-EXTENSION"]}/vector0.dylib`,
       os: "darwin",
       cpu: "x86_64",
     },
     {
-      path: "sqlite-vss-macos_aarch64/vector0.dylib",
+      path: `${process.env["ARTIFACT-MACOS-AARCH64-EXTENSION"]}/vector0.dylib`,
       os: "darwin",
       cpu: "aarch64",
     },
