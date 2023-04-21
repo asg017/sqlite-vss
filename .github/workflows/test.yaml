@@ -198,14 +198,13 @@ jobs:
           path: dist/debug/*
   build-macos-aarch64-python:
     runs-on: [self-hosted, mm1]
-    needs: [build-macos-x86_64-extension]
+    needs: [build-macos-aarch64-extension]
     steps:
       - uses: actions/checkout@v3
       - uses: actions/download-artifact@v3
         with:
           name: ${{ env.ARTIFACT-MACOS-AARCH64-EXTENSION }}
           path: dist/debug/
-      - uses: actions/setup-python@v3
       - run: pip install wheel
       - run: make python IS_MACOS_ARM=1
       - run: make datasette
