@@ -2,6 +2,7 @@ import sqlite3
 import unittest
 import time
 import os
+import tempfile
 
 EXT_VSS_PATH="./dist/debug/vss0"
 EXT_VECTOR_PATH="./dist/debug/vector0"
@@ -318,7 +319,6 @@ class TestVss(unittest.TestCase):
     
     
   def test_vss0_persistent(self):
-    import tempfile
     tf = tempfile.NamedTemporaryFile(delete=False)
     tf.close()
     
@@ -376,6 +376,30 @@ class TestVss(unittest.TestCase):
     ])
     
     db.close()
+  def test_vss0_persistent_stress(self):
+    tf = tempfile.NamedTemporaryFile(delete=False)
+    tf.close()
+    
+    # create a vss0 table with no data, then close it. When re-opening it, should work as expected
+    db = connect(tf.name)
+    db.execute("create virtual table x using vss0(a(2));")
+    db.close()
+
+    db = connect(tf.name)
+    self.assertEqual(execute_all(db, "select rowid, length(idx) as length from x_index"), [
+      {'rowid': 0, 'length': 90},
+    ])
+    db.execute("insert into x(rowid, a) select 1, json_array(1, 2)")
+    db.commit()
+
+    self.assertEqual(execute_all(db, "select rowid, length(idx) as length from x_index"), [
+      {'rowid': 0, 'length': 106},
+    ])
+
+    self.assertEqual(execute_all(db, "select rowid, vector_debug(a) as a from x"), [
+      {'rowid': 1, 'a': 'size: 2 [1.000000, 2.000000]'},
+    ])
+    db.close()
   
   def test_vss_stress(self):
     cur = db.cursor()
@@ -396,6 +420,7 @@ class TestVss(unittest.TestCase):
     
     with self.assertRaisesRegex(sqlite3.OperationalError, ".*could not parse index string invalid"):
       execute_all(cur, 'create virtual table t1 using vss0(a(2) factory="invalid");')
+  
   def test_vss_training(self):
     import random
     import json

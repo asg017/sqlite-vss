@@ -614,6 +614,10 @@ static int init(
   pNew->indexCount = columns->size();
   pNew->indexes = new std::vector<faiss::Index *> ();
   
+  pNew->schema = sqlite3_mprintf("%s", argv[1]);
+  pNew->name = sqlite3_mprintf("%s", argv[2]);
+  pNew->db = db;
+  
   if (isCreate) {
     int i;
     for (auto column = columns->begin(); column != columns->end(); ++column) {
@@ -626,9 +630,27 @@ static int init(
       }
     }
     create_shadow_tables(db, argv[1], argv[2], pNew->indexCount);
+
+    // after shadow tables are created, write the initial index state to shadow _index
+    for (int i = 0; i < pNew->indexes->size(); i++) {
+      auto index = pNew->indexes->at(i);
+      try {
+        int rc = write_index_insert(index, pNew->db, pNew->schema, pNew->name, i);
+        if(rc != SQLITE_OK) return rc;
+      } catch(faiss::FaissException& e) {
+        return SQLITE_ERROR;
+      }
+    }
+    
   } else {
     for(int i = 0; i < pNew->indexCount; i++) {
-      pNew->indexes->push_back(read_index_select(db, argv[2], i));
+      auto index = read_index_select(db, argv[2], i);
+      // index in shadow table should always be available, integrity check to avoid null pointer 
+      if(index == NULL) {
+        *pzErr = sqlite3_mprintf("Could not read index at position %d", i);
+        return SQLITE_ERROR;
+      }
+      pNew->indexes->push_back(index);
     }
   }
 
@@ -647,9 +669,6 @@ static int init(
   
   pNew->isTraining = false;
   pNew->isInsertData = false;
-  pNew->schema = sqlite3_mprintf("%s", argv[1]);
-  pNew->name = sqlite3_mprintf("%s", argv[2]);
-  pNew->db = db;
     
   return SQLITE_OK;
 }

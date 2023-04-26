@@ -52,13 +52,16 @@ $(prefix):
 	mkdir -p $(prefix)/debug
 	mkdir -p $(prefix)/release
 
-$(TARGET_LOADABLE): $(prefix) src/vss-extension.cpp src/vector-extension.cpp src/sqlite-vss.h.in
-	SQLITE_VSS_CMAKE_VERSION=$(CMAKE_VERSION) cmake -B build; make -C build
+$(TARGET_LOADABLE): export SQLITE_VSS_CMAKE_VERSION = $(CMAKE_VERSION)
+$(TARGET_LOADABLE_RELEASE): export SQLITE_VSS_CMAKE_VERSION = $(CMAKE_VERSION)
+
+$(TARGET_LOADABLE): $(prefix) src/vss-extension.cpp src/vector-extension.cpp src/sqlite-vss.h.in 
+	cmake -B build; make -C build
 	cp build/vector0.$(LOADABLE_EXTENSION) $(TARGET_LOADABLE_VECTOR)
 	cp build/vss0.$(LOADABLE_EXTENSION) $(TARGET_LOADABLE_VSS)
 
 $(TARGET_LOADABLE_RELEASE): $(prefix)
-	SQLITE_VSS_CMAKE_VERSION=$(CMAKE_VERSION) cmake -DCMAKE_BUILD_TYPE=Release -B build_release; make -C build_release
+	cmake -DCMAKE_BUILD_TYPE=Release -B build_release; make -C build_release
 	cp build_release/vector0.$(LOADABLE_EXTENSION) $(TARGET_LOADABLE_RELEASE_VECTOR)
 	cp build_release/vss0.$(LOADABLE_EXTENSION) $(TARGET_LOADABLE_RELEASE_VSS)
 
