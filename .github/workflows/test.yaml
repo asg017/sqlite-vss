@@ -127,8 +127,8 @@ jobs:
           # `brew info libomp` gives the correct one, with .a file for static openmp builds
           CC: /usr/local/opt/llvm/bin/clang
           CXX: /usr/local/opt/llvm/bin/clang++
-          LDFLAGS: "-L/usr/local/opt/libomp/lib/"
-          CPPFLAGS: "-I/usr/local/opt/libomp/include/"
+          LDFLAGS: "-L/usr/local/opt/libomp/lib"
+          CPPFLAGS: "-I/usr/local/opt/libomp/include"
       - uses: actions/upload-artifact@v3
         with:
           name: ${{ env.ARTIFACT-MACOS-X86_64-EXTENSION }}
