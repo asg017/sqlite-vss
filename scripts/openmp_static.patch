@@ -1,0 +1,37 @@
+diff --git a/faiss/CMakeLists.txt b/faiss/CMakeLists.txt
+index 16eb9e9c..230adee2 100644
+--- a/faiss/CMakeLists.txt
++++ b/faiss/CMakeLists.txt
+@@ -251,8 +251,30 @@ target_compile_definitions(faiss PRIVATE FINTEGER=int)
+ target_compile_definitions(faiss_avx2 PRIVATE FINTEGER=int)
+ 
+ find_package(OpenMP REQUIRED)
+-target_link_libraries(faiss PRIVATE OpenMP::OpenMP_CXX)
+-target_link_libraries(faiss_avx2 PRIVATE OpenMP::OpenMP_CXX)
++
++# PATCH: statically link OpenMP into vss0 (for MacOS only)
++# On Macs, OpenMP_CXX_LIBRARIES always ends in .dylib for some reason,
++# to target_link_libraries will dynamically link openmp. This isn't ideal
++# for pre-compiled SQLite extensions, since users will have to 
++# "brew install libomp", which doesn't always work. So this patch is included
++# in MacOS builds for easier installations
++
++# same as OpenMP_CXX_LIBRARIES but with ".a" instead of ".dylib"
++set(_OPENMP_ARCHIVE_PATH "${OpenMP_CXX_LIBRARIES}")
++string(REPLACE ".dylib" ".a" _OPENMP_ARCHIVE_PATH ${_OPENMP_ARCHIVE_PATH})
++message("_OPENMP_ARCHIVE_PATH: ${_OPENMP_ARCHIVE_PATH}")
++
++# link to that .a file
++target_link_libraries(faiss PRIVATE ${_OPENMP_ARCHIVE_PATH})
++target_link_libraries(faiss_avx2 PRIVATE ${_OPENMP_ARCHIVE_PATH})
++
++# include openmp headers as well
++target_include_directories(faiss PUBLIC ${OpenMP_CXX_INCLUDE_DIRS})
++target_include_directories(faiss_avx2 PUBLIC ${OpenMP_CXX_INCLUDE_DIRS})
++
++# The original linking configurations
++#target_link_libraries(faiss PRIVATE OpenMP::OpenMP_CXX)
++#target_link_libraries(faiss_avx2 PRIVATE OpenMP::OpenMP_CXX)
+ 
+ find_package(MKL)
+ if(MKL_FOUND)

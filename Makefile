@@ -139,9 +139,15 @@ test:
 	make test-npm
 	make test-deno
 
+patch-openmp:
+	patch --forward --reject-file=/dev/null --quiet -i scripts/openmp_static.patch vendor/faiss/faiss/CMakeLists.txt 2> /dev/null || true
+
+ patch-openmp-undo:
+	patch -R vendor/faiss/faiss/CMakeLists.txt < scripts/openmp_static.patch 
 
 test-loadable-3.41.0:
 	LD_LIBRARY_PATH=vendor/sqlite-snapshot-202301161813/.libs/  make test 
 
 .PHONY: clean test test-3.41.0 loadable \
+	patch-openmp patch-openmp-undo \
 	python python-release python-versions datasette npm deno version

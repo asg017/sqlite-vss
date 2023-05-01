@@ -120,6 +120,7 @@ jobs:
         with:
           path: build
           key: ${{ runner.os }}-build
+      - run: make patch-openmp
       - run: make loadable
         env:
           # https://stackoverflow.com/questions/48825416/missing-openmp-c-flags-openmp-c-lib-names
@@ -185,6 +186,7 @@ jobs:
       - if: steps.cache-sqlite-build.outputs.cache-hit != 'true'
         working-directory: vendor/sqlite
         run: ./configure && make
+      - run: make patch-openmp
       - run: make loadable
         env:
           # https://stackoverflow.com/questions/48825416/missing-openmp-c-flags-openmp-c-lib-names
