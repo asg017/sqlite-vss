@@ -8,18 +8,20 @@ pip install sqlite-vss
 
 ## Usage
 
-The `sqlite-vss` python package exports two functions: `loadable_path()`, which returns the full path to the loadable extension, and `load(conn)`, which loads the `sqlite-vss` extension into the given [sqlite3 Connection object](https://docs.python.org/3/library/sqlite3.html#connection-objects).
+The `sqlite-vss` python package exports two functions: `vss_loadable_path()`, which returns the full path to the loadable extension, and `load(conn)`, which loads the `sqlite-vss` extension into the given [sqlite3 Connection object](https://docs.python.org/3/library/sqlite3.html#connection-objects).
 
 ```python
 import sqlite_vss
-print(sqlite_vss.loadable_path())
+print(sqlite_vss.vss_loadable_path())
 # '/.../venv/lib/python3.9/site-packages/sqlite_vss/vss0'
 
 import sqlite3
 conn = sqlite3.connect(':memory:')
+conn.enable_load_extension(True)
 sqlite_vss.load(conn)
-conn.execute('select vss_version(), vss()').fetchone()
-# ('v0.1.0', '01gr7gwc5aq22ycea6j8kxq4s9')
+
+print(conn.execute('select vss_version()').fetchone()[0])
+# 'v0.1.0'
 ```
 
 See [the full API Reference](#api-reference) for the Python API, and [`docs.md`](../../docs.md) for documentation on the `sqlite-vss` SQL API.
@@ -34,7 +36,7 @@ If you get a `unsupported platform` error when pip installing `sqlite-vss`, you'
 
 ## API Reference
 
-<h3 name="loadable_path"><code>loadable_path()</code></h3>
+<h3 name="vss_loadable_path"><code>vss_loadable_path()</code></h3>
 
 Returns the full path to the locally-install `sqlite-vss` extension, without the filename.
 
@@ -42,7 +44,7 @@ This can be directly passed to [`sqlite3.Connection.load_extension()`](https://d
 
 ```python
 import sqlite_vss
-print(sqlite_vss.loadable_path())
+print(sqlite_vss.vss_loadable_path())
 # '/.../venv/lib/python3.9/site-packages/sqlite_vss/vss0'
 ```
 
