@@ -8,7 +8,6 @@
 #include "sqlite-vss.h"
 
 #include "sqlite3ext.h"
-
 SQLITE_EXTENSION_INIT1
 
 
@@ -19,6 +18,9 @@ SQLITE_EXTENSION_INIT1
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
+char VECTOR_BLOB_HEADER_BYTE = 'v';
+char VECTOR_BLOB_HEADER_TYPE = 1;
+const char * VECTOR_FLOAT_POINTER_NAME = "vectorf32v0";
 
 struct VecX {
   int64_t size;
@@ -59,7 +61,7 @@ std::vector<float> * vectorFromBlobValue(sqlite3_value*value, const char ** pzEr
   b = sqlite3_value_blob(value);
   memcpy(&header, ((char *) b + 0), sizeof(char));
   memcpy(&type,   ((char *) b + 1), sizeof(char));
-  
+
   if(header != VECTOR_BLOB_HEADER_BYTE) {
     *pzErrMsg = "Blob not well-formatted vector blob";
     return NULL;
@@ -69,8 +71,8 @@ std::vector<float> * vectorFromBlobValue(sqlite3_value*value, const char ** pzEr
     return NULL;
   }
   int numElements = (n - 2)/sizeof(float);
-  float * v = (float *) ((char *)b + 2); 
-  return new std::vector<float>(v, v+numElements); 
+  float * v = (float *) ((char *)b + 2);
+  return new std::vector<float>(v, v+numElements);
 }
 
 std::vector<float> * vectorFromRawBlobValue(sqlite3_value*value, const char ** pzErrMsg) {
@@ -82,12 +84,12 @@ std::vector<float> * vectorFromRawBlobValue(sqlite3_value*value, const char ** p
   }
   const void * b = sqlite3_value_blob(value);
 
-  float * v = (float *) ((char *)b); 
-  return new std::vector<float>(v, v+ (n / 4)); 
+  float * v = (float *) ((char *)b);
+  return new std::vector<float>(v, v+ (n / 4));
 }
 
 std::vector<float> * vectorFromTextValue(sqlite3_value*value) {
-  std::vector<float> v; 
+  std::vector<float> v;
 
   try {
     json data = json::parse(sqlite3_value_text(value));
@@ -107,7 +109,7 @@ static std::vector<float>* valueAsVector(sqlite3_value*value) {
   std::vector<float> * vec;
 
   // Option 2: value is a blob in vector format
-  if(sqlite3_value_type(value) == SQLITE_BLOB) {      
+  if(sqlite3_value_type(value) == SQLITE_BLOB) {
     const char * pzErrMsg = 0;
     if((vec = vectorFromBlobValue(value, &pzErrMsg)) != NULL) {
       return vec;
@@ -151,7 +153,7 @@ static void vector_debug(sqlite3_context *context, int argc, sqlite3_value **arg
     sqlite3_str_appendchar(str, 1, ']');
     sqlite3_result_text(context, sqlite3_str_finish(str), -1, sqlite3_free);
     delete v;
-      
+
   }else {
     sqlite3_result_text(context, "yo", -1, SQLITE_STATIC);
   }
@@ -221,10 +223,10 @@ static void vector_from_json(sqlite3_context *context, int argc, sqlite3_value *
   }
 
   //json j = json::parse(text);
-  //std::vector<float> *v = new std::vector<float>(); 
+  //std::vector<float> *v = new std::vector<float>();
   //j.get_to(*v);
-  
-  
+
+
 }
 #pragma endregion
 
@@ -239,7 +241,7 @@ static void vector_from_json(sqlite3_context *context, int argc, sqlite3_value *
 static void vector_to_blob(sqlite3_context *context, int argc, sqlite3_value **argv) {
   std::vector<float>*v = valueAsVector(argv[0]);
   if(v == NULL) return;
-  
+
   int sz = v->size();
   int n = (sizeof(char)) + (sizeof(char)) + (sz * 4);
   void * b = sqlite3_malloc(n);
@@ -250,7 +252,7 @@ static void vector_to_blob(sqlite3_context *context, int argc, sqlite3_value **a
   memcpy((void *) ((char *) b+2), (void *) v->data(), sz*4);
   sqlite3_result_blob64(context, b, n, sqlite3_free);
   delete v;
-  
+
 }
 
 static void vector_from_blob(sqlite3_context *context, int argc, sqlite3_value **argv) {
@@ -268,7 +270,7 @@ static void vector_from_blob(sqlite3_context *context, int argc, sqlite3_value *
 static void vector_to_raw(sqlite3_context *context, int argc, sqlite3_value **argv) {
   std::vector<float>*v = valueAsVector(argv[0]);
   if(v == NULL) return;
-  
+
   int sz = v->size();
   int n = sz * sizeof(float);
   void * b = sqlite3_malloc(n);
@@ -276,7 +278,7 @@ static void vector_to_raw(sqlite3_context *context, int argc, sqlite3_value **ar
   memcpy((void *) ((char *) b), (void *) v->data(), n);
   sqlite3_result_blob64(context, b, n, sqlite3_free);
   delete v;
-  
+
 }
 static void vector_from_raw(sqlite3_context *context, int argc, sqlite3_value **argv) {
   const char * pzErrMsg;
@@ -309,7 +311,7 @@ struct fvecsEach_cursor {
   // total size of pBlob in bytes
   sqlite3_int64 iBlobN;
   sqlite3_int64 p;
-  
+
   // current dimensions
   int iCurrentD;
   // pointer to current vector being read in
@@ -385,7 +387,7 @@ static int fvecsEachBestIndex(
 }
 
 static int fvecsEachFilter(
-  sqlite3_vtab_cursor *pVtabCursor, 
+  sqlite3_vtab_cursor *pVtabCursor,
   int idxNum, const char *idxStr,
   int argc, sqlite3_value **argv
 ){
@@ -400,18 +402,18 @@ static int fvecsEachFilter(
   memcpy(pCur->pBlob, b, n);
 
   memcpy(&pCur->iCurrentD, pCur->pBlob, sizeof(int));
-  float * v = (float *) ((char *)pCur->pBlob + sizeof(int)); 
+  float * v = (float *) ((char *)pCur->pBlob + sizeof(int));
   pCur->pCurrentVector = new std::vector<float>(v, v+pCur->iCurrentD);
   pCur->p = sizeof(int) + (pCur->iCurrentD*sizeof(float));
-  
+
   return SQLITE_OK;
 }
 
 static int fvecsEachNext(sqlite3_vtab_cursor *cur){
   fvecsEach_cursor *pCur = (fvecsEach_cursor*)cur;
-  
+
   memcpy(&pCur->iCurrentD, ((char *)pCur->pBlob + pCur->p), sizeof(int));
-  float * v = (float *) (((char *)pCur->pBlob + pCur->p) + sizeof(int)); 
+  float * v = (float *) (((char *)pCur->pBlob + pCur->p) + sizeof(int));
   pCur->pCurrentVector->clear();
   pCur->pCurrentVector->reserve(pCur->iCurrentD);// = new std::vector<float>(v, v+pCur->iCurrentD);
   pCur->pCurrentVector->insert(pCur->pCurrentVector->begin(), v, v+pCur->iCurrentD);
@@ -454,7 +456,7 @@ static int fvecsEachColumn(
 }
 
 /*
-** This following structure defines all the methods for the 
+** This following structure defines all the methods for the
 ** virtual table.
 */
 static sqlite3_module fvecsEachModule = {
@@ -518,7 +520,7 @@ static void vector_fvecs(sqlite3_context *context, int argc, sqlite3_value **arg
 
 
 #pragma region entrypoint
-static void vector0(sqlite3_context *context, int argc, sqlite3_value **argv) {  
+static void vector0(sqlite3_context *context, int argc, sqlite3_value **argv) {
   Vector0Global *pGlobal = (Vector0Global*)sqlite3_user_data(context);
   vector0_api **ppApi;
   ppApi = (vector0_api**)sqlite3_value_pointer(argv[0], "vector0_api_ptr");
@@ -532,7 +534,6 @@ extern "C" {
   int sqlite3_vector_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi) {
     int rc = SQLITE_OK;
     SQLITE_EXTENSION_INIT2(pApi);
-
     Vector0Global *pGlobal = 0;
     pGlobal = (Vector0Global*)sqlite3_malloc(sizeof(Vector0Global));
     if( pGlobal==0 ){
@@ -579,11 +580,11 @@ extern "C" {
       }
     }
 
-    
+
     rc = sqlite3_create_module(db, "vector_fvecs_each", &fvecsEachModule, 0);
     if(rc != SQLITE_OK) goto fail;
 
-    
+
     return SQLITE_OK;
 
     fail:

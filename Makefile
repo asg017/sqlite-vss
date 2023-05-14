@@ -39,9 +39,19 @@ TARGET_LOADABLE_VECTOR=$(prefix)/debug/vector0.$(LOADABLE_EXTENSION)
 TARGET_LOADABLE_VSS=$(prefix)/debug/vss0.$(LOADABLE_EXTENSION)
 TARGET_LOADABLE=$(TARGET_LOADABLE_VECTOR) $(TARGET_LOADABLE_VSS)
 
+TARGET_STATIC_VECTOR=$(prefix)/debug/libvector0.a
+TARGET_STATIC_VSS=$(prefix)/debug/libvss0.a
+TARGET_STATIC_FAISS_AVX2=$(prefix)/debug/libfaiss_avx2.a
+TARGET_STATIC=$(TARGET_STATIC_VECTOR) $(TARGET_STATIC_VSS) $(TARGET_STATIC_FAISS_AVX2)
+
 TARGET_LOADABLE_RELEASE_VSS=$(prefix)/release/vss0.$(LOADABLE_EXTENSION)
 TARGET_LOADABLE_RELEASE_VECTOR=$(prefix)/release/vector0.$(LOADABLE_EXTENSION)
 TARGET_LOADABLE_RELEASE=$(TARGET_LOADABLE_RELEASE_VECTOR) $(TARGET_LOADABLE_RELEASE_VSS)
+
+TARGET_STATIC_RELEASE_VECTOR=$(prefix)/release/libvector0.a
+TARGET_STATIC_RELEASE_VSS=$(prefix)/release/libvss0.a
+TARGET_STATIC_RELEASE_FAISS_AVX2=$(prefix)/release/libfaiss_avx2.a
+TARGET_STATIC_RELEASE=$(TARGET_STATIC_RELEASE_VECTOR) $(TARGET_STATIC_RELEASE_VSS) $(TARGET_STATIC_RELEASE_FAISS_AVX2)
 
 TARGET_WHEELS=$(prefix)/debug/wheels
 TARGET_WHEELS_RELEASE=$(prefix)/release/wheels
@@ -55,7 +65,7 @@ $(prefix):
 $(TARGET_LOADABLE): export SQLITE_VSS_CMAKE_VERSION = $(CMAKE_VERSION)
 $(TARGET_LOADABLE_RELEASE): export SQLITE_VSS_CMAKE_VERSION = $(CMAKE_VERSION)
 
-$(TARGET_LOADABLE): $(prefix) src/vss-extension.cpp src/vector-extension.cpp src/sqlite-vss.h.in 
+$(TARGET_LOADABLE): $(prefix) src/vss-extension.cpp src/vector-extension.cpp src/sqlite-vss.h.in
 	cmake -B build; make -C build
 	cp build/vector0.$(LOADABLE_EXTENSION) $(TARGET_LOADABLE_VECTOR)
 	cp build/vss0.$(LOADABLE_EXTENSION) $(TARGET_LOADABLE_VSS)
@@ -64,6 +74,21 @@ $(TARGET_LOADABLE_RELEASE): $(prefix)
 	cmake -DCMAKE_BUILD_TYPE=Release -B build_release; make -C build_release
 	cp build_release/vector0.$(LOADABLE_EXTENSION) $(TARGET_LOADABLE_RELEASE_VECTOR)
 	cp build_release/vss0.$(LOADABLE_EXTENSION) $(TARGET_LOADABLE_RELEASE_VSS)
+
+$(TARGET_STATIC): export SQLITE_VSS_CMAKE_VERSION = $(CMAKE_VERSION)
+$(TARGET_STATIC_RELEASE): export SQLITE_VSS_CMAKE_VERSION = $(CMAKE_VERSION)
+
+$(TARGET_STATIC): $(prefix) src/vss-extension.cpp src/vector-extension.cpp src/sqlite-vss.h.in
+	cmake -B build; make -C build
+	cp build/libvector0.a $(TARGET_STATIC_VECTOR)
+	cp build/libvss0.a $(TARGET_STATIC_VSS)
+	cp build/vendor/faiss/faiss/libfaiss_avx2.a $(TARGET_STATIC_FAISS_AVX2)
+
+$(TARGET_STATIC_RELEASE): $(prefix) src/vss-extension.cpp src/vector-extension.cpp src/sqlite-vss.h.in
+	cmake -DCMAKE_BUILD_TYPE=Release -B build_release; make -C build_release
+	cp build_release/libvector0.a $(TARGET_STATIC_RELEASE_VECTOR)
+	cp build_release/libvss0.a $(TARGET_STATIC_RELEASE_VSS)
+	cp build_release/vendor/faiss/faiss/libfaiss_avx2.a $(TARGET_STATIC_RELEASE_FAISS_AVX2)
 
 
 $(TARGET_WHEELS): $(prefix)
@@ -74,21 +99,23 @@ $(TARGET_WHEELS_RELEASE): $(prefix)
 
 
 loadable: $(TARGET_LOADABLE)
-
 loadable-release: $(TARGET_LOADABLE_RELEASE)
+
+static: $(TARGET_STATIC)
+static-release: $(TARGET_STATIC_RELEASE)
 
 
 python: $(TARGET_WHEELS) $(TARGET_LOADABLE) python/sqlite_vss/setup.py python/sqlite_vss/sqlite_vss/__init__.py scripts/rename-wheels.py
-	cp $(TARGET_LOADABLE_VECTOR) $(INTERMEDIATE_PYPACKAGE_EXTENSION) 
-	cp $(TARGET_LOADABLE_VSS) $(INTERMEDIATE_PYPACKAGE_EXTENSION) 
+	cp $(TARGET_LOADABLE_VECTOR) $(INTERMEDIATE_PYPACKAGE_EXTENSION)
+	cp $(TARGET_LOADABLE_VSS) $(INTERMEDIATE_PYPACKAGE_EXTENSION)
 	rm $(TARGET_WHEELS)/sqlite_vss* || true
 	pip3 wheel python/sqlite_vss/ -w $(TARGET_WHEELS)
 	python3 scripts/rename-wheels.py $(TARGET_WHEELS) $(RENAME_WHEELS_ARGS)
 	echo "✅ generated python wheel"
 
 python-release: $(TARGET_LOADABLE_RELEASE) $(TARGET_WHEELS_RELEASE) python/sqlite_vss/setup.py python/sqlite_vss/sqlite_vss/__init__.py scripts/rename-wheels.py
-	cp $(TARGET_LOADABLE_RELEASE_VECTOR) $(INTERMEDIATE_PYPACKAGE_EXTENSION) 
-	cp $(TARGET_LOADABLE_RELEASE_VSS) $(INTERMEDIATE_PYPACKAGE_EXTENSION) 
+	cp $(TARGET_LOADABLE_RELEASE_VECTOR) $(INTERMEDIATE_PYPACKAGE_EXTENSION)
+	cp $(TARGET_LOADABLE_RELEASE_VSS) $(INTERMEDIATE_PYPACKAGE_EXTENSION)
 	rm $(TARGET_WHEELS_RELEASE)/sqlite_vss* || true
 	pip3 wheel python/sqlite_vss/ -w $(TARGET_WHEELS_RELEASE)
 	python3 scripts/rename-wheels.py $(TARGET_WHEELS_RELEASE) $(RENAME_WHEELS_ARGS)
@@ -100,7 +127,7 @@ python-versions: python/version.py.tmpl
 
 	VERSION=$(VERSION) envsubst < python/version.py.tmpl > python/datasette_sqlite_vss/datasette_sqlite_vss/version.py
 	echo "✅ generated python/datasette_sqlite_vss/datasette_sqlite_vss/version.py"
-	
+
 datasette: $(TARGET_WHEELS) python/datasette_sqlite_vss/setup.py python/datasette_sqlite_vss/datasette_sqlite_vss/__init__.py
 	rm $(TARGET_WHEELS)/datasette* || true
 	pip3 wheel python/datasette_sqlite_vss/ --no-deps -w $(TARGET_WHEELS)
@@ -143,11 +170,15 @@ patch-openmp:
 	patch --forward --reject-file=/dev/null --quiet -i scripts/openmp_static.patch vendor/faiss/faiss/CMakeLists.txt 2> /dev/null || true
 
  patch-openmp-undo:
-	patch -R vendor/faiss/faiss/CMakeLists.txt < scripts/openmp_static.patch 
+	patch -R vendor/faiss/faiss/CMakeLists.txt < scripts/openmp_static.patch
 
 test-loadable-3.41.0:
-	LD_LIBRARY_PATH=vendor/sqlite-snapshot-202301161813/.libs/  make test 
+	LD_LIBRARY_PATH=vendor/sqlite-snapshot-202301161813/.libs/  make test
 
-.PHONY: clean test test-3.41.0 loadable \
+site-dev:
+	npm --prefix site run dev
+
+.PHONY: clean test test-3.41.0 \
+	loadable loadable-release static static-release \
 	patch-openmp patch-openmp-undo \
 	python python-release python-versions datasette npm deno version

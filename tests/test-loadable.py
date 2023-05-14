@@ -10,7 +10,6 @@ EXT_VECTOR_PATH="./dist/debug/vector0"
 def connect(path=":memory:"):
   db = sqlite3.connect(path)
 
-  
   db.enable_load_extension(True)
 
   db.execute("create temp table base_functions as select name from pragma_function_list")
@@ -71,14 +70,14 @@ class TestVss(unittest.TestCase):
     modules = list(map(lambda a: a[0], db.execute("select name from vss_loaded_modules").fetchall()))
     self.assertEqual(modules, VSS_MODULES)
 
-    
+
   def test_vss_version(self):
     self.assertEqual(db.execute("select vss_version()").fetchone()[0][0], "v")
 
   def test_vss_debug(self):
     debug = db.execute("select vss_debug()").fetchone()[0].split('\n')
     self.assertEqual(len(debug), 3)
-  
+
   def test_vss_distance_l1(self):
     vss_distance_l1 = lambda a, b: db.execute("select vss_distance_l1(json(?), json(?))", [a, b]).fetchone()[0]
     self.assertEqual(vss_distance_l1('[0, 0]', '[0, 0]'), 0.0)
@@ -93,22 +92,22 @@ class TestVss(unittest.TestCase):
     vss_distance_linf = lambda a, b: db.execute("select vss_distance_linf(json(?), json(?))", [a, b]).fetchone()[0]
     self.assertEqual(vss_distance_linf('[0, 0]', '[0, 0]'), 0.0)
     self.assertEqual(vss_distance_linf('[0, 0]', '[0, 1]'), 1.0)
-  
+
   def test_vss_inner_product(self):
     vss_inner_product = lambda a, b: db.execute("select vss_inner_product(json(?), json(?))", [a, b]).fetchone()[0]
     self.assertEqual(vss_inner_product('[0, 0]', '[0, 0]'), 0.0)
     self.assertEqual(vss_inner_product('[0, 0]', '[0, 1]'), 0.0)
-  
+
   def test_vss_fvec_add(self):
     vss_fvec_add = lambda a, b: db.execute("select vss_fvec_add(json(?), json(?))", [a, b]).fetchone()[0]
     self.assertEqual(vss_fvec_add('[0, 0]', '[0, 0]'), None)
     self.skipTest("TODO")
-  
+
   def test_vss_fvec_sub(self):
     vss_fvec_sub = lambda a, b: db.execute("select vss_fvec_sub(json(?), json(?))", [a, b]).fetchone()[0]
     self.assertEqual(vss_fvec_sub('[0, 0]', '[0, 0]'), None)
     self.skipTest("TODO")
-    
+
   def test_vss_search(self):
     self.skipTest("TODO")
 
@@ -121,11 +120,11 @@ class TestVss(unittest.TestCase):
   def test_vss_range_search_params(self):
     self.skipTest("TODO")
 
-    
+
   def test_vss0(self):
     #
     #            |
-    #    1000 -> X 
+    #    1000 -> X
     #            |          1002
     #            |          /
     #            |         V
@@ -143,25 +142,25 @@ class TestVss(unittest.TestCase):
     """)
     execute_all(cur, """
       insert into x(rowid, a, b)
-        select 
-          key + 1000, 
+        select
+          key + 1000,
           json_extract(value, '$[0]'),
           json_extract(value, '$[1]')
         from json_each(?);
       """, ["""
         [
-          [[0, 1], [1]], 
-          [[0, -1], [2]], 
-          [[1, 0], [3]], 
+          [[0, 1], [1]],
+          [[0, -1], [2]],
+          [[1, 0], [3]],
           [[-1, 0], [4]],
           [[0, 0], [5]]
         ]
         """])
     db.commit()
-    
+
     self.assertEqual(cur.lastrowid, 1004)
     self.assertEqual(execute_all(cur, "select rowid, length(idx) from x_index"), [
-      {'rowid': 0, 'length(idx)': 170}, 
+      {'rowid': 0, 'length(idx)': 170},
       {'rowid': 1, 'length(idx)': 150}
     ])
     self.assertEqual(execute_all(cur, "select rowid from x_data"), [
@@ -171,7 +170,7 @@ class TestVss(unittest.TestCase):
       {"rowid": 1003},
       {"rowid": 1004},
     ])
-    
+
     with self.subTest("delete + commit"):
       execute_all(cur, "delete from x where rowid = 1004")
       db.commit()
@@ -184,10 +183,10 @@ class TestVss(unittest.TestCase):
       ])
 
       self.assertEqual(execute_all(cur, "select rowid, length(idx) from x_index"), [
-        {'rowid': 0, 'length(idx)': 154}, 
+        {'rowid': 0, 'length(idx)': 154},
         {'rowid': 1, 'length(idx)': 138}
       ])
-    
+
     with self.subTest("delete + rollback"):
       execute_all(cur, "delete from x where rowid = 1003")
       self.assertEqual(execute_all(cur, "select rowid from x_data"), [
@@ -206,16 +205,16 @@ class TestVss(unittest.TestCase):
       ])
 
       self.assertEqual(execute_all(cur, "select rowid, length(idx) from x_index"), [
-        {'rowid': 0, 'length(idx)': 154}, 
+        {'rowid': 0, 'length(idx)': 154},
         {'rowid': 1, 'length(idx)': 138}
       ])
 
     def search(column, v, k):
       return execute_all(cur, f"select rowid, distance from x where vss_search({column}, vss_search_params(json(?), ?))", [v, k])
-    
+
     def range_search(column, v, d):
       return execute_all(cur, f"select rowid, distance from x where vss_range_search({column}, vss_range_search_params(json(?), ?))", [v, d])
-    
+
     self.assertEqual(search('a', '[0.9, 0]', 5), [
       {'rowid': 1002, 'distance': 0.010000004433095455},
       {'rowid': 1000, 'distance': 1.809999942779541},
@@ -226,16 +225,16 @@ class TestVss(unittest.TestCase):
       {'rowid': 1003, 'distance': 4.0},
       {'rowid': 1002, 'distance': 9.0},
     ])
-    
+
     with self.assertRaisesRegex(sqlite3.OperationalError, 'input query size doesn\'t match index dimensions: 0 != 1'):
       search('b', '[]', 2)
 
     with self.assertRaisesRegex(sqlite3.OperationalError, 'input query size doesn\'t match index dimensions: 3 != 1'):
       search('b', '[0.1, 0.2, 0.3]', 2)
-    
+
     with self.assertRaisesRegex(sqlite3.OperationalError, 'k must be greater than 0, got -1'):
       search('b', '[6]', -1)
-    
+
     with self.assertRaisesRegex(sqlite3.OperationalError, 'k must be greater than 0, got 0'):
       search('b', '[6]', 0)
 
@@ -262,8 +261,8 @@ class TestVss(unittest.TestCase):
     if sqlite3.sqlite_version_info[1] >= 41:
       self.assertEqual(
         execute_all(
-          cur, 
-          f"select rowid, distance from x where vss_search(a, json(?)) limit ?", 
+          cur,
+          f"select rowid, distance from x where vss_search(a, json(?)) limit ?",
           ['[0.9, 0]', 2]
         ),
         [
@@ -273,18 +272,18 @@ class TestVss(unittest.TestCase):
       )
       with self.assertRaisesRegex(sqlite3.OperationalError, "2nd argument to vss_search\(\) must be a vector"):
         execute_all(
-            cur, 
+            cur,
             f"select rowid, distance from x where vss_search(a, 3) limit 1"
           )
-    
+
     else:
       with self.assertRaisesRegex(sqlite3.OperationalError, "vss_search\(\) only support vss_search_params\(\) as a 2nd parameter for SQLite versions below 3.41.0"):
         execute_all(
-            cur, 
-            f"select rowid, distance from x where vss_search(a, json(?)) limit ?", 
+            cur,
+            f"select rowid, distance from x where vss_search(a, json(?)) limit ?",
             ['[0.9, 0]', 2]
           )
-    
+
     self.assertRegex(
       explain_query_plan("select * from x where vss_search(a, null);"),
       r'SCAN (TABLE )?x VIRTUAL TABLE INDEX 0:search'
@@ -309,19 +308,19 @@ class TestVss(unittest.TestCase):
     # TODO support rowid point queries
 
     self.assertEqual(db.execute("select count(*) from x_data").fetchone()[0], 4)
-    
+
     execute_all(cur, "drop table x;")
     with self.assertRaisesRegex(sqlite3.OperationalError, "no such table: x_data"):
       self.assertEqual(db.execute("select count(*) from x_data").fetchone()[0], 4)
-    
+
     with self.assertRaisesRegex(sqlite3.OperationalError, "no such table: x_index"):
       self.assertEqual(db.execute("select count(*) from x_index").fetchone()[0], 2)
-    
-    
+
+
   def test_vss0_persistent(self):
     tf = tempfile.NamedTemporaryFile(delete=False)
     tf.close()
-    
+
     db = connect(tf.name)
     db.execute("create table t as select 1 as a")
     cur = db.cursor()
@@ -330,16 +329,16 @@ class TestVss(unittest.TestCase):
     """)
     execute_all(cur, """
       insert into x(rowid, a, b)
-        select 
-          key + 1000, 
+        select
+          key + 1000,
           json_extract(value, '$[0]'),
           json_extract(value, '$[1]')
         from json_each(?);
       """, ["""
         [
-          [[0, 1], [1]], 
-          [[0, -1], [2]], 
-          [[1, 0], [3]], 
+          [[0, 1], [1]],
+          [[0, -1], [2]],
+          [[1, 0], [3]],
           [[-1, 0], [4]]
         ]
         """])
@@ -348,7 +347,7 @@ class TestVss(unittest.TestCase):
 
     def search(cur,  column, v, k):
       return execute_all(cur, f"select rowid, distance from x where vss_search({column}, vss_search_params(json(?), ?))", [v, k])
-    
+
     self.assertEqual(search(cur, 'a', '[0.9, 0]', 5), [
       {'rowid': 1002, 'distance': 0.010000004433095455},
       {'rowid': 1000, 'distance': 1.809999942779541},
@@ -374,12 +373,12 @@ class TestVss(unittest.TestCase):
       {'rowid': 1003, 'distance': 4.0},
       {'rowid': 1002, 'distance': 9.0},
     ])
-    
+
     db.close()
   def test_vss0_persistent_stress(self):
     tf = tempfile.NamedTemporaryFile(delete=False)
     tf.close()
-    
+
     # create a vss0 table with no data, then close it. When re-opening it, should work as expected
     db = connect(tf.name)
     db.execute("create virtual table x using vss0(a(2));")
@@ -400,15 +399,15 @@ class TestVss(unittest.TestCase):
       {'rowid': 1, 'a': 'size: 2 [1.000000, 2.000000]'},
     ])
     db.close()
-  
+
   def test_vss_stress(self):
     cur = db.cursor()
-    
+
     execute_all(cur, 'create virtual table no_id_map using vss0(a(2) factory="Flat");')
     with self.assertRaisesRegex(sqlite3.OperationalError, ".*add_with_ids not implemented for this type of index.*"):
       execute_all(cur, """insert into no_id_map(rowid, a) select  100, json('[0, 1]')""")
       db.commit()
-      
+
 
     execute_all(cur, 'create virtual table no_id_map2 using vss0(a(2) factory="Flat,IDMap");')
     execute_all(cur, "insert into no_id_map2(rowid, a) select  100, json('[0, 1]')")
@@ -417,24 +416,24 @@ class TestVss(unittest.TestCase):
       execute_all(cur, "select rowid, a from no_id_map2;")
     # but this suceeds, because only the rowid column is referenced
     execute_all(cur, "select rowid from no_id_map2;")
-    
+
     with self.assertRaisesRegex(sqlite3.OperationalError, ".*could not parse index string invalid"):
       execute_all(cur, 'create virtual table t1 using vss0(a(2) factory="invalid");')
-  
+
   def test_vss_training(self):
     import random
     import json
     cur = db.cursor()
     execute_all(
-      cur, 
+      cur,
       'create virtual table with_training using vss0(a(4) factory="IVF10,Flat,IDMap2", b(4) factory="IVF10,Flat,IDMap2")'
     )
     data = list(map(lambda x: [random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1), random.uniform(0, 1)], range(0, 1000)))
     execute_all(
-      cur, 
+      cur,
       """
-        insert into with_training(operation, a, b) 
-          select 
+        insert into with_training(operation, a, b)
+          select
             'training',
             value,
             value
@@ -446,10 +445,10 @@ class TestVss(unittest.TestCase):
     self.assertEqual(cur.execute('select count(*) from with_training').fetchone()[0], 0)
 
     execute_all(
-      cur, 
+      cur,
       """
-        insert into with_training(rowid, a, b) 
-          select 
+        insert into with_training(rowid, a, b)
+          select
             key,
             value,
             value
@@ -487,7 +486,7 @@ class TestVector(unittest.TestCase):
     modules = list(map(lambda a: a[0], db.execute("select name from vector_loaded_modules").fetchall()))
     self.assertEqual(modules, VECTOR_MODULES)
 
-    
+
   def test_vector_version(self):
     self.assertEqual(db.execute("select vector_version()").fetchone()[0][0], "v")
 
@@ -500,12 +499,10 @@ class TestVector(unittest.TestCase):
     )
     with self.assertRaisesRegex(sqlite3.OperationalError, "value not a vector"):
       db.execute("select vector_debug(']')").fetchone()
-    
-  
+
   def test_vector0(self):
-    
     self.assertEqual(db.execute("select vector0(null)").fetchone()[0], None)
-  
+
   def test_vector_from_blob(self):
     self.assertEqual(
       db.execute("select vector_debug(vector_from_blob(vector_to_blob(vector_from_json(?))))", ["[0.1,0.2]"]).fetchone()[0],
@@ -517,10 +514,10 @@ class TestVector(unittest.TestCase):
     #import pdb;pdb.set_trace()
     raises_small_blob_header(b"")
     raises_small_blob_header(b"v")
-    
+
     with self.assertRaisesRegex(sqlite3.OperationalError, "Blob not well-formatted vector blob"):
         db.execute("select vector_from_blob(?)", [b"V\x01\x00\x00\x00\x00"]).fetchall()
-    
+
     with self.assertRaisesRegex(sqlite3.OperationalError, "Blob type not right"):
         db.execute("select vector_from_blob(?)", [b"v\x00\x00\x00\x00\x00"]).fetchall()
 
@@ -529,13 +526,13 @@ class TestVector(unittest.TestCase):
     self.assertEqual(vector_to_blob("[]"), b"v\x01")
     self.assertEqual(vector_to_blob("[0.1]"), b"v\x01\xcd\xcc\xcc=")
     self.assertEqual(vector_to_blob("[0.1, 0]"), b"v\x01\xcd\xcc\xcc=\x00\x00\x00\x00")
-  
+
   def test_vector_to_raw(self):
     vector_to_raw = lambda x: db.execute("select vector_to_raw(vector_from_json(json(?)))", [x]).fetchone()[0]
     self.assertEqual(vector_to_raw("[]"), None) # TODO why not b""
     self.assertEqual(vector_to_raw("[0.1]"), b"\xcd\xcc\xcc=")
     self.assertEqual(vector_to_raw("[0.1, 0]"), b"\xcd\xcc\xcc=\x00\x00\x00\x00")
-  
+
   def test_vector_from_raw(self):
     vector_from_raw_blob = lambda x: db.execute("select vector_debug(vector_from_raw(?))", [x]).fetchone()[0]
     self.assertEqual(
@@ -561,17 +558,17 @@ class TestVector(unittest.TestCase):
     with self.assertRaisesRegex(sqlite3.OperationalError, "input not valid json, or contains non-float data"):
       vector_from_json('')
     #db.execute("select vector_from_json(?)", [""]).fetchone()[0]
-  
+
   def test_vector_to_json(self):
     vector_to_json = lambda x: db.execute("select vector_debug(vector_to_json(vector_from_json(json(?))))", [x]).fetchone()[0]
     self.assertEqual(vector_to_json('[0.1, 0.2, 0.3]'), "size: 3 [0.100000, 0.200000, 0.300000]")
-  
+
   def test_vector_length(self):
     vector_length = lambda x: db.execute("select vector_length(vector_from_json(json(?)))", [x]).fetchone()[0]
     self.assertEqual(vector_length('[0.1, 0.2, 0.3]'), 3)
     self.assertEqual(vector_length('[0.1]'), 1)
     self.assertEqual(vector_length('[]'), 0)
-  
+
   def test_vector_value_at(self):
     vector_value_at = lambda x, y: db.execute("select vector_value_at(vector_from_json(json(?)), ?)", [x, y]).fetchone()[0]
     self.assertAlmostEqual(vector_value_at('[0.1, 0.2, 0.3]', 0), 0.1)
@@ -579,13 +576,13 @@ class TestVector(unittest.TestCase):
     self.assertAlmostEqual(vector_value_at('[0.1, 0.2, 0.3]', 2), 0.3)
     #self.assertAlmostEqual(vector_value_at('[0.1, 0.2, 0.3]', 3), 0.3)
 
-class TestCoverage(unittest.TestCase):                                      
-  def test_coverage_vss(self):                                                      
+class TestCoverage(unittest.TestCase):
+  def test_coverage_vss(self):
     test_methods = [method for method in dir(TestVss) if method.startswith('test_vss')]
     funcs_with_tests = set([x.replace("test_", "") for x in test_methods])
     for func in VSS_FUNCTIONS:
       self.assertTrue(func in funcs_with_tests, f"{func} does not have cooresponding test in {funcs_with_tests}")
-  
+
   def test_coverage_vector(self):
     test_methods = [method for method in dir(TestVector) if method.startswith('test_vector')]
     funcs_with_tests = set([x.replace("test_", "") for x in test_methods])

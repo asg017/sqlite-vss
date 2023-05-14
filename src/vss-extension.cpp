@@ -1,8 +1,8 @@
 #include <cstdio>
 #include <cstdlib>
-#include "sqlite3ext.h"
 #include "sqlite-vss.h"
 
+#include "sqlite3ext.h"
 SQLITE_EXTENSION_INIT1
 
 #include <cmath>
@@ -26,16 +26,13 @@ SQLITE_EXTENSION_INIT1
 // https://github.com/sqlite/sqlite/blob/master/src/json.c#L88-L89
 //#define JSON_SUBTYPE  74    /* Ascii for "J" */
 
-#pragma region work 
+#pragma region work
 
-void del(void*p) {
-  //delete p;
-}
 static void vss_version(sqlite3_context *context, int argc, sqlite3_value **argv) {
   sqlite3_result_text(context, SQLITE_VSS_VERSION, -1, SQLITE_STATIC);
 }
 static void vss_debug(sqlite3_context *context, int argc, sqlite3_value **argv) {
-  const char * debug = sqlite3_mprintf("version: %s\nfaiss version: %d.%d.%d\nfaiss compile options: %s", 
+  const char * debug = sqlite3_mprintf("version: %s\nfaiss version: %d.%d.%d\nfaiss compile options: %s",
   SQLITE_VSS_VERSION, FAISS_VERSION_MAJOR, FAISS_VERSION_MINOR, FAISS_VERSION_PATCH,
   faiss::get_compile_options().c_str());
   sqlite3_result_text(context, debug, -1, SQLITE_TRANSIENT);
@@ -278,7 +275,7 @@ static int write_index_insert(faiss::Index * index, sqlite3*db, char * schema, c
 
   // First try to insert into xyz_index. If that fails with a rowid constraint error,
   // that means the index is already on disk, we just have to UPDATE instead.
-  
+
   sqlite3_stmt *stmt;
   char * q = sqlite3_mprintf("insert into \"%w\".\"%w_index\"(rowid, idx) values (?, ?)", schema, name);
   int rc = sqlite3_prepare_v2(db, q, -1, &stmt, 0);
@@ -296,16 +293,16 @@ static int write_index_insert(faiss::Index * index, sqlite3*db, char * schema, c
   int result = sqlite3_step(stmt);
   sqlite3_finalize(stmt);
   sqlite3_free(q);
-    
-  
+
+
   // INSERT was success, index wasn't written yet, all good to exit
   if(result == SQLITE_DONE) {
     return SQLITE_OK;
   }
   // INSERT failed for another unknown reason, bad, return error
   else if(sqlite3_extended_errcode(db) != SQLITE_CONSTRAINT_ROWID) {
-    return SQLITE_ERROR;  
-  } 
+    return SQLITE_ERROR;
+  }
 
   // INSERT failed because index already is on disk, so do UPDATE instead
 
@@ -433,7 +430,7 @@ static int create_shadow_tables(sqlite3 * db, const char * schema, const char * 
   }
   sqlite3_str_appendall(create_index_str, ")");*/
   const char * zCreateIndex =  sqlite3_mprintf("CREATE TABLE \"%w\".\"%w_index\"(idx)", schema, name);//sqlite3_str_finish(create_index_str);
-  int rc = sqlite3_exec(db, zCreateIndex, 0, 0, 0);  
+  int rc = sqlite3_exec(db, zCreateIndex, 0, 0, 0);
   sqlite3_free((void *) zCreateIndex);
   if (rc != SQLITE_OK) return rc;
 
@@ -441,16 +438,16 @@ static int create_shadow_tables(sqlite3 * db, const char * schema, const char * 
   rc = sqlite3_exec(db, zCreateData, 0, 0, 0);
   sqlite3_free((void *) zCreateData);
   return rc;
-  
+
 }
 
 static int drop_shadow_tables(sqlite3*db, char * name) {
   const char* drops[2] = {"drop table \"%w_index\";", "drop table \"%w_data\";"};
   for(int i = 0; i < 2; i++) {
     const char * s = drops[i];
-    
+
     sqlite3_stmt *stmt;
-    
+
     sqlite3_str *query = sqlite3_str_new(0);
     sqlite3_str_appendf(query, s, name);
     char * q = sqlite3_str_finish(query);
@@ -467,7 +464,7 @@ static int drop_shadow_tables(sqlite3*db, char * name) {
     }
     sqlite3_free(q);
     sqlite3_finalize(stmt);
-    
+
   }
   return SQLITE_OK;
 }
@@ -502,7 +499,7 @@ struct vss_index_vtab {
   bool isInsertData;
 };
 
-enum QueryType {search, range_search, fullscan}; 
+enum QueryType {search, range_search, fullscan};
 
 typedef struct vss_index_cursor vss_index_cursor;
 struct vss_index_cursor {
@@ -518,7 +515,7 @@ struct vss_index_cursor {
   sqlite3_int64 search_k;
   std::vector<faiss::idx_t> *search_ids;
   std::vector<float> *search_distances;
-  
+
   // for query_type == QueryType::range_search
   faiss::RangeSearchResult * range_search_result;
 
@@ -552,7 +549,7 @@ std::vector<VssIndexColumn>* parse_constructor(int argc, const char *const*argv)
 
     std::size_t factoryStart, factoryStringStartFrom;
     std::string factory;
-    if( 
+    if(
       (factoryStart = arg.find("factory", rparen)) != std::string::npos
       && (factoryStringStartFrom = arg.find("=", factoryStart)) != std::string::npos
     ) {
@@ -563,7 +560,7 @@ std::vector<VssIndexColumn>* parse_constructor(int argc, const char *const*argv)
         return NULL;
       }
       factory = arg.substr(lquote+1, rquote - lquote-1);
-      
+
     } else {
       factory = std::string("Flat,IDMap2");
     }
@@ -598,13 +595,13 @@ static int init(
   const char * query = sqlite3_str_finish(str);
   rc = sqlite3_declare_vtab(db, query);
   sqlite3_free((void*) query);
-  
+
   #define VSS_INDEX_COLUMN_DISTANCE    0
   #define VSS_INDEX_COLUMN_OPERATION   1
   #define VSS_INDEX_COLUMN_VECTORS     2
-  
+
   if( rc!=SQLITE_OK ) return rc;
-  
+
   vss_index_vtab *pNew;
   pNew = (vss_index_vtab *) sqlite3_malloc( sizeof(*pNew) );
   *ppVtab = (sqlite3_vtab*)pNew;
@@ -613,11 +610,11 @@ static int init(
   pNew->vector_api = (vector0_api *) pAux;
   pNew->indexCount = columns->size();
   pNew->indexes = new std::vector<faiss::Index *> ();
-  
+
   pNew->schema = sqlite3_mprintf("%s", argv[1]);
   pNew->name = sqlite3_mprintf("%s", argv[2]);
   pNew->db = db;
-  
+
   if (isCreate) {
     int i;
     for (auto column = columns->begin(); column != columns->end(); ++column) {
@@ -641,11 +638,11 @@ static int init(
         return SQLITE_ERROR;
       }
     }
-    
+
   } else {
     for(int i = 0; i < pNew->indexCount; i++) {
       auto index = read_index_select(db, argv[2], i);
-      // index in shadow table should always be available, integrity check to avoid null pointer 
+      // index in shadow table should always be available, integrity check to avoid null pointer
       if(index == NULL) {
         *pzErr = sqlite3_mprintf("Could not read index at position %d", i);
         return SQLITE_ERROR;
@@ -666,10 +663,10 @@ static int init(
     pNew->delete_to_delete_ids->push_back(new std::vector<faiss::idx_t>());
   }
 
-  
+
   pNew->isTraining = false;
   pNew->isInsertData = false;
-    
+
   return SQLITE_OK;
 }
 
@@ -710,7 +707,7 @@ static int vssIndexDisconnect(sqlite3_vtab *pVtab){
     delete p->insert_to_add_data->at(i);
     delete p->insert_to_add_ids->at(i);
     delete p->delete_to_delete_ids->at(i);
-    
+
   }
   delete p->trainings;
   delete p->insert_to_add_data;
@@ -740,7 +737,7 @@ static int vssIndexOpen(sqlite3_vtab *pVtab, sqlite3_vtab_cursor **ppCursor){
   pCur->table = p;
   //pCur->nns = new std::vector<faiss::idx_t>(5);
   //pCur->dis = new std::vector<float>(5);
-  
+
   return SQLITE_OK;
 }
 
@@ -779,10 +776,10 @@ static int vssIndexBestIndex(
     else if(constraint.op == VSS_RANGE_SEARCH_FUNCTION) {
       iRangeSearchTerm = i;
       iXSearchColumn = constraint.iColumn;
-    } 
+    }
     else if(constraint.op == SQLITE_INDEX_CONSTRAINT_LIMIT) {
       iLimit = i;
-    } 
+    }
   }
   if(iSearchTerm >=0) {
     pIdxInfo->idxNum = iXSearchColumn - VSS_INDEX_COLUMN_VECTORS;
@@ -814,21 +811,21 @@ static int vssIndexBestIndex(
 }
 
 static int vssIndexFilter(
-  sqlite3_vtab_cursor *pVtabCursor, 
+  sqlite3_vtab_cursor *pVtabCursor,
   int idxNum, const char *idxStr,
   int argc, sqlite3_value **argv
 ){
   //printf("filter argc=%d, idxStr='%s', idxNum=%d\n", argc, idxStr, idxNum);
-  vss_index_cursor *pCur = (vss_index_cursor *)pVtabCursor;  
+  vss_index_cursor *pCur = (vss_index_cursor *)pVtabCursor;
   if (strcmp(idxStr, "search")==0) {
     pCur->query_type = QueryType::search;
     std::vector<float> * query_vector;
-    
+
     VssSearchParams* params;
     if ( (params = (VssSearchParams*) sqlite3_value_pointer(argv[0], "vss0_searchparams")) != NULL) {
       pCur->search_k = params->k;
       query_vector = new std::vector<float>(*params->vector);
-    } 
+    }
     // https://sqlite.org/forum/info/6b32f818ba1d97ef
     else if(sqlite3_libversion_number() < 3041000) {
       sqlite3_free(pVtabCursor->pVtab->zErrMsg);
@@ -836,11 +833,11 @@ static int vssIndexFilter(
       return SQLITE_ERROR;
     }
     else if ((query_vector = pCur->table->vector_api->xValueAsVector(argv[0])) != NULL) {
-      if(argc > 1)  
+      if(argc > 1)
         pCur->search_k = sqlite3_value_int(argv[1]);
       else {
         sqlite3_free(pVtabCursor->pVtab->zErrMsg);
-        pVtabCursor->pVtab->zErrMsg = sqlite3_mprintf("vss_search() only support vss_search_params() as a 2nd parameter for SQLite versions below 3.41.0");
+        pVtabCursor->pVtab->zErrMsg = sqlite3_mprintf("TODO");
         return SQLITE_ERROR;
       }
     }
@@ -885,7 +882,7 @@ static int vssIndexFilter(
     faiss::Index* index = pCur->table->indexes->at(idxNum);
     index->range_search(nq, params->vector->data(), params->distance, result);
     pCur->range_search_result = result;
-    
+
   }else if (strcmp(idxStr, "fullscan")==0) {
     pCur->query_type = QueryType::fullscan;
     sqlite3_stmt* stmt;
@@ -915,7 +912,7 @@ static int vssIndexNext(sqlite3_vtab_cursor *cur){
       pCur->step_result = sqlite3_step(pCur->stmt);
     }
   }
-  
+
   return SQLITE_OK;
 }
 static int vssIndexRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid){
@@ -943,8 +940,8 @@ static int vssIndexEof(sqlite3_vtab_cursor *cur){
     case QueryType::search: {
       return pCur->iCurrent >= pCur->search_k || (pCur->search_ids->at(pCur->iCurrent) == -1);
     }
-    case QueryType::range_search: {      
-      return pCur->iCurrent >= pCur->range_search_result->lims[1]; 
+    case QueryType::range_search: {
+      return pCur->iCurrent >= pCur->range_search_result->lims[1];
     }
     case QueryType::fullscan: {
       return pCur->step_result != SQLITE_ROW;
@@ -976,14 +973,14 @@ static int vssIndexColumn(
   }
   else if ( i >= VSS_INDEX_COLUMN_VECTORS) {
     faiss::Index * index = pCur->table->indexes->at(i-VSS_INDEX_COLUMN_VECTORS);
-      
+
     std::vector<float> *v = new std::vector<float>(index->d);
     sqlite3_int64 rowid;
     vssIndexRowid(cur, &rowid);
-    
+
     try {
       index->reconstruct(rowid, v->data());
-      
+
     }
     catch(faiss::FaissException& e) {
       //printf("%s\n", ex.what());
@@ -1006,7 +1003,6 @@ static int vssIndexBegin(sqlite3_vtab *tab) {
 static int vssIndexSync(sqlite3_vtab *pVTab) {
   vss_index_vtab *p = (vss_index_vtab*)pVTab;
   bool needsWriting = false;
-  //printf("SYNC %d %d\n", p->isTraining, p->isInsertData);
   if(p->isTraining) {
     //printf("TRAINING %lu\n", p->training->size());
     for (std::size_t i = 0; i != p->trainings->size(); ++i) {
@@ -1107,7 +1103,7 @@ static int vssIndexUpdate(
     for(int i = 0; i < p->indexCount; i++) {
       p->delete_to_delete_ids->at(i)->push_back(rowid_to_delete);
     }
-    
+
   }
   // INSERT operation
   else if (argc > 1 && sqlite3_value_type(argv[0]) == SQLITE_NULL) {
@@ -1142,14 +1138,14 @@ static int vssIndexUpdate(
           p->insert_to_add_data->at(i)->reserve(vec->size() + distance(vec->begin(), vec->end()));
           p->insert_to_add_data->at(i)->insert(p->insert_to_add_data->at(i)->end(), vec->begin(), vec->end());
           p->insert_to_add_ids->at(i)->push_back(rowid);
-            
+
           p->isInsertData = true;
           *pRowid = rowid;
           delete vec;
         }
       }
-      
-      
+
+
     } else {
       std::string operation ((char *) sqlite3_value_text(argv[2+VSS_INDEX_COLUMN_OPERATION]));
       if(operation.compare("training") == 0) {
@@ -1161,8 +1157,8 @@ static int vssIndexUpdate(
             p->isTraining = true;
             delete vec;
           }
-        }      
-      } 
+        }
+      }
       else {
         //printf("unknown operation\n");
         return SQLITE_ERROR;
@@ -1300,13 +1296,12 @@ extern "C" {
     sqlite3_create_function_v2(db, "vss_inner_product", 2, SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS, vector_api, vss_inner_product, 0, 0, 0);
     sqlite3_create_function_v2(db, "vss_fvec_add", 2, SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS, vector_api, vss_fvec_add, 0, 0, 0);
     sqlite3_create_function_v2(db, "vss_fvec_sub", 2, SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS, vector_api, vss_fvec_sub, 0, 0, 0);
-    
+
     sqlite3_create_function_v2(db, "vss_search", 2, SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS, vector_api, vssSearchFunc, 0, 0, 0);
     sqlite3_create_function_v2(db, "vss_search_params", 2, 0, vector_api, VssSearchParamsFunc, 0, 0, 0);
     sqlite3_create_function_v2(db, "vss_range_search", 2, SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS, vector_api, vssRangeSearchFunc, 0, 0, 0);
     sqlite3_create_function_v2(db, "vss_range_search_params", 2, 0, vector_api, VssRangeSearchParamsFunc, 0, 0, 0);
-    
-    
+
     sqlite3_create_module_v2  (db, "vss0", &vssIndexModule, vector_api, 0);
     return 0;
   }
