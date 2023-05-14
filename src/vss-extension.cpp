@@ -1023,6 +1023,7 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
         size_t numRemoved = p->indexes->at(i)->remove_ids(*selector);
         delete selector;
         needsWriting= true;
+        delete_ids->clear();
       }
   }
 

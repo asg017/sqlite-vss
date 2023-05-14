@@ -460,6 +460,41 @@ class TestVss(unittest.TestCase):
     db.commit()
     self.assertEqual(cur.execute('select count(*) from with_training').fetchone()[0], 1000)
 
+  def test_vss0_issue_29_upsert(self):
+    db = connect()
+    execute_all(db , '')
+    db.executescript("""
+    create virtual table demo using vss0(a(2));
+
+    insert into demo(rowid, a)
+      values (1, '[1.0, 2.0]'), (2, '[2.0, 3.0]');
+    """)
+
+    self.assertEqual(
+      execute_all(db, "select rowid, vector_debug(a) from demo;"),
+      [
+        {'rowid': 1, 'vector_debug(a)': 'size: 2 [1.000000, 2.000000]'},
+        {'rowid': 2, 'vector_debug(a)': 'size: 2 [2.000000, 3.000000]'}
+      ]
+    )
+
+    db.executescript("""
+    delete from demo where rowid = 1;
+    insert into demo(rowid, a) select 1, '[99.0, 99.0]';
+
+    delete from demo where rowid = 2;
+    insert into demo(rowid, a) select 2, '[299.0, 299.0]';
+    """)
+
+    # This is what used to fail, since we we're clearing deleted IDs properly
+    self.assertEqual(
+      execute_all(db, "select rowid, vector_debug(a) from demo;"),
+      [
+        {'rowid': 1, 'vector_debug(a)': 'size: 2 [99.000000, 99.000000]'},
+        {'rowid': 2, 'vector_debug(a)': 'size: 2 [299.000000, 299.000000]'}
+      ]
+    )
+    db.close()
 
 VECTOR_FUNCTIONS = [
   'vector0',
