@@ -1,0 +1,22 @@
+{
+  "name": "site",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "vitepress": "^1.0.0-alpha.75"
+  },
+  "dependencies": {
+    "markdown-it-container": "^3.0.0"
+  }
+}
