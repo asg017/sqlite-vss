@@ -837,7 +837,7 @@ static int vssIndexFilter(
         pCur->search_k = sqlite3_value_int(argv[1]);
       else {
         sqlite3_free(pVtabCursor->pVtab->zErrMsg);
-        pVtabCursor->pVtab->zErrMsg = sqlite3_mprintf("TODO");
+        pVtabCursor->pVtab->zErrMsg = sqlite3_mprintf("LIMIT required on vss_search() queries");
         return SQLITE_ERROR;
       }
     }
