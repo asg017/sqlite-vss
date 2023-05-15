@@ -53,7 +53,7 @@ begin;
 delete from vss_articles
   where rowid between 100 and 200;
 
-insert into vss_articles(rowd, headline_embedding, description_embedding)
+insert into vss_articles(rowid, headline_embedding, description_embedding)
   values (:rowid, :headline_embedding, :description_embedding)
 
 commit;
