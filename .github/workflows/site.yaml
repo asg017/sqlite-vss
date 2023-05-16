@@ -24,6 +24,7 @@ jobs:
         with:
           node-version: 16
           cache: npm
+          cache-dependency-path: site/package-lock.json
       - run: npm ci
         working-directory: site/
       - run: make site-build
