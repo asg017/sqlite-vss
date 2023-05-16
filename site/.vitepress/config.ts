@@ -176,6 +176,7 @@ export default defineConfig({
   description,
   lastUpdated: true,
   head: head(),
+  base: "/sqlite-vss/",
   themeConfig: {
     nav: nav(),
     sidebar: sidebar(),

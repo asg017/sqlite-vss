@@ -178,6 +178,9 @@ test-loadable-3.41.0:
 site-dev:
 	npm --prefix site run dev
 
+site-build:
+	npm --prefix site run build
+
 .PHONY: clean test test-3.41.0 \
 	loadable loadable-release static static-release \
 	patch-openmp patch-openmp-undo \
