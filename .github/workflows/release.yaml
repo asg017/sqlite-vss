@@ -266,3 +266,44 @@ jobs:
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
           skip-existing: true
+  upload-gem:
+    needs:
+      [
+        build-linux-x86_64-extension,
+        build-macos-x86_64-extension,
+        build-macos-aarch64-extension,
+      ]
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v2
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.2
+      - run: |
+          rm bindings/ruby/lib/*.{dylib,so,dll} || true
+          cp ${{ env.ARTIFACT-MACOS-X86_64-EXTENSION }}/*.dylib bindings/ruby/lib
+          gem -C bindings/ruby build -o x86_64-darwin.gem sqlite_vss.gemspec
+        env:
+          PLATFORM: x86_64-darwin
+      - run: |
+          rm bindings/ruby/lib/*.{dylib,so,dll} || true
+          cp ${{ env.ARTIFACT-MACOS-AARCH64-EXTENSION }}/*.dylib bindings/ruby/lib
+          gem -C bindings/ruby build -o arm64-darwin.gem sqlite_vss.gemspec
+        env:
+          PLATFORM: arm64-darwin
+      - run: |
+          rm bindings/ruby/lib/*.{dylib,so,dll} || true
+          cp ${{ env.ARTIFACT-LINUX-X86_64-EXTENSION }}/*.so bindings/ruby/lib
+          gem -C bindings/ruby build -o x86_64-linux.gem sqlite_vss.gemspec
+        env:
+          PLATFORM: x86_64-linux
+      - run: |
+          gem push bindings/ruby/x86_64-darwin.gem
+          gem push bindings/ruby/arm64-darwin.gem
+          gem push bindings/ruby/x86_64-linux.gem
+          gem push bindings/ruby/x64-mingw32.gem
+        env:
+          GEM_HOST_API_KEY: ${{ secrets.GEM_HOST_API_KEY }}

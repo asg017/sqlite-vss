@@ -142,11 +142,15 @@ npm: VERSION npm/platform-package.README.md.tmpl npm/platform-package.package.js
 deno: VERSION deno/deno.json.tmpl
 	scripts/deno_generate_package.sh
 
+bindings/ruby/lib/version.rb: bindings/ruby/lib/version.rb.tmpl VERSION
+	VERSION=$(VERSION) envsubst < $< > $@
+
 version:
 	make python-versions
 	make python
 	make npm
 	make deno
+	make bindings/ruby/lib/version.rb
 
 test-loadable:
 	$(PYTHON) tests/test-loadable.py
