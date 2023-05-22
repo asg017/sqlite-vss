@@ -3,19 +3,7 @@
 
 # Getting Started
 
-## Quickstart
-
-::: xxx
-
-```python
-print("yo!")
-```
-
-```js
-console.log("yo!");
-```
-
-:::
+## Introduction
 
 ## Installing
 
@@ -59,7 +47,7 @@ spm install github.com/asg017/sqlite-vss
 
 For quick
 
-## Example
+## Basic Example
 
 <!-- <p align="center"> <img src="./demo_base.png" width="75%"> </p> -->
 
@@ -131,3 +119,5 @@ limit 3;
 │ 1     │ 34.0     │
 └───────┴──────────┘
 ```
+
+## Next Steps

@@ -36,24 +36,18 @@ function head(): HeadConfig[] {
 const guides = {
   text: "Guides",
   items: [
-    { text: "OpenAI's Embedding API", link: "/openai-python" },
-    { text: "openai-to-sqlite", link: "/openai-to-sqlite" },
-    {
-      text: "Sentence Transformers",
-      link: "/sentence-transformers-python",
-    },
-    {
-      text: "HuggingFace Inference API",
-      link: "/huggingface",
-    },
-    { text: "Cohere's Embedding API", link: "/cohere" },
+    //{ text: "OpenAI's Embedding API", link: "/openai-python" },
+    //{ text: "openai-to-sqlite", link: "/openai-to-sqlite" },
+    //{ text: "Sentence Transformers", link: "/sentence-transformers-python",},
+    //{ text: "HuggingFace Inference API", link: "/huggingface",},
+    //{ text: "Cohere's Embedding API", link: "/cohere" },
   ],
 };
 
 function nav(): DefaultTheme.NavItem[] {
   return [
     { text: "Home", link: "/" },
-    guides,
+    //guides,
     { text: "API Reference", link: "/api-reference" },
     { text: "♥ Sponsor", link: "https://github.com/sponsors/asg017" },
     {
@@ -78,22 +72,22 @@ function nav(): DefaultTheme.NavItem[] {
               text: "Node.js: NPM package",
               link: `https://www.npmjs.com/package/${PROJECT}`,
             },
-            {
-              text: "Ruby: Ruby gem",
-              link: `https://rubygems.org/gems/${PROJECT.replace("-", "_")}`,
-            },
+            //{
+            //  text: "Ruby: Ruby gem",
+            //  link: `https://rubygems.org/gems/${PROJECT.replace("-", "_")}`,
+            //},
             {
               text: "Deno: deno.land/x module",
               link: `https://deno.land/x/${PROJECT.replace("-", "_")}`,
             },
-            {
-              text: "Golang: Go module",
-              link: `https://pkg.go.dev/github.com/asg017/${PROJECT}`,
-            },
-            {
-              text: "Rust: Cargo crate",
-              link: `https://crates.io/crates/${PROJECT}`,
-            },
+            //{
+            //  text: "Golang: Go module",
+            //  link: `https://pkg.go.dev/github.com/asg017/${PROJECT}`,
+            //},
+            //{
+            //  text: "Rust: Cargo crate",
+            //  link: `https://crates.io/crates/${PROJECT}`,
+            //},
           ],
         },
       ],
@@ -107,15 +101,13 @@ function sidebar(): DefaultTheme.Sidebar {
       text: "Getting Started",
       collapsed: false,
       items: [
-        { text: "Introduction", link: "/getting-started#introduction" },
         {
-          text: "Quickstart",
-          items: [
-            { text: "Installing", link: "/getting-started#installing" },
-            { text: "Example", link: "/getting-started#example" },
-          ],
+          text: "Introduction",
+          link: "/getting-started#introduction",
         },
-        { text: "See also", link: "/getting-started#see-also" },
+        { text: "Installing", link: "/getting-started#installing" },
+        { text: "Basic Example", link: "/getting-started#basic-example" },
+        { text: "Next Steps", link: "/getting-started#next-steps" },
       ],
     },
     {
@@ -125,15 +117,15 @@ function sidebar(): DefaultTheme.Sidebar {
         { text: "Python", link: "/python" },
         { text: "Node.js", link: "/nodejs" },
         { text: "Deno", link: "/deno" },
-        { text: "Ruby", link: "/ruby" },
-        { text: "Go", link: "/go" },
-        { text: "Rust", link: "/rust" },
+        //{ text: "Ruby", link: "/ruby" },
+        //{ text: "Go", link: "/go" },
+        //{ text: "Rust", link: "/rust" },
         { text: "Datasette", link: "/datasette" },
         { text: "Loadable Extension", link: "/loadable" },
         { text: "Turso", link: "/turso" },
       ],
     },
-    guides,
+    //guides,
     {
       text: "Comparisons with...",
       collapsed: true,
@@ -170,7 +162,6 @@ function sidebar(): DefaultTheme.Sidebar {
     },
   ];
 }
-
 export default defineConfig({
   title: PROJECT,
   description,
@@ -180,6 +171,10 @@ export default defineConfig({
   themeConfig: {
     nav: nav(),
     sidebar: sidebar(),
+    footer: {
+      message: "MIT License",
+      copyright: "Copyright © 2023 Alex Garcia",
+    },
     outline: "deep",
     search: {
       provider: "local",
