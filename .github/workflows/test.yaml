@@ -34,7 +34,7 @@ jobs:
 
       # TODO how cache this?
       - run: sudo apt-get install -y cmake libgomp1
-      - run: make loadable
+      - run: make loadable static
       - uses: actions/upload-artifact@v3
         with:
           name: ${{ env.ARTIFACT-LINUX-X86_64-EXTENSION }}
@@ -122,7 +122,7 @@ jobs:
           key: ${{ runner.os }}-build
       - run: make patch-openmp
       - run: find /usr/local/opt/libomp/*
-      - run: make loadable
+      - run: make loadable static
         env:
           # `brew info libomp` gives the correct one, with .a file for static openmp builds
           CC: /usr/local/opt/llvm/bin/clang
@@ -188,7 +188,7 @@ jobs:
         working-directory: vendor/sqlite
         run: ./configure && make
       - run: make patch-openmp
-      - run: make loadable
+      - run: make loadable static
         env:
           # `brew info libomp` gives the correct one, with .a file for static openmp builds
           CC: /opt/homebrew/opt/llvm/bin/clang
@@ -234,7 +234,7 @@ jobs:
       - if: steps.cache-sqlite-build.outputs.cache-hit != 'true'
         working-directory: vendor\sqlite
         run: ./configure && make
-      - run: make loadable
+      - run: make loadable static
       - uses: actions/upload-artifact@v3
         with:
           name: ${{ env.ARTIFACT-WINDOWS-X86_64-EXTENSION }}

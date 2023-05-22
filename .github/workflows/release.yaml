@@ -33,7 +33,7 @@ jobs:
 
       # TODO how cache this?
       - run: sudo apt-get install -y cmake libgomp1
-      - run: make loadable-release
+      - run: make loadable-release static-release
       - uses: actions/upload-artifact@v3
         with:
           name: ${{ env.ARTIFACT-LINUX-X86_64-EXTENSION }}
@@ -78,7 +78,7 @@ jobs:
           path: build
           key: ${{ runner.os }}-build
       - run: make patch-openmp
-      - run: make loadable-release
+      - run: make loadable-release static-release
         env:
           # `brew info libomp` gives the correct one, with .a file for static openmp builds
           CC: /usr/local/opt/llvm/bin/clang
@@ -123,7 +123,7 @@ jobs:
         working-directory: vendor/sqlite
         run: ./configure && make
       - run: make patch-openmp
-      - run: make loadable-release
+      - run: make loadable-release static-release
         env:
           # `brew info libomp` gives the correct one, with .a file for static openmp builds
           CC: /opt/homebrew/opt/llvm/bin/clang
@@ -153,9 +153,9 @@ jobs:
   upload-extensions:
     needs:
       [
-        build-linux-x86_64-extension,
         build-macos-x86_64-extension,
         build-macos-aarch64-extension,
+        build-linux-x86_64-extension,
       ]
     permissions:
       contents: write
