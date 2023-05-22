@@ -37,7 +37,7 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: ${{ env.ARTIFACT-LINUX-X86_64-EXTENSION }}
-          path: dist/release/*.so
+          path: dist/release/*
   build-linux-x86_64-python:
     runs-on: ubuntu-20.04
     needs: [build-linux-x86_64-extension]
@@ -88,7 +88,7 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: ${{ env.ARTIFACT-MACOS-X86_64-EXTENSION }}
-          path: dist/release/*.dylib
+          path: dist/release/*
   build-macos-x86_64-python:
     runs-on: macos-latest
     needs: [build-macos-x86_64-extension]
