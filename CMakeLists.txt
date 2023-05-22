@@ -29,7 +29,7 @@ set(JSON_BuildTests OFF CACHE INTERNAL "")
 add_subdirectory(vendor/json)
 
 # ================================== sqlite-vector ================================== #
-add_library(sqlite-vector SHARED src/vector-extension.cpp)
+add_library(sqlite-vector SHARED src/sqlite-vector.cpp)
 target_link_libraries(sqlite-vector sqlite3)
 target_link_libraries(sqlite-vector nlohmann_json::nlohmann_json)
 target_include_directories(sqlite-vector PUBLIC "${PROJECT_BINARY_DIR}")
@@ -39,7 +39,7 @@ set_target_properties(sqlite-vector PROPERTIES PREFIX "")
 set_target_properties(sqlite-vector PROPERTIES OUTPUT_NAME "vector0")
 
 # ============================== sqlite-vector-static ============================== #
-add_library(sqlite-vector-static STATIC src/vector-extension.cpp)
+add_library(sqlite-vector-static STATIC src/sqlite-vector.cpp)
 target_compile_definitions(sqlite-vector-static PUBLIC SQLITE_CORE)
 target_link_libraries(sqlite-vector-static sqlite3)
 target_link_libraries(sqlite-vector-static nlohmann_json::nlohmann_json)
@@ -48,7 +48,7 @@ set_target_properties(sqlite-vector-static PROPERTIES OUTPUT_NAME "vector0")
 
 
 # ================================== sqlite-vss ================================== #
-add_library(sqlite-vss SHARED src/vss-extension.cpp)
+add_library(sqlite-vss SHARED src/sqlite-vss.cpp)
 target_link_libraries(sqlite-vss sqlite3)
 target_link_libraries(sqlite-vss faiss_avx2)
 target_include_directories(sqlite-vss PUBLIC "${PROJECT_BINARY_DIR}")
@@ -58,7 +58,7 @@ set_target_properties(sqlite-vss PROPERTIES PREFIX "")
 set_target_properties(sqlite-vss PROPERTIES OUTPUT_NAME "vss0")
 
 # ============================== sqlite-vss-static =============================== #
-add_library(sqlite-vss-static STATIC src/vss-extension.cpp)
+add_library(sqlite-vss-static STATIC src/sqlite-vss.cpp)
 target_link_libraries(sqlite-vss-static PRIVATE sqlite3)
 target_link_libraries(sqlite-vss-static PUBLIC faiss_avx2)
 target_link_options(sqlite-vss-static PRIVATE "-Wl,-all_load")

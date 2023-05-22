@@ -67,12 +67,12 @@ $(prefix):
 $(TARGET_LOADABLE): export SQLITE_VSS_CMAKE_VERSION = $(CMAKE_VERSION)
 $(TARGET_LOADABLE_RELEASE): export SQLITE_VSS_CMAKE_VERSION = $(CMAKE_VERSION)
 
-$(TARGET_LOADABLE): $(prefix) src/vss-extension.cpp src/vector-extension.cpp src/sqlite-vss.h.in
+$(TARGET_LOADABLE): $(prefix) src/sqlite-vss.cpp src/sqlite-vector.cpp src/sqlite-vss.h.in
 	cmake -B build; make -C build
 	cp build/vector0.$(LOADABLE_EXTENSION) $(TARGET_LOADABLE_VECTOR)
 	cp build/vss0.$(LOADABLE_EXTENSION) $(TARGET_LOADABLE_VSS)
 
-$(TARGET_LOADABLE_RELEASE): $(prefix)
+$(TARGET_LOADABLE_RELEASE): $(prefix) src/sqlite-vss.cpp src/sqlite-vector.cpp src/sqlite-vss.h.in
 	cmake -DCMAKE_BUILD_TYPE=Release -B build_release; make -C build_release
 	cp build_release/vector0.$(LOADABLE_EXTENSION) $(TARGET_LOADABLE_RELEASE_VECTOR)
 	cp build_release/vss0.$(LOADABLE_EXTENSION) $(TARGET_LOADABLE_RELEASE_VSS)
@@ -80,7 +80,7 @@ $(TARGET_LOADABLE_RELEASE): $(prefix)
 $(TARGET_STATIC): export SQLITE_VSS_CMAKE_VERSION = $(CMAKE_VERSION)
 $(TARGET_STATIC_RELEASE): export SQLITE_VSS_CMAKE_VERSION = $(CMAKE_VERSION)
 
-$(TARGET_STATIC): $(prefix) src/vss-extension.cpp src/vector-extension.cpp src/sqlite-vss.h.in
+$(TARGET_STATIC): $(prefix) src/sqlite-vss.cpp src/sqlite-vector.cpp src/sqlite-vss.h.in
 	cmake -B build; make -C build
 	cp build/libvector0.a $(TARGET_STATIC_VECTOR)
 	cp build/libvss0.a $(TARGET_STATIC_VSS)
@@ -88,7 +88,7 @@ $(TARGET_STATIC): $(prefix) src/vss-extension.cpp src/vector-extension.cpp src/s
 	cp build/sqlite-vss.h $(TARGET_STATIC_VSS_H)
 	cp build/sqlite-vector.h $(TARGET_STATIC_VECTOR_H)
 
-$(TARGET_STATIC_RELEASE): $(prefix) src/vss-extension.cpp src/vector-extension.cpp src/sqlite-vss.h.in
+$(TARGET_STATIC_RELEASE): $(prefix) src/sqlite-vss.cpp src/sqlite-vector.cpp src/sqlite-vss.h.in src/sqlite-vector.h.in
 	cmake -DCMAKE_BUILD_TYPE=Release -B build_release; make -C build_release
 	cp build_release/libvector0.a $(TARGET_STATIC_RELEASE_VECTOR)
 	cp build_release/libvss0.a $(TARGET_STATIC_RELEASE_VSS)
