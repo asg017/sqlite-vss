@@ -21,7 +21,7 @@ SQLITE_EXTENSION_INIT1
 #include <faiss/impl/IDSelector.h>
 #include <faiss/utils/distances.h>
 
-#include "vectors.h"
+#include "sqlite-vector.h"
 
 // https://github.com/sqlite/sqlite/blob/master/src/json.c#L88-L89
 //#define JSON_SUBTYPE  74    /* Ascii for "J" */

@@ -150,12 +150,12 @@ jobs:
         with:
           name: ${{ env.ARTIFACT-MACOS-AARCH64-WHEELS }}
           path: dist/release/wheels/*.whl
-  upload-release-assets:
+  upload-extensions:
     needs:
       [
+        build-linux-x86_64-extension,
         build-macos-x86_64-extension,
         build-macos-aarch64-extension,
-        build-linux-x86_64-extension,
       ]
     permissions:
       contents: write
@@ -163,17 +163,32 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/download-artifact@v2
-      - run: npm install tar-fs
-      - uses: actions/github-script@v6
-        env:
-          ARTIFACT-LINUX-X86_64-EXTENSION: ${{ env.ARTIFACT-LINUX-X86_64-EXTENSION }}
-          ARTIFACT-MACOS-X86_64-EXTENSION: ${{ env.ARTIFACT-MACOS-X86_64-EXTENSION }}
-          ARTIFACT-MACOS-AARCH64-EXTENSION: ${{ env.ARTIFACT-MACOS-AARCH64-EXTENSION }}
+      - uses: asg017/upload-spm@main
+        id: upload-spm-loadable
         with:
+          name: sqlite-vss
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const script = require('.github/workflows/upload.js')
-            await script({github, context})
+          platforms: |
+            macos-x86_64:     ${{ env.ARTIFACT-MACOS-X86_64-EXTENSION }}/*.dylib
+            macos-aarch64:    ${{ env.ARTIFACT-MACOS-AARCH64-EXTENSION }}/*.dylib
+            linux-x86_64:     ${{ env.ARTIFACT-LINUX-X86_64-EXTENSION }}/*.so
+      - uses: asg017/upload-spm@main
+        id: upload-spm-static
+        with:
+          name: sqlite-vss
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          asset-name-template: "$PROJECT-$VERSION-static-$OS-$CPU"
+          skip-spm: true
+          platforms: |
+            macos-x86_64:   |
+              ${{ env.ARTIFACT-MACOS-X86_64-EXTENSION }}/*.a
+              ${{ env.ARTIFACT-MACOS-X86_64-EXTENSION }}/*.h
+            macos-aarch64:  |
+              ${{ env.ARTIFACT-MACOS-AARCH64-EXTENSION }}/*.a
+              ${{ env.ARTIFACT-MACOS-AARCH64-EXTENSION }}/*.h
+            linux-x86_64:   |
+              ${{ env.ARTIFACT-LINUX-X86_64-EXTENSION }}/*.a
+              ${{ env.ARTIFACT-LINUX-X86_64-EXTENSION }}/*.h
   upload-deno:
     needs:
       [
@@ -269,9 +284,9 @@ jobs:
   upload-gem:
     needs:
       [
-        build-linux-x86_64-extension,
         build-macos-x86_64-extension,
         build-macos-aarch64-extension,
+        build-linux-x86_64-extension,
       ]
     permissions:
       contents: write
@@ -304,6 +319,5 @@ jobs:
           gem push bindings/ruby/x86_64-darwin.gem
           gem push bindings/ruby/arm64-darwin.gem
           gem push bindings/ruby/x86_64-linux.gem
-          gem push bindings/ruby/x64-mingw32.gem
         env:
           GEM_HOST_API_KEY: ${{ secrets.GEM_HOST_API_KEY }}

@@ -3,8 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <vector>
-#include "vectors.h"
-//#include "sqlite-vector.h"
+#include "sqlite-vector.h"
 #include "sqlite-vss.h"
 
 #include "sqlite3ext.h"
