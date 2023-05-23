@@ -78,11 +78,11 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           cache: "npm"
-          cache-dependency-path: npm/sqlite-vss/package.json
+          cache-dependency-path: bindings/npm/sqlite-vss/package.json
       - run: npm install
-        working-directory: npm/sqlite-vss
-      - run: cp dist/debug/vss0.so npm/sqlite-vss-linux-x64/lib
-      - run: cp dist/debug/vector0.so npm/sqlite-vss-linux-x64/lib
+        working-directory: bindings/npm/sqlite-vss
+      - run: cp dist/debug/vss0.so bindings/npm/sqlite-vss-linux-x64/lib
+      - run: cp dist/debug/vector0.so bindings/npm/sqlite-vss-linux-x64/lib
       - run: make test-npm
       # for test-deno
       - uses: denoland/setup-deno@v1
