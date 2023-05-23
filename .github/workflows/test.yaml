@@ -77,7 +77,7 @@ jobs:
       # for test-npm
       - uses: actions/setup-node@v3
         with:
-          cache: bindings/node
+          cache: npm
           cache-dependency-path: bindings/node/sqlite-vss/package.json
       - run: npm install
         working-directory: bindings/node/sqlite-vss
