@@ -51,7 +51,9 @@ TARGET_LOADABLE_RELEASE_VECTOR=$(prefix)/release/vector0.$(LOADABLE_EXTENSION)
 TARGET_LOADABLE_RELEASE=$(TARGET_LOADABLE_RELEASE_VECTOR) $(TARGET_LOADABLE_RELEASE_VSS)
 
 TARGET_STATIC_RELEASE_VECTOR=$(prefix)/release/libvector0.a
+TARGET_STATIC_RELEASE_VECTOR_H=$(prefix)/release/sqlite-vector.h
 TARGET_STATIC_RELEASE_VSS=$(prefix)/release/libvss0.a
+TARGET_STATIC_RELEASE_VSS_H=$(prefix)/release/sqlite-vss.h
 TARGET_STATIC_RELEASE_FAISS_AVX2=$(prefix)/release/libfaiss_avx2.a
 TARGET_STATIC_RELEASE=$(TARGET_STATIC_RELEASE_VECTOR) $(TARGET_STATIC_RELEASE_VSS) $(TARGET_STATIC_RELEASE_FAISS_AVX2)
 
@@ -93,8 +95,8 @@ $(TARGET_STATIC_RELEASE): $(prefix) src/sqlite-vss.cpp src/sqlite-vector.cpp src
 	cp build_release/libvector0.a $(TARGET_STATIC_RELEASE_VECTOR)
 	cp build_release/libvss0.a $(TARGET_STATIC_RELEASE_VSS)
 	cp build_release/vendor/faiss/faiss/libfaiss_avx2.a $(TARGET_STATIC_RELEASE_FAISS_AVX2)
-	cp build_release/sqlite-vss.h $(TARGET_STATIC_VSS_H)
-	cp build_release/sqlite-vector.h $(TARGET_STATIC_VECTOR_H)
+	cp build_release/sqlite-vss.h $(TARGET_STATIC_RELEASE_VSS_H)
+	cp build_release/sqlite-vector.h $(TARGET_STATIC_RELEASE_VECTOR_H)
 
 
 $(TARGET_WHEELS): $(prefix)

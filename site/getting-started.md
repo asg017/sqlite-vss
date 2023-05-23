@@ -3,7 +3,7 @@
 
 # Getting Started
 
-## Introduction
+## Concepts
 
 ## Installing
 
@@ -19,19 +19,19 @@ pip install sqlite-vss
 npm install sqlite-vss
 ```
 
-```js [Deno]
-import * as sqlite_vss from "https://deno.land/x/sqlite_vss@v0.1.0/mod.ts";
-```
-
 ```bash [Ruby]
 gem install sqlite-vss
+```
+
+```js [Deno]
+import * as sqlite_vss from "https://deno.land/x/sqlite_vss@v0.1.0/mod.ts";
 ```
 
 ```bash [Datasette]
 datasette install datasette-sqlite-vss
 ```
 
-```bash [Go]
+<!--```bash [Go]
 go get github.com/asg017/sqlite-vss/go
 ```
 
@@ -42,37 +42,57 @@ cargo add sqlite-vss
 ```bash [sqlite-package-manager]
 spm install github.com/asg017/sqlite-vss
 ```
+-->
 
 :::
 
-For quick
+Alternatively, you can download pre-compiled loadable extensions from the [`sqlite-vss` Github Releases](https://github.com/asg017/sqlite-vss/releases/latest).
 
-## Basic Example
+## Basic Example: 2-Dimensional Vectors
 
-<!-- <p align="center"> <img src="./demo_base.png" width="75%"> </p> -->
+This example will go over the basics of `sqlite-vss`: How to create a `vss0` virtual table, how to populate it with your own vectors data, and how to query those vectors for similarity.
+
+Say we have a list of 2-dimensional vectors with the following values:
+
+| ID  | Vector         |
+| --- | -------------- |
+| 1   | `[1.0, 3.0]`   |
+| 2   | `[3.0, 1.0]`   |
+| 3   | `[-2.0, -2.0]` |
+| 4   | `[-4.0, 1.0]`  |
+
+Visually, these vectors would look like this:
 
 <p align="center"> <img src="./demo_base_dark.png" width="75%"> </p>
 
+Let's store these in a `vss0` virtual table! Let's create a new virtual table called `vss_demo`, with a single vector column called `a` for these four vectors
+
 ```sqlite
-create virtual table vss_lookup using vss0(
+create virtual table vss_demo using vss0(
   a(2)
 );
+```
 
-insert into vss_lookup(rowid, a)
+Notice the `2` declaration in the `a` column definition. This is a required argument that tells `sqlite-vss` how many dimensions our vectors have. Also note that prefixing the virtual table name with `vss_` is a convention but not required.
+
+Now we have an empty `vss_demo`. Let's insert our vectors!
+
+```sqlite
+insert into vss_demo(rowid, a)
   select
-    key as rowid,
-    value as a
+    value ->> 0 as rowid,
+    value ->> 1 as a
   from json_each('
     [
-      [1.0, 3.0],
-      [3.0, 1.0],
-      [-2.0, -2.0],
-      [-4.0, 1.0]
+      [ 1, [1.0, 3.0]   ],
+      [ 2, [3.0, 1.0]   ],
+      [ 3, [-2.0, -2.0] ],
+      [ 4, [-4.0, 1.0]  ]
     ]
   ');
-
-
 ```
+
+Here we are using [SQLite's builting JSON support](https://www.sqlite.org/json1.html) to define our vector data in a JSON string. `sqlite-vss` supports reading vectors and JSON in a few different formats, which you [can learn more about here](api-reference#inserting-data).
 
 <p align="center"> <img src="./demo_q1.png" width="75%"> </p>
 

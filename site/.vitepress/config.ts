@@ -51,7 +51,7 @@ function nav(): DefaultTheme.NavItem[] {
     { text: "API Reference", link: "/api-reference" },
     { text: "♥ Sponsor", link: "https://github.com/sponsors/asg017" },
     {
-      text: VERSION,
+      text: `v${VERSION}`,
       items: [
         {
           text: "Github Release",
@@ -65,17 +65,17 @@ function nav(): DefaultTheme.NavItem[] {
               link: `https://pypi.org/project/${PROJECT}`,
             },
             {
-              text: "Datasette: Plugin",
-              link: `https://datasette.io/plugins/datasette-${PROJECT}`,
-            },
-            {
               text: "Node.js: NPM package",
               link: `https://www.npmjs.com/package/${PROJECT}`,
             },
-            //{
-            //  text: "Ruby: Ruby gem",
-            //  link: `https://rubygems.org/gems/${PROJECT.replace("-", "_")}`,
-            //},
+            {
+              text: "Ruby: Ruby gem",
+              link: `https://rubygems.org/gems/${PROJECT}`,
+            },
+            {
+              text: "Datasette: Plugin",
+              link: `https://datasette.io/plugins/datasette-${PROJECT}`,
+            },
             {
               text: "Deno: deno.land/x module",
               link: `https://deno.land/x/${PROJECT.replace("-", "_")}`,

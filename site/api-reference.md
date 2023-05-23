@@ -8,7 +8,7 @@ As a reminder, `sqlite-vss` is still young, so breaking changes should be expect
 
 ## `vss0` Virtual Tables
 
-The `vss0` module is used to create virtual tables that store and query your vectors.
+The `vss0` module is used to create virtual tables that store and query your vectors. It takes inspiration from, and is very similar to the [SQLite FTS5 full-text search](https://www.sqlite.org/fts5.html) virtual table.
 
 ### Constructor Synax
 
@@ -95,18 +95,18 @@ This is equivalent to the query above, just a little more verbose.
 delete from vss_xyz where rowid between 100 and 200;
 ```
 
+Keep in mind, small `DELETE` operations are ineffiecient, so batch your inserts/deletes and wrap `INSERT`s/`DELETE`s in [transactions](https://www.sqlite.org/lang_transaction.html) whenever possible.
+
 ### Shadow Table Schema
 
 You shouldn't need to directly access the shadow tables for `vss0` virtual tables, but here's the format for them. **Subject to change, do not rely on this, will break in the future.**
 
+For a `vss0` virtual table called `xyz`, the follow shadow tables will exist:
+
 - `xyz_data` - One row per "item" in the virtual table. Used to delegate and track rowid usage in the virtual table. `x` is a no-op column. `create table xyz_data(x);`
 - `xyz_index` - One row per column index. Stores the raw serialized Faiss index in one big BLOB. `create table xyz_index(idx);`
 
-```
-create table
-```
-
-## SQL Functions
+## `sqlite-vss` Functions
 
 ### `vss_version()` {#vss_version}
 
@@ -209,3 +209,27 @@ select vss_fvec_add(); --
 ```sqlite
 select vss_fvec_sub(); --
 ```
+
+## `sqlite-vector` Functions
+
+### `vector0()` {#vector0}
+
+### `vector_debug()` {#vector_debug}
+
+### `vector_from_blob()` {#vector_from_blob}
+
+### `vector_from_json()` {#vector_from_json}
+
+### `vector_from_raw()` {#vector_from_raw}
+
+### `vector_length()` {#vector_length}
+
+### `vector_to_blob()` {#vector_to_blob}
+
+### `vector_to_json()` {#vector_to_json}
+
+### `vector_to_raw()` {#vector_to_raw}
+
+### `vector_value_at()` {#vector_value_at}
+
+### `vector_version()` {#vector_version}

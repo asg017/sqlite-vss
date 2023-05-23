@@ -6,7 +6,7 @@ Python developers can use `sqlite-vss` with the [`sqlite-vss` PyPi package](http
 pip install sqlite-vss
 ```
 
-To use in python, the `sqlite_vss` module has a `.load()` function that will load all `sqlite-vss` SQL function into a given SQLite connection.
+In Python, the `sqlite_vss` module has a `.load()` function that will load all `sqlite-vss` SQL function into a given SQLite connection.
 
 ```python
 import sqlite3
@@ -20,11 +20,13 @@ version, = db.execute('select vss_version()').fetchone()
 print(version)
 ```
 
+See [the API Reference](./api-reference) for all available SQL functions.
+
 ## Storing Python Vectors
 
 If your vectors in Python are represented as a list of floats, you can insert them into a `vss0` table in a few different ways.
 
-First approach: serialize your list as a JSON string with [`json.dumps()`](https://docs.python.org/3/library/json.html#json.dumps).
+The first approach: serialize your list as a JSON string with [`json.dumps()`](https://docs.python.org/3/library/json.html#json.dumps).
 
 ```python
 embedding = [0.1, 0.2]

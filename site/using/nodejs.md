@@ -2,7 +2,7 @@
 
 [![npm](https://img.shields.io/npm/v/sqlite-vss.svg?color=green&logo=nodedotjs&logoColor=white)](https://www.npmjs.com/package/sqlite-vss)
 
-Node.js developers can use `sqlite-vss` with the [`sqlite-vss` NPM package](https://www.npmjs.com/package/sqlite-vss):
+Node.js developers can use `sqlite-vss` with the [`sqlite-vss` NPM package](https://www.npmjs.com/package/sqlite-vss). It can be installed with:
 
 ```bash
 npm install sqlite-vss
