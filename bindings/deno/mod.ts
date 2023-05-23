@@ -13,11 +13,11 @@ try {
     vectorPath = await download({
       url: {
         darwin: {
-          aarch64: `${BASE}/deno-darwin-aarch64.vector0.dylib`,
-          x86_64: `${BASE}/deno-darwin-x86_64.vector0.dylib`,
+          aarch64: `${BASE}/sqlite-vss-${meta.version}-deno-darwin-aarch64.vector0.dylib`,
+          x86_64: `${BASE}/sqlite-vss-${meta.version}-deno-darwin-x86_64.vector0.dylib`,
         },
         linux: {
-          x86_64: `${BASE}/deno-linux-x86_64.vector0.so`,
+          x86_64: `${BASE}/sqlite-vss-${meta.version}-deno-linux-x86_64.vector0.so`,
         },
       },
       suffixes: {
@@ -34,11 +34,11 @@ try {
     vssPath = await download({
       url: {
         darwin: {
-          aarch64: `${BASE}/deno-darwin-aarch64.vss0.dylib`,
-          x86_64: `${BASE}/deno-darwin-x86_64.vss0.dylib`,
+          aarch64: `${BASE}/sqlite-vss-${meta.version}-deno-darwin-aarch64.vss0.dylib`,
+          x86_64: `${BASE}/sqlite-vss-${meta.version}-deno-darwin-x86_64.vss0.dylib`,
         },
         linux: {
-          x86_64: `${BASE}/deno-linux-x86_64.vss0.so`,
+          x86_64: `${BASE}/sqlite-vss-${meta.version}-deno-linux-x86_64.vss0.so`,
         },
       },
       suffixes: {

@@ -60,7 +60,7 @@ TARGET_STATIC_RELEASE=$(TARGET_STATIC_RELEASE_VECTOR) $(TARGET_STATIC_RELEASE_VS
 TARGET_WHEELS=$(prefix)/debug/wheels
 TARGET_WHEELS_RELEASE=$(prefix)/release/wheels
 
-INTERMEDIATE_PYPACKAGE_EXTENSION=python/sqlite_vss/sqlite_vss/
+INTERMEDIATE_PYPACKAGE_EXTENSION=bindings/python/sqlite_vss/sqlite_vss/
 
 $(prefix):
 	mkdir -p $(prefix)/debug
@@ -113,41 +113,41 @@ static: $(TARGET_STATIC)
 static-release: $(TARGET_STATIC_RELEASE)
 
 
-python: $(TARGET_WHEELS) $(TARGET_LOADABLE) python/sqlite_vss/setup.py python/sqlite_vss/sqlite_vss/__init__.py scripts/rename-wheels.py
+python: $(TARGET_WHEELS) $(TARGET_LOADABLE) bindings/python/sqlite_vss/setup.py bindings/python/sqlite_vss/sqlite_vss/__init__.py scripts/rename-wheels.py
 	cp $(TARGET_LOADABLE_VECTOR) $(INTERMEDIATE_PYPACKAGE_EXTENSION)
 	cp $(TARGET_LOADABLE_VSS) $(INTERMEDIATE_PYPACKAGE_EXTENSION)
 	rm $(TARGET_WHEELS)/sqlite_vss* || true
-	pip3 wheel python/sqlite_vss/ -w $(TARGET_WHEELS)
+	pip3 wheel bindings/python/sqlite_vss/ -w $(TARGET_WHEELS)
 	python3 scripts/rename-wheels.py $(TARGET_WHEELS) $(RENAME_WHEELS_ARGS)
 	echo "✅ generated python wheel"
 
-python-release: $(TARGET_LOADABLE_RELEASE) $(TARGET_WHEELS_RELEASE) python/sqlite_vss/setup.py python/sqlite_vss/sqlite_vss/__init__.py scripts/rename-wheels.py
+python-release: $(TARGET_LOADABLE_RELEASE) $(TARGET_WHEELS_RELEASE) bindings/python/sqlite_vss/setup.py bindings/python/sqlite_vss/sqlite_vss/__init__.py scripts/rename-wheels.py
 	cp $(TARGET_LOADABLE_RELEASE_VECTOR) $(INTERMEDIATE_PYPACKAGE_EXTENSION)
 	cp $(TARGET_LOADABLE_RELEASE_VSS) $(INTERMEDIATE_PYPACKAGE_EXTENSION)
 	rm $(TARGET_WHEELS_RELEASE)/sqlite_vss* || true
-	pip3 wheel python/sqlite_vss/ -w $(TARGET_WHEELS_RELEASE)
+	pip3 wheel bindings/python/sqlite_vss/ -w $(TARGET_WHEELS_RELEASE)
 	python3 scripts/rename-wheels.py $(TARGET_WHEELS_RELEASE) $(RENAME_WHEELS_ARGS)
 	echo "✅ generated release python wheel"
 
-python-versions: python/version.py.tmpl
-	VERSION=$(VERSION) envsubst < python/version.py.tmpl > python/sqlite_vss/sqlite_vss/version.py
-	echo "✅ generated python/sqlite_vss/sqlite_vss/version.py"
+python-versions: bindings/python/version.py.tmpl
+	VERSION=$(VERSION) envsubst < bindings/python/version.py.tmpl > bindings/python/sqlite_vss/sqlite_vss/version.py
+	echo "✅ generated bindings/python/sqlite_vss/sqlite_vss/version.py"
 
-	VERSION=$(VERSION) envsubst < python/version.py.tmpl > python/datasette_sqlite_vss/datasette_sqlite_vss/version.py
-	echo "✅ generated python/datasette_sqlite_vss/datasette_sqlite_vss/version.py"
+	VERSION=$(VERSION) envsubst < bindings/python/version.py.tmpl > bindings/python/datasette_sqlite_vss/datasette_sqlite_vss/version.py
+	echo "✅ generated bindings/python/datasette_sqlite_vss/datasette_sqlite_vss/version.py"
 
-datasette: $(TARGET_WHEELS) python/datasette_sqlite_vss/setup.py python/datasette_sqlite_vss/datasette_sqlite_vss/__init__.py
+datasette: $(TARGET_WHEELS) bindings/python/datasette_sqlite_vss/setup.py bindings/python/datasette_sqlite_vss/datasette_sqlite_vss/__init__.py
 	rm $(TARGET_WHEELS)/datasette* || true
-	pip3 wheel python/datasette_sqlite_vss/ --no-deps -w $(TARGET_WHEELS)
+	pip3 wheel bindings/python/datasette_sqlite_vss/ --no-deps -w $(TARGET_WHEELS)
 
-datasette-release: $(TARGET_WHEELS_RELEASE) python/datasette_sqlite_vss/setup.py python/datasette_sqlite_vss/datasette_sqlite_vss/__init__.py
+datasette-release: $(TARGET_WHEELS_RELEASE) bindings/python/datasette_sqlite_vss/setup.py bindings/python/datasette_sqlite_vss/datasette_sqlite_vss/__init__.py
 	rm $(TARGET_WHEELS_RELEASE)/datasette* || true
-	pip3 wheel python/datasette_sqlite_vss/ --no-deps -w $(TARGET_WHEELS_RELEASE)
+	pip3 wheel bindings/python/datasette_sqlite_vss/ --no-deps -w $(TARGET_WHEELS_RELEASE)
 
-npm: VERSION npm/platform-package.README.md.tmpl npm/platform-package.package.json.tmpl npm/sqlite-vss/package.json.tmpl scripts/npm_generate_platform_packages.sh
+npm: VERSION bindings/node/platform-package.README.md.tmpl bindings/node/platform-package.package.json.tmpl bindings/node/sqlite-vss/package.json.tmpl scripts/npm_generate_platform_packages.sh
 	scripts/npm_generate_platform_packages.sh
 
-deno: VERSION deno/deno.json.tmpl
+deno: VERSION bindings/deno/deno.json.tmpl
 	scripts/deno_generate_package.sh
 
 bindings/ruby/lib/version.rb: bindings/ruby/lib/version.rb.tmpl VERSION
@@ -167,10 +167,10 @@ test-python:
 	$(PYTHON) tests/test-python.py
 
 test-npm:
-	node npm/sqlite-vss/test.js
+	node bindings/node/sqlite-vss/test.js
 
 test-deno:
-	deno task --config deno/deno.json test
+	deno task --config bindings/deno/deno.json test
 
 test:
 	make test-loadable
