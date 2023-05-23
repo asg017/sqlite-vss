@@ -19,20 +19,20 @@ generate () {
     export EXTENSION_SUFFIX="so"
   fi
 
-  
-  mkdir -p npm/$PACKAGE_NAME/lib
 
-  envsubst < npm/platform-package.package.json.tmpl > npm/$PACKAGE_NAME/package.json
-  envsubst < npm/platform-package.README.md.tmpl > npm/$PACKAGE_NAME/README.md
-  
-  touch npm/$PACKAGE_NAME/lib/.gitkeep
-  
-  echo "✅ generated npm/$PACKAGE_NAME"
+  mkdir -p bindings/node/$PACKAGE_NAME/lib
+
+  envsubst < bindings/node/platform-package.package.json.tmpl > bindings/node/$PACKAGE_NAME/package.json
+  envsubst < bindings/node/platform-package.README.md.tmpl > bindings/node/$PACKAGE_NAME/README.md
+
+  touch bindings/node/$PACKAGE_NAME/lib/.gitkeep
+
+  echo "✅ generated bindings/node/$PACKAGE_NAME"
 }
 
-envsubst < npm/$PACKAGE_NAME_BASE/package.json.tmpl > npm/$PACKAGE_NAME_BASE/package.json
-echo "✅ generated npm/$PACKAGE_NAME_BASE"
+envsubst < bindings/node/$PACKAGE_NAME_BASE/package.json.tmpl > bindings/node/$PACKAGE_NAME_BASE/package.json
+echo "✅ generated bindings/node/$PACKAGE_NAME_BASE"
 
-generate darwin x64 
-generate darwin arm64 
-generate linux x64 
+generate darwin x64
+generate darwin arm64
+generate linux x64
