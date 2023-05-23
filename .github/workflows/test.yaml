@@ -77,7 +77,7 @@ jobs:
       # for test-npm
       - uses: actions/setup-node@v3
         with:
-          cache: "npm"
+          cache: bindings/npm
           cache-dependency-path: bindings/npm/sqlite-vss/package.json
       - run: npm install
         working-directory: bindings/npm/sqlite-vss
@@ -91,7 +91,7 @@ jobs:
       - uses: actions/cache@v3
         with:
           path: ${{ env.DENO_DIR }}
-          key: ${{ runner.os }}-${{ hashFiles('deno/deno.lock') }}
+          key: ${{ runner.os }}-${{ hashFiles('bindings/deno/deno.lock') }}
       - run: make test-deno
         env:
           DENO_SQLITE_VECTOR_PATH: ${{ github.workspace }}/dist/debug/vector0
