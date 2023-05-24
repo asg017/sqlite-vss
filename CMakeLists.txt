@@ -40,11 +40,11 @@ set_target_properties(sqlite-vector PROPERTIES OUTPUT_NAME "vector0")
 
 # ============================== sqlite-vector-static ============================== #
 add_library(sqlite-vector-static STATIC src/sqlite-vector.cpp)
-target_compile_definitions(sqlite-vector-static PUBLIC SQLITE_CORE)
 target_link_libraries(sqlite-vector-static sqlite3)
 target_link_libraries(sqlite-vector-static nlohmann_json::nlohmann_json)
 target_include_directories(sqlite-vector-static PUBLIC "${PROJECT_BINARY_DIR}")
 set_target_properties(sqlite-vector-static PROPERTIES OUTPUT_NAME "vector0")
+target_compile_definitions(sqlite-vector-static PUBLIC SQLITE_CORE)
 
 
 # ================================== sqlite-vss ================================== #
