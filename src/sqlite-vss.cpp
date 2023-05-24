@@ -52,6 +52,7 @@ static void vss_distance_l1(sqlite3_context *context, int argc, sqlite3_value **
   a = vector_api->xValueAsVector(argv[0]);
   if(a==NULL) {
     sqlite3_result_error(context, "a is not a vector", -1);
+    return;
   }
   b = vector_api->xValueAsVector(argv[1]);
   if(b==NULL) {
@@ -79,6 +80,7 @@ static void vss_distance_l2(sqlite3_context *context, int argc, sqlite3_value **
   a = vector_api->xValueAsVector(argv[0]);
   if(a==NULL) {
     sqlite3_result_error(context, "a is not a vector", -1);
+    return;
   }
   b = vector_api->xValueAsVector(argv[1]);
   if(b==NULL) {
@@ -106,6 +108,7 @@ static void vss_distance_linf(sqlite3_context *context, int argc, sqlite3_value 
   a = vector_api->xValueAsVector(argv[0]);
   if(a==NULL) {
     sqlite3_result_error(context, "a is not a vector", -1);
+    return;
   }
   b = vector_api->xValueAsVector(argv[1]);
   if(b==NULL) {
@@ -133,6 +136,7 @@ static void vss_inner_product(sqlite3_context *context, int argc, sqlite3_value 
   a = vector_api->xValueAsVector(argv[0]);
   if(a==NULL) {
     sqlite3_result_error(context, "a is not a vector", -1);
+    return;
   }
   b = vector_api->xValueAsVector(argv[1]);
   if(b==NULL) {
@@ -161,6 +165,7 @@ static void vss_fvec_add(sqlite3_context *context, int argc, sqlite3_value **arg
   a = vector_api->xValueAsVector(argv[0]);
   if(a==NULL) {
     sqlite3_result_error(context, "a is not a vector", -1);
+    return;
   }
   b = vector_api->xValueAsVector(argv[1]);
   if(b==NULL) {
@@ -192,6 +197,7 @@ static void vss_fvec_sub(sqlite3_context *context, int argc, sqlite3_value **arg
   a = vector_api->xValueAsVector(argv[0]);
   if(a==NULL) {
     sqlite3_result_error(context, "a is not a vector", -1);
+    return;
   }
   b = vector_api->xValueAsVector(argv[1]);
   if(b==NULL) {
