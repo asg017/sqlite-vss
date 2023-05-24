@@ -29,3 +29,6 @@ _deps
 
 venv/
 dist/
+
+deps/
+_build/

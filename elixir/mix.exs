@@ -8,7 +8,6 @@ defmodule SqliteVss.MixProject do
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      aliases: [test: ["sqlite_vss.install --if-missing", "test"]]
     ]
   end
 
@@ -23,9 +22,9 @@ defmodule SqliteVss.MixProject do
   defp deps do
     [
       {:ex_doc, "~> 0.14", only: :dev, runtime: false},
-      {:ecto_sql, "~> 3.6"},
       {:ecto_sqlite3, ">= 0.0.0"},
-      {:castore, ">= 0.0.0"}
+      {:castore, ">= 0.0.0"},
+      {:hex_core, "~> 0.10.0"}
     ]
   end
 end

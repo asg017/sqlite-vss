@@ -1,5 +1,5 @@
 defmodule Mix.Tasks.SqliteVss.Install do
-    @shortdoc "Installs SqliteVss extension files"
+  @shortdoc "Installs SqliteVss extension files"
   use Mix.Task
 
   @impl true
