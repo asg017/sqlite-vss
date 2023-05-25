@@ -27,8 +27,9 @@ defmodule SqliteVss do
         |> List.first()
 
       {:ok, {404, _, _}} ->
+        #https://github.com/asg017/sqlite-vss/releases/download/v0.1.1-alpha.7/sqlite-vss-v0.1.1-alpha.7-loadable-macos-aarch64.tar.gz
         # TODO: remove this fallback once sqlite_vss is published
-        "0.1.0"
+        "0.1.1-alpha.7"
 
       {:error, reason} ->
         IO.inspect(reason, label: "Something went wrong")
@@ -43,19 +44,18 @@ defmodule SqliteVss do
       freshdir_p(Path.join(System.tmp_dir!(), "sqlite_vss")) ||
         raise "could not install sqlite_vss."
 
-    urls = for file <- ["vector0", "vss0"], do: get_url(base_url, file)
+    url = get_url(base_url)
 
-    tars = for url <- urls, do: fetch_body!(url)
-
-    for tar <- tars do
-      case :erl_tar.extract({:binary, tar}, [:compressed, cwd: to_charlist(tmp_dir)]) do
-        :ok -> :ok
-        other -> raise "couldn't unpack archive: #{inspect(other)}"
-      end
-    end
+    IO.inspect(url, label: "line_number: 49, filename: sqlite_vss.ex")
+    tar = fetch_body!(url)
 
     bin_path = bin_path()
     File.mkdir_p!(Path.dirname(bin_path))
+
+    case :erl_tar.extract({:binary, tar}, [:verbose, :compressed, cwd: to_charlist(tmp_dir)]) do
+      :ok -> :ok
+      other -> raise "couldn't unpack archive: #{inspect(other)}"
+    end
 
     File.cp_r!(Path.join([tmp_dir]), bin_path)
   end
@@ -94,6 +94,9 @@ defmodule SqliteVss do
 
       {:unix, osname} ->
         [arch | _] = arch_str |> List.to_string() |> String.split("-")
+
+        osname =
+          if osname == :darwin, do: "macos", else: osname
 
         case arch do
           "x86_64" -> "#{osname}-x86_64"
@@ -188,7 +191,7 @@ defmodule SqliteVss do
   The default URL to install SqliteVss from.
   """
   def default_base_url do
-    "https://github.com/asg017/sqlite-vss/releases/download/v$version/sqlite-vss-v$version-$file-$target.tar.gz"
+    "https://github.com/asg017/sqlite-vss/releases/download/v$version/sqlite-vss-v$version-loadable-$target.tar.gz"
   end
 
   def loadable_path_vector0() do
@@ -199,10 +202,9 @@ defmodule SqliteVss do
     SqliteVss.bin_path() <> "/vss0"
   end
 
-  defp get_url(base_url, file) do
+  defp get_url(base_url) do
     base_url
     |> String.replace("$version", configured_version())
     |> String.replace("$target", target())
-    |> String.replace("$file", file)
   end
 end
