@@ -14,24 +14,10 @@ defmodule SqliteVss do
   Returns the configured sqlite_vss version.
   """
   def configured_version do
-    cacertfile = cacertfile() |> String.to_charlist()
-
-    http_options =
-      [
-        ssl: [
-          verify: :verify_peer,
-          cacertfile: cacertfile,
-          depth: 2,
-          customize_hostname_check: [
-            match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
-          ]
-        ]
-      ]
-
     config = :hex_core.default_config()
 
     updated_config =
-      Map.put(config, :http_adapter, {:hex_http_httpc, %{http_options: http_options}})
+      Map.put(config, :http_adapter, {:hex_http_httpc, %{http_options: http_options()}})
 
     case :hex_api_package.get(updated_config, "sqlite_vss") do
       {:ok, {200, _headers, response}} ->
@@ -99,13 +85,6 @@ defmodule SqliteVss do
     end
   end
 
-  # Available targets:
-  # sqlite-vss-v0.1.1-alpha.1-vector0-darwin-aarch64.tar.gz
-  # sqlite-vss-v0.1.1-alpha.1-vector0-darwin-x86_64.tar.gz
-  # sqlite-vss-v0.1.1-alpha.1-vector0-linux-x86_64.tar.gz
-  # sqlite-vss-v0.1.1-alpha.1-vss0-darwin-aarch64.tar.gz
-  # sqlite-vss-v0.1.1-alpha.1-vss0-darwin-x86_64.tar.gz
-  # sqlite-vss-v0.1.1-alpha.1-vss0-linux-x86_64.tar.gz
   defp target do
     arch_str = :erlang.system_info(:system_architecture)
 
@@ -124,6 +103,27 @@ defmodule SqliteVss do
     end
   end
 
+  defp http_options(scheme) do
+    http_options()
+    |> maybe_add_proxy_auth(scheme)
+  end
+
+  defp http_options do
+    # https://erlef.github.io/security-wg/secure_coding_and_deployment_hardening/inets
+    cacertfile = cacertfile() |> String.to_charlist()
+
+    [
+      ssl: [
+        verify: :verify_peer,
+        cacertfile: cacertfile,
+        depth: 2,
+        customize_hostname_check: [
+          match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
+        ]
+      ]
+    ]
+  end
+
   defp fetch_body!(url) do
     scheme = URI.parse(url).scheme
     url = String.to_charlist(url)
@@ -139,25 +139,9 @@ defmodule SqliteVss do
       :httpc.set_options([{set_option, {{String.to_charlist(host), port}, []}}])
     end
 
-    # https://erlef.github.io/security-wg/secure_coding_and_deployment_hardening/inets
-    cacertfile = cacertfile() |> String.to_charlist()
-
-    http_options =
-      [
-        ssl: [
-          verify: :verify_peer,
-          cacertfile: cacertfile,
-          depth: 2,
-          customize_hostname_check: [
-            match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
-          ]
-        ]
-      ]
-      |> maybe_add_proxy_auth(scheme)
-
     options = [body_format: :binary]
 
-    case :httpc.request(:get, {url, []}, http_options, options) do
+    case :httpc.request(:get, {url, []}, http_options(scheme), options) do
       {:ok, {{_, 200, _}, _headers, body}} ->
         body
 
