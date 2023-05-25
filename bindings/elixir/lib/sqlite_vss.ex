@@ -1,6 +1,6 @@
 defmodule SqliteVss do
   @moduledoc """
-  Documentation for `SqliteVss`.
+  `SqliteVss` module which installs the vector0 and vss0 extensions.
   """
   use Application
   require Logger
