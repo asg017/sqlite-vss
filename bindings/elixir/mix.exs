@@ -8,6 +8,15 @@ defmodule SqliteVss.MixProject do
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+
+      name: "sqlite_vss",
+      source_url: "https://github.com/asg017/sqlite-vss",
+      homepage_url: "https://github.com/asg017/sqlite-vss",
+      docs: [
+        main: "SqliteVss",
+        extras: ["README.md"],
+        source_ref: "v0.1.0"
+      ]
     ]
   end
 
