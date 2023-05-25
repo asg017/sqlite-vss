@@ -1,6 +1,5 @@
-# SqliteVss
-
-**TODO: Add description**
+# SqliteVss Hex Package
+sqlite_vss is distributed on hex for Elixir developers.
 
 ## Installation
 
@@ -23,3 +22,33 @@ Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_do
 and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
 be found at <https://hexdocs.pm/sqlite_vss>.
 
+The `sqlite-vss` package is meant to be used with Exqlite like the following:
+
+```
+Mix.install([
+  {:sqlite_vss, path: "../"},
+  {:exqlite, "~> 0.13.0"}
+], verbose: true)
+
+Mix.Task.run("sqlite_vss.install")
+
+alias Exqlite.Basic
+
+{:ok, conn} = Basic.open("example.db")
+
+:ok = Exqlite.Basic.enable_load_extension(conn)
+Exqlite.Basic.load_extension(conn, SqliteVss.loadable_path_vector0())
+Exqlite.Basic.load_extension(conn, SqliteVss.loadable_path_vss0())
+
+{:ok, [[version]], [_]} = Basic.exec(conn, "select vss_version()") |> Basic.rows()
+
+IO.puts("version: #{version}")
+```
+
+## Running the demo
+
+```
+cd demo
+
+elixir demo.exs
+```
