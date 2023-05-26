@@ -153,12 +153,16 @@ deno: VERSION bindings/deno/deno.json.tmpl
 bindings/ruby/lib/version.rb: bindings/ruby/lib/version.rb.tmpl VERSION
 	VERSION=$(VERSION) envsubst < $< > $@
 
+bindings/rust/Cargo.toml: bindings/rust/Cargo.toml.tmpl VERSION
+	VERSION=$(VERSION) envsubst < $< > $@
+
 version:
 	make python-versions
 	make python
 	make npm
 	make deno
 	make bindings/ruby/lib/version.rb
+	make bindings/rust/Cargo.toml
 
 test-loadable:
 	$(PYTHON) tests/test-loadable.py
