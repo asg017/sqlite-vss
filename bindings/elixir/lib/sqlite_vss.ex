@@ -13,7 +13,7 @@ defmodule SqliteVss do
   @doc """
   Returns the configured sqlite_vss version.
   """
-  def configured_version do
+  def current_version do
     config = :hex_core.default_config()
 
     updated_config =
@@ -27,37 +27,29 @@ defmodule SqliteVss do
         |> List.first()
 
       {:ok, {404, _, _}} ->
-        #https://github.com/asg017/sqlite-vss/releases/download/v0.1.1-alpha.7/sqlite-vss-v0.1.1-alpha.7-loadable-macos-aarch64.tar.gz
         # TODO: remove this fallback once sqlite_vss is published
-        "0.1.1-alpha.7"
+        "0.1.1-alpha.8"
 
       {:error, reason} ->
-        IO.inspect(reason, label: "Something went wrong")
+        reason
     end
   end
 
   @doc """
-  Installs sqlite_vss with `configured_version/0`.
+  Installs sqlite_vss with `current_version/0`.
   """
   def install(base_url \\ default_base_url()) do
-    tmp_dir =
-      freshdir_p(Path.join(System.tmp_dir!(), "sqlite_vss")) ||
-        raise "could not install sqlite_vss."
-
     url = get_url(base_url)
 
-    IO.inspect(url, label: "line_number: 49, filename: sqlite_vss.ex")
     tar = fetch_body!(url)
 
     bin_path = bin_path()
     File.mkdir_p!(Path.dirname(bin_path))
 
-    case :erl_tar.extract({:binary, tar}, [:verbose, :compressed, cwd: to_charlist(tmp_dir)]) do
+    case :erl_tar.extract({:binary, tar}, [:verbose, :compressed, cwd: to_charlist(bin_path)]) do
       :ok -> :ok
       other -> raise "couldn't unpack archive: #{inspect(other)}"
     end
-
-    File.cp_r!(Path.join([tmp_dir]), bin_path)
   end
 
   @doc """
@@ -76,13 +68,19 @@ defmodule SqliteVss do
       end
   end
 
-  defp freshdir_p(path) do
-    with {:ok, _} <- File.rm_rf(path),
-         :ok <- File.mkdir_p(path) do
-      path
-    else
-      _ -> nil
-    end
+  @doc """
+  The default URL to install SqliteVss from.
+  """
+  def default_base_url do
+    "https://github.com/asg017/sqlite-vss/releases/download/v$version/sqlite-vss-v$version-loadable-$target.tar.gz"
+  end
+
+  def loadable_path_vector0() do
+    SqliteVss.bin_path() <> "/vector0"
+  end
+
+  def loadable_path_vss0() do
+    SqliteVss.bin_path() <> "/vss0"
   end
 
   defp target do
@@ -187,24 +185,10 @@ defmodule SqliteVss do
     Application.get_env(:sqlite_vss, :cacerts_path) || CAStore.file_path()
   end
 
-  @doc """
-  The default URL to install SqliteVss from.
-  """
-  def default_base_url do
-    "https://github.com/asg017/sqlite-vss/releases/download/v$version/sqlite-vss-v$version-loadable-$target.tar.gz"
-  end
-
-  def loadable_path_vector0() do
-    SqliteVss.bin_path() <> "/vector0"
-  end
-
-  def loadable_path_vss0() do
-    SqliteVss.bin_path() <> "/vss0"
-  end
 
   defp get_url(base_url) do
     base_url
-    |> String.replace("$version", configured_version())
+    |> String.replace("$version", current_version())
     |> String.replace("$target", target())
   end
 end
