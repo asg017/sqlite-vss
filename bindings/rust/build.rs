@@ -73,6 +73,8 @@ fn main() {
         output_directory.to_string_lossy().to_string()
     };
 
+    println!("cargo:rerun-if-env-changed=LIB_SQLITE_VSS");
+
     println!("cargo:rustc-link-search=native={}", static_path);
     println!("cargo:rustc-link-lib=static=faiss_avx2");
     println!("cargo:rustc-link-lib=static=vector0");
