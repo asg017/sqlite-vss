@@ -12,6 +12,7 @@
   "license": "(MIT OR Apache-2.0)",
   "main": "src/index.js",
   "type": "module",
+  "typings": "src/index.d.ts",
   "scripts": {
     "test": "node test.js"
   },
