@@ -39,9 +39,9 @@ TARGET_LOADABLE_VECTOR=$(prefix)/debug/vector0.$(LOADABLE_EXTENSION)
 TARGET_LOADABLE_VSS=$(prefix)/debug/vss0.$(LOADABLE_EXTENSION)
 TARGET_LOADABLE=$(TARGET_LOADABLE_VECTOR) $(TARGET_LOADABLE_VSS)
 
-TARGET_STATIC_VECTOR=$(prefix)/debug/libvector0.a
+TARGET_STATIC_VECTOR=$(prefix)/debug/libsqlite_vector0.a
 TARGET_STATIC_VECTOR_H=$(prefix)/debug/sqlite-vector.h
-TARGET_STATIC_VSS=$(prefix)/debug/libvss0.a
+TARGET_STATIC_VSS=$(prefix)/debug/libsqlite_vss0.a
 TARGET_STATIC_VSS_H=$(prefix)/debug/sqlite-vss.h
 TARGET_STATIC_FAISS_AVX2=$(prefix)/debug/libfaiss_avx2.a
 TARGET_STATIC=$(TARGET_STATIC_VECTOR) $(TARGET_STATIC_VSS) $(TARGET_STATIC_FAISS_AVX2)
@@ -50,9 +50,9 @@ TARGET_LOADABLE_RELEASE_VSS=$(prefix)/release/vss0.$(LOADABLE_EXTENSION)
 TARGET_LOADABLE_RELEASE_VECTOR=$(prefix)/release/vector0.$(LOADABLE_EXTENSION)
 TARGET_LOADABLE_RELEASE=$(TARGET_LOADABLE_RELEASE_VECTOR) $(TARGET_LOADABLE_RELEASE_VSS)
 
-TARGET_STATIC_RELEASE_VECTOR=$(prefix)/release/libvector0.a
+TARGET_STATIC_RELEASE_VECTOR=$(prefix)/release/libsqlite_vector0.a
 TARGET_STATIC_RELEASE_VECTOR_H=$(prefix)/release/sqlite-vector.h
-TARGET_STATIC_RELEASE_VSS=$(prefix)/release/libvss0.a
+TARGET_STATIC_RELEASE_VSS=$(prefix)/release/libsqlite_vss0.a
 TARGET_STATIC_RELEASE_VSS_H=$(prefix)/release/sqlite-vss.h
 TARGET_STATIC_RELEASE_FAISS_AVX2=$(prefix)/release/libfaiss_avx2.a
 TARGET_STATIC_RELEASE=$(TARGET_STATIC_RELEASE_VECTOR) $(TARGET_STATIC_RELEASE_VSS) $(TARGET_STATIC_RELEASE_FAISS_AVX2)
@@ -84,16 +84,16 @@ $(TARGET_STATIC_RELEASE): export SQLITE_VSS_CMAKE_VERSION = $(CMAKE_VERSION)
 
 $(TARGET_STATIC): $(prefix) src/sqlite-vss.cpp src/sqlite-vector.cpp src/sqlite-vss.h.in
 	cmake -B build; make -C build
-	cp build/libvector0.a $(TARGET_STATIC_VECTOR)
-	cp build/libvss0.a $(TARGET_STATIC_VSS)
+	cp build/libsqlite_vector0.a $(TARGET_STATIC_VECTOR)
+	cp build/libsqlite_vss0.a $(TARGET_STATIC_VSS)
 	cp build/vendor/faiss/faiss/libfaiss_avx2.a $(TARGET_STATIC_FAISS_AVX2)
 	cp build/sqlite-vss.h $(TARGET_STATIC_VSS_H)
 	cp build/sqlite-vector.h $(TARGET_STATIC_VECTOR_H)
 
 $(TARGET_STATIC_RELEASE): $(prefix) src/sqlite-vss.cpp src/sqlite-vector.cpp src/sqlite-vss.h.in src/sqlite-vector.h.in
 	cmake -DCMAKE_BUILD_TYPE=Release -B build_release; make -C build_release
-	cp build_release/libvector0.a $(TARGET_STATIC_RELEASE_VECTOR)
-	cp build_release/libvss0.a $(TARGET_STATIC_RELEASE_VSS)
+	cp build_release/libsqlite_vector0.a $(TARGET_STATIC_RELEASE_VECTOR)
+	cp build_release/libsqlite_vss0.a $(TARGET_STATIC_RELEASE_VSS)
 	cp build_release/vendor/faiss/faiss/libfaiss_avx2.a $(TARGET_STATIC_RELEASE_FAISS_AVX2)
 	cp build_release/sqlite-vss.h $(TARGET_STATIC_RELEASE_VSS_H)
 	cp build_release/sqlite-vector.h $(TARGET_STATIC_RELEASE_VECTOR_H)
