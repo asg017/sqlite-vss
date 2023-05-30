@@ -32,7 +32,8 @@ defmodule SqliteVss.MixProject do
       {:ex_doc, "~> 0.14", only: :dev, runtime: false},
       {:ecto_sqlite3, ">= 0.0.0"},
       {:castore, ">= 0.0.0"},
-      {:hex_core, "~> 0.10.0"}
+      {:hex_core, "~> 0.10.0"},
+      {:bypass, "~>  2.1.0", only: :test}
     ]
   end
 end
