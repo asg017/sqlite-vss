@@ -150,45 +150,6 @@ jobs:
         with:
           name: ${{ env.ARTIFACT-MACOS-AARCH64-WHEELS }}
           path: dist/release/wheels/*.whl
-  upload-extensions:
-    needs:
-      [
-        build-macos-x86_64-extension,
-        build-macos-aarch64-extension,
-        build-linux-x86_64-extension,
-      ]
-    permissions:
-      contents: write
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/download-artifact@v2
-      - uses: asg017/upload-spm@main
-        id: upload-spm-loadable
-        with:
-          name: sqlite-vss
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          platforms: |
-            macos-x86_64:     ${{ env.ARTIFACT-MACOS-X86_64-EXTENSION }}/*.dylib
-            macos-aarch64:    ${{ env.ARTIFACT-MACOS-AARCH64-EXTENSION }}/*.dylib
-            linux-x86_64:     ${{ env.ARTIFACT-LINUX-X86_64-EXTENSION }}/*.so
-      - uses: asg017/upload-spm@main
-        id: upload-spm-static
-        with:
-          name: sqlite-vss
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          asset-name-template: "$PROJECT-$VERSION-static-$OS-$CPU"
-          skip-spm: true
-          platforms: |
-            macos-x86_64:   |
-              ${{ env.ARTIFACT-MACOS-X86_64-EXTENSION }}/*.a
-              ${{ env.ARTIFACT-MACOS-X86_64-EXTENSION }}/*.h
-            macos-aarch64:  |
-              ${{ env.ARTIFACT-MACOS-AARCH64-EXTENSION }}/*.a
-              ${{ env.ARTIFACT-MACOS-AARCH64-EXTENSION }}/*.h
-            linux-x86_64:   |
-              ${{ env.ARTIFACT-LINUX-X86_64-EXTENSION }}/*.a
-              ${{ env.ARTIFACT-LINUX-X86_64-EXTENSION }}/*.h
   upload-deno:
     needs:
       [
@@ -199,19 +160,73 @@ jobs:
     permissions:
       contents: write
     runs-on: ubuntu-latest
+    outputs:
+      deno-checksums: ${{ steps.deno-assets.outputs.result }}
     steps:
       - uses: actions/checkout@v3
       - uses: actions/download-artifact@v2
-      - uses: actions/github-script@v6
+      - id: deno-assets
+        uses: actions/github-script@v6
         env:
           ARTIFACT-LINUX-X86_64-EXTENSION: ${{ env.ARTIFACT-LINUX-X86_64-EXTENSION }}
           ARTIFACT-MACOS-X86_64-EXTENSION: ${{ env.ARTIFACT-MACOS-X86_64-EXTENSION }}
           ARTIFACT-MACOS-AARCH64-EXTENSION: ${{ env.ARTIFACT-MACOS-AARCH64-EXTENSION }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          result-encoding: string
           script: |
             const script = require('.github/workflows/upload-deno-assets.js')
-            await script({github, context})
+            return await script({github, context})
+  upload-extensions:
+    needs:
+      [
+        build-macos-x86_64-extension,
+        build-macos-aarch64-extension,
+        build-linux-x86_64-extension,
+      ]
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    outputs:
+      checksums: ${{ steps.upload-spm.outputs.asset-checksums }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v2
+      - uses: asg017/upload-spm@main
+        id: upload-spm
+        with:
+          name: sqlite-vss
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          platforms: |
+            macos-x86_64:     ${{ env.ARTIFACT-MACOS-X86_64-EXTENSION }}/*
+            macos-aarch64:    ${{ env.ARTIFACT-MACOS-AARCH64-EXTENSION }}/*
+            linux-x86_64:     ${{ env.ARTIFACT-LINUX-X86_64-EXTENSION }}/*
+  upload-checksums:
+    needs: [upload-extensions, upload-deno]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/github-script@v6
+        env:
+          CHECKSUMS: "${{ needs.upload-extensions.outputs.checksums }}\n${{ needs.upload-deno.outputs.deno-checksums }}"
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            const release = await github.rest.repos.getReleaseByTag({
+              owner,
+              repo,
+              tag: process.env.GITHUB_REF.replace("refs/tags/", ""),
+            });
+            const release_id = release.data.id;
+            github.rest.repos.uploadReleaseAsset({
+              owner,
+              repo,
+              release_id,
+              name: "checksums.txt",
+              data: process.env.CHECKSUMS,
+            });
   upload-npm:
     needs:
       [
@@ -224,14 +239,9 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/download-artifact@v2
       - run: |
-          cp ${{ env.ARTIFACT-LINUX-X86_64-EXTENSION }}/vector0.so bindings/node/sqlite-vss-linux-x64/lib/vector0.so
-          cp ${{ env.ARTIFACT-LINUX-X86_64-EXTENSION }}/vss0.so bindings/node/sqlite-vss-linux-x64/lib/vss0.so
-
-          cp ${{ env.ARTIFACT-MACOS-X86_64-EXTENSION }}/vector0.dylib bindings/node/sqlite-vss-darwin-x64/lib/vector0.dylib
-          cp ${{ env.ARTIFACT-MACOS-X86_64-EXTENSION }}/vss0.dylib bindings/node/sqlite-vss-darwin-x64/lib/vss0.dylib
-
-          cp ${{ env.ARTIFACT-MACOS-AARCH64-EXTENSION }}/vector0.dylib bindings/node/sqlite-vss-darwin-arm64/lib/vector0.dylib
-          cp ${{ env.ARTIFACT-MACOS-AARCH64-EXTENSION }}/vss0.dylib bindings/node/sqlite-vss-darwin-arm64/lib/vss0.dylib
+          cp ${{ env.ARTIFACT-LINUX-X86_64-EXTENSION }}/*.so bindings/node/sqlite-vss-linux-x64/lib/
+          cp ${{ env.ARTIFACT-MACOS-X86_64-EXTENSION }}/*.dylib bindings/node/sqlite-vss-darwin-x64/lib/
+          cp ${{ env.ARTIFACT-MACOS-AARCH64-EXTENSION }}/*.dylib bindings/node/sqlite-vss-darwin-arm64/lib/
       - uses: actions/setup-node@v3
         with:
           node-version: "16"
@@ -256,7 +266,7 @@ jobs:
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-  upload_pypi:
+  upload-pypi:
     needs:
       [
         build-linux-x86_64-python,

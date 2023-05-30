@@ -37,16 +37,21 @@ module.exports = async ({ github, context }) => {
     tag: VERSION,
   });
   const release_id = release.data.id;
+  const outputAssetChecksums = [];
 
   await Promise.all(
     compiled_extensions.map(async ({ name, path }) => {
+      const data = await fs.readFile(path);
+      const checksum = createHash("sha256").update(data).digest("hex");
+      outputAssetChecksums.push({ name, checksum });
       return github.rest.repos.uploadReleaseAsset({
         owner,
         repo,
         release_id,
         name,
-        data: await fs.readFile(path),
+        data,
       });
     })
   );
+  return outputAssetChecksums.map((d) => `${d.checksum} ${d.name}`).join("\n");
 };
