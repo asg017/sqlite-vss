@@ -56,7 +56,7 @@ defmodule SqliteVssTest do
 
       error_message =
         """
-        precompiled artifact is not available for this target: \"i686-unknown-linux-gnu\".
+        precompiled artifact is not available for this target: \"gnu-i686-linux-unknown\".
         The available targets are:
          - linux-x86_64
          - macos-aarch64

@@ -129,7 +129,7 @@ defmodule SqliteVss do
 
           _ ->
             {:error,
-             "precompiled artifact is not available for this target: \"i686-unknown-linux-gnu\".\nThe available targets are:\n - linux-x86_64\n - macos-aarch64\n - macos-x86_64"}
+             "precompiled artifact is not available for this target: \"#{arch_str}\".\nThe available targets are:\n - linux-x86_64\n - macos-aarch64\n - macos-x86_64"}
         end
     end
   end
