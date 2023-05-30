@@ -79,10 +79,10 @@ $(TARGET_LOADABLE_RELEASE): $(prefix) src/sqlite-vss.cpp src/sqlite-vector.cpp s
 	cp build_release/vector0.$(LOADABLE_EXTENSION) $(TARGET_LOADABLE_RELEASE_VECTOR)
 	cp build_release/vss0.$(LOADABLE_EXTENSION) $(TARGET_LOADABLE_RELEASE_VSS)
 
-$(TARGET_STATIC): export SQLITE_VSS_CMAKE_VERSION = $(CMAKE_VERSION)
-$(TARGET_STATIC_RELEASE): export SQLITE_VSS_CMAKE_VERSION = $(CMAKE_VERSION)
+$(TARGET_STATIC) $(TARGET_STATIC_VECTOR_H) $(TARGET_STATIC_VSS_H): export SQLITE_VSS_CMAKE_VERSION = $(CMAKE_VERSION)
+$(TARGET_STATIC_RELEASE) $(TARGET_STATIC_RELEASE_VECTOR_H) $(TARGET_STATIC_RELEASE_VSS_H): export SQLITE_VSS_CMAKE_VERSION = $(CMAKE_VERSION)
 
-$(TARGET_STATIC) $(TARGET_STATIC_VECTOR_H) $(TARGET_STATIC_VSS_H): $(prefix) src/sqlite-vss.cpp src/sqlite-vector.cpp src/sqlite-vss.h.in
+$(TARGET_STATIC) $(TARGET_STATIC_VECTOR_H) $(TARGET_STATIC_VSS_H): $(prefix) VERSION src/sqlite-vss.cpp src/sqlite-vector.cpp src/sqlite-vss.h.in
 	cmake -B build; make -C build
 	cp build/libsqlite_vector0.a $(TARGET_STATIC_VECTOR)
 	cp build/libsqlite_vss0.a $(TARGET_STATIC_VSS)
@@ -90,7 +90,7 @@ $(TARGET_STATIC) $(TARGET_STATIC_VECTOR_H) $(TARGET_STATIC_VSS_H): $(prefix) src
 	cp build/sqlite-vector.h $(TARGET_STATIC_VECTOR_H)
 	cp build/sqlite-vss.h $(TARGET_STATIC_VSS_H)
 
-$(TARGET_STATIC_RELEASE) $(TARGET_STATIC_RELEASE_VECTOR_H) $(TARGET_STATIC_RELEASE_VSS_H): $(prefix) src/sqlite-vss.cpp src/sqlite-vector.cpp src/sqlite-vss.h.in src/sqlite-vector.h.in
+$(TARGET_STATIC_RELEASE) $(TARGET_STATIC_RELEASE_VECTOR_H) $(TARGET_STATIC_RELEASE_VSS_H): $(prefix) VERSION src/sqlite-vss.cpp src/sqlite-vector.cpp src/sqlite-vss.h.in src/sqlite-vector.h.in
 	cmake -DCMAKE_BUILD_TYPE=Release -B build_release; make -C build_release
 	cp build_release/libsqlite_vector0.a $(TARGET_STATIC_RELEASE_VECTOR)
 	cp build_release/libsqlite_vss0.a $(TARGET_STATIC_RELEASE_VSS)
@@ -176,6 +176,7 @@ version:
 	make bindings/ruby/lib/version.rb
 	make bindings/rust/Cargo.toml
 	make go
+	make rust
 
 test-loadable:
 	$(PYTHON) tests/test-loadable.py
