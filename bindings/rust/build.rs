@@ -88,7 +88,6 @@ fn main() {
     };
 
     println!("cargo:rerun-if-env-changed=LIB_SQLITE_VSS");
-
     println!(
         "cargo:rustc-link-search=native={}",
         output_directory.to_string_lossy()
@@ -96,5 +95,17 @@ fn main() {
     println!("cargo:rustc-link-lib=static=faiss_avx2");
     println!("cargo:rustc-link-lib=static=sqlite_vector0");
     println!("cargo:rustc-link-lib=static=sqlite_vss0");
-    println!("cargo:rustc-link-arg=-Wl,-undefined,dynamic_lookup");
+
+    if cfg!(target_os = "macos") {
+      println!("cargo:rustc-link-arg=-Wl,-undefined,dynamic_lookup");
+    }
+    else if cfg!(target_os = "linux") {
+      // TODO different builds of faiss/sqlite-vss may require other libs
+      println!("cargo:rustc-link-lib=dylib=gomp");
+      println!("cargo:rustc-link-lib=dylib=atlas");
+      println!("cargo:rustc-link-lib=dylib=blas");
+      println!("cargo:rustc-link-lib=dylib=lapack");
+      println!("cargo:rustc-link-lib=dylib=m");
+      println!("cargo:rustc-link-lib=dylib=stdc++");
+  }
 }
