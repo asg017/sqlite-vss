@@ -132,7 +132,7 @@ version, = db.execute('select vss_version()').fetchone()
 print(version)
 ```
 
-See [`bindings/python/sqlite_vss`](./bindings/python/sqlite_vss/README.md) for more details.
+See [`bindings/python`](./bindings/python/README.md) for more details.
 
 ### Node.js
 
@@ -185,7 +185,7 @@ And for [Datasette](https://datasette.io/), install the [`datasette-sqlite-vss` 
 datasette install datasette-sqlite-vss
 ```
 
-See [`bindings/python/datasette_sqlite_vss`](./bindings/python/datasette_sqlite_vss/README.md) for more details.
+See [`bindings/datasette`](./bindings/datasette/README.md) for more details.
 
 ## Disadvantages
 

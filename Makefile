@@ -60,7 +60,7 @@ TARGET_STATIC_RELEASE=$(TARGET_STATIC_RELEASE_VECTOR) $(TARGET_STATIC_RELEASE_VS
 TARGET_WHEELS=$(prefix)/debug/wheels
 TARGET_WHEELS_RELEASE=$(prefix)/release/wheels
 
-INTERMEDIATE_PYPACKAGE_EXTENSION=bindings/python/sqlite_vss/sqlite_vss/
+INTERMEDIATE_PYPACKAGE_EXTENSION=bindings/python/sqlite_vss/
 
 $(prefix):
 	mkdir -p $(prefix)/debug
@@ -113,36 +113,36 @@ static: $(TARGET_STATIC)
 static-release: $(TARGET_STATIC_RELEASE)
 
 
-python: $(TARGET_WHEELS) $(TARGET_LOADABLE) bindings/python/sqlite_vss/setup.py bindings/python/sqlite_vss/sqlite_vss/__init__.py scripts/rename-wheels.py
+python: $(TARGET_WHEELS) $(TARGET_LOADABLE) bindings/python/setup.py bindings/python/sqlite_vss/__init__.py scripts/rename-wheels.py
 	cp $(TARGET_LOADABLE_VECTOR) $(INTERMEDIATE_PYPACKAGE_EXTENSION)
 	cp $(TARGET_LOADABLE_VSS) $(INTERMEDIATE_PYPACKAGE_EXTENSION)
 	rm $(TARGET_WHEELS)/sqlite_vss* || true
-	pip3 wheel bindings/python/sqlite_vss/ -w $(TARGET_WHEELS)
+	pip3 wheel bindings/python/ -w $(TARGET_WHEELS)
 	python3 scripts/rename-wheels.py $(TARGET_WHEELS) $(RENAME_WHEELS_ARGS)
 	echo "✅ generated python wheel"
 
-python-release: $(TARGET_LOADABLE_RELEASE) $(TARGET_WHEELS_RELEASE) bindings/python/sqlite_vss/setup.py bindings/python/sqlite_vss/sqlite_vss/__init__.py scripts/rename-wheels.py
+python-release: $(TARGET_LOADABLE_RELEASE) $(TARGET_WHEELS_RELEASE) bindings/python/setup.py bindings/python/sqlite_vss/__init__.py scripts/rename-wheels.py
 	cp $(TARGET_LOADABLE_RELEASE_VECTOR) $(INTERMEDIATE_PYPACKAGE_EXTENSION)
 	cp $(TARGET_LOADABLE_RELEASE_VSS) $(INTERMEDIATE_PYPACKAGE_EXTENSION)
 	rm $(TARGET_WHEELS_RELEASE)/sqlite_vss* || true
-	pip3 wheel bindings/python/sqlite_vss/ -w $(TARGET_WHEELS_RELEASE)
+	pip3 wheel bindings/python/ -w $(TARGET_WHEELS_RELEASE)
 	python3 scripts/rename-wheels.py $(TARGET_WHEELS_RELEASE) $(RENAME_WHEELS_ARGS)
 	echo "✅ generated release python wheel"
 
-python-versions: bindings/python/version.py.tmpl
-	VERSION=$(VERSION) envsubst < bindings/python/version.py.tmpl > bindings/python/sqlite_vss/sqlite_vss/version.py
-	echo "✅ generated bindings/python/sqlite_vss/sqlite_vss/version.py"
+python-versions: bindings/python/version.py.tmpl bindings/datasette/version.py.tmpl
+	VERSION=$(VERSION) envsubst < bindings/python/version.py.tmpl > bindings/python/sqlite_vss/version.py
+	echo "✅ generated bindings/python/sqlite_vss/version.py"
 
-	VERSION=$(VERSION) envsubst < bindings/python/version.py.tmpl > bindings/python/datasette_sqlite_vss/datasette_sqlite_vss/version.py
-	echo "✅ generated bindings/python/datasette_sqlite_vss/datasette_sqlite_vss/version.py"
+	VERSION=$(VERSION) envsubst < bindings/datasette/version.py.tmpl > bindings/datasette/datasette_sqlite_vss/version.py
+	echo "✅ generated bindings/datasette/datasette_sqlite_vss/version.py"
 
-datasette: $(TARGET_WHEELS) bindings/python/datasette_sqlite_vss/setup.py bindings/python/datasette_sqlite_vss/datasette_sqlite_vss/__init__.py
+datasette: $(TARGET_WHEELS) bindings/datasette/setup.py bindings/datasette/datasette_sqlite_vss/__init__.py
 	rm $(TARGET_WHEELS)/datasette* || true
-	pip3 wheel bindings/python/datasette_sqlite_vss/ --no-deps -w $(TARGET_WHEELS)
+	pip3 wheel bindings/datasette/ --no-deps -w $(TARGET_WHEELS)
 
-datasette-release: $(TARGET_WHEELS_RELEASE) bindings/python/datasette_sqlite_vss/setup.py bindings/python/datasette_sqlite_vss/datasette_sqlite_vss/__init__.py
+datasette-release: $(TARGET_WHEELS_RELEASE) bindings/datasette/setup.py bindings/datasette/datasette_sqlite_vss/__init__.py
 	rm $(TARGET_WHEELS_RELEASE)/datasette* || true
-	pip3 wheel bindings/python/datasette_sqlite_vss/ --no-deps -w $(TARGET_WHEELS_RELEASE)
+	pip3 wheel bindings/datasette/ --no-deps -w $(TARGET_WHEELS_RELEASE)
 
 npm: VERSION bindings/node/platform-package.README.md.tmpl bindings/node/platform-package.package.json.tmpl bindings/node/sqlite-vss/package.json.tmpl scripts/npm_generate_platform_packages.sh
 	scripts/npm_generate_platform_packages.sh
