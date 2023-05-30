@@ -1,23 +1,38 @@
+use std::path::PathBuf;
+
+#[cfg(feature = "download-libs")]
 use flate2::read::GzDecoder;
-use std::{io::BufReader, path::PathBuf};
+#[cfg(feature = "download-libs")]
+use std::io::BufReader;
+#[cfg(feature = "download-libs")]
 use tar::Archive;
+#[cfg(feature = "download-libs")]
 use ureq::get;
+#[cfg(feature = "download-libs")]
 use zip::read::ZipArchive;
 
+#[cfg(feature = "download-libs")]
 enum Platform {
     MacosX86_64,
     MacosAarch64,
     LinuxX86_64,
 }
 
-fn download_static_for_platform(version: String, output_directory: &PathBuf) {
-    let os = std::env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not found");
-    let arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap();
-    let platform = match (os.as_str(), arch.as_str()) {
+#[cfg(not(feature = "download-libs"))]
+fn download_static_for_platform(
+    _os: &str,
+    _arch: &str,
+    _version: String,
+    _output_directory: &PathBuf,
+) {
+}
+#[cfg(feature = "download-libs")]
+fn download_static_for_platform(os: &str, arch: &str, version: String, output_directory: &PathBuf) {
+    let platform = match (os, arch) {
         ("linux", "x86_64") => Platform::LinuxX86_64,
         ("macos", "x86_64") => Platform::MacosX86_64,
         ("macos", "aarch64") => Platform::MacosAarch64,
-        _ => todo!("TODO"),
+        _ => panic!("Unsupported platform: {os} {arch}"),
     };
 
     let base = "https://github.com/asg017/sqlite-vss/releases/download";
@@ -57,27 +72,29 @@ fn download_static_for_platform(version: String, output_directory: &PathBuf) {
     }
 }
 fn main() {
-    // check if the env var LIB_SQLITE_VSS exists
-    let static_path = if let Ok(v) = std::env::var("LIB_SQLITE_VSS") {
-        v
-    } else {
-        let version = format!("v{}", env!("CARGO_PKG_VERSION"));
+    let version = format!("v{}", env!("CARGO_PKG_VERSION"));
+    let os = std::env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not found");
+    let arch = std::env::var("CARGO_CFG_TARGET_ARCH").expect("CARGO_CFG_TARGET_ARCH not found");
+
+    let output_directory = if cfg!(feature = "download-libs") {
         let output_directory = std::path::Path::new(std::env::var("OUT_DIR").unwrap().as_str())
-            .join(format!("sqlite-vss-v{version}"));
-        eprintln!("{}", output_directory.to_string_lossy());
+            .join(format!("sqlite-vss-v{version}-{os}-{arch}"));
         if !output_directory.exists() {
-            download_static_for_platform(version, &output_directory);
-        } else {
-            println!("{} already exists", output_directory.to_string_lossy())
+            download_static_for_platform(os.as_str(), arch.as_str(), version, &output_directory);
         }
-        output_directory.to_string_lossy().to_string()
+        output_directory
+    } else {
+        std::env::var("LIB_SQLITE_VSS").expect("The LIB_SQLITE_VSS environment variable needs to be defined if the download-libs feature is not enabled").into()
     };
 
     println!("cargo:rerun-if-env-changed=LIB_SQLITE_VSS");
 
-    println!("cargo:rustc-link-search=native={}", static_path);
+    println!(
+        "cargo:rustc-link-search=native={}",
+        output_directory.to_string_lossy()
+    );
     println!("cargo:rustc-link-lib=static=faiss_avx2");
-    println!("cargo:rustc-link-lib=static=vector0");
-    println!("cargo:rustc-link-lib=static=vss0");
+    println!("cargo:rustc-link-lib=static=sqlite_vector0");
+    println!("cargo:rustc-link-lib=static=sqlite_vss0");
     println!("cargo:rustc-link-arg=-Wl,-undefined,dynamic_lookup");
 }

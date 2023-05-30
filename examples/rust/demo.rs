@@ -8,7 +8,7 @@ fn main() -> Result<()> {
     }
 
     let conn = Connection::open_in_memory()?;
-    let mut stmt = conn.prepare("SELECT 1 + 1, hello('alex'), hola('alex')")?;
+    let mut stmt = conn.prepare("SELECT 1 + 1, vss_version(), vector_to_json(X'00002842')")?;
     let mut rows = stmt.query([]).unwrap();
     let row = rows.next().unwrap().unwrap();
 

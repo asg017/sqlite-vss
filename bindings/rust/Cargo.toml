@@ -15,10 +15,16 @@ license = "MIT/Apache-2.0"
 
 [build-dependencies]
 anyhow = "1.0.71"
-ureq = "2.6.2"
-flate2 = "1.0.26"
-tar = "0.4.38"
-zip = "0.6.6"
+ureq = { version = "2.6.2", optional = true }
+flate2 = { version = "1.0.26", optional = true }
+tar = { version = "0.4.38", optional = true }
+zip = { version = "0.6.6", optional = true }
 
 [dev-dependencies]
 rusqlite = "0.29.0"
+
+[features]
+default = ["vector", "vss"]
+download-libs = ["ureq", "flate2", "tar", "zip"]
+vector = []
+vss = []
