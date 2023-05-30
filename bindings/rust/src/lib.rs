@@ -1,11 +1,11 @@
 #[cfg(feature = "vector")]
-#[link(name = "vector0")]
+#[link(name = "sqlite_vector0")]
 extern "C" {
     pub fn sqlite3_vector_init();
 }
 
 #[cfg(feature = "vss")]
-#[link(name = "vss0")]
+#[link(name = "sqlite_vss0")]
 extern "C" {
     pub fn sqlite3_vss_init();
 }
