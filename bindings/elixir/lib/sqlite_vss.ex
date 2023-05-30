@@ -46,161 +46,16 @@ defmodule SqliteVss do
 
     tar_binary = fetch_body!(url)
 
-    cache_dir =
-      :filename.basedir(
-        :user_cache,
-        Path.join("sqlite_vss_precompiled", "precompiled_extensions"),
-        %{}
-      )
-
-    cache_tar_gz_filename = filename(current_target!())
-
-    full_cache_path = cache_dir <> "/" <> cache_tar_gz_filename
-
     bin_path = bin_path()
 
-    if File.exists?(full_cache_path) do
-      with :ok <- check_file_integrity(full_cache_path),
-           :ok <-
-             :erl_tar.extract({:binary, tar_binary}, [
-               :compressed,
-               cwd: to_charlist(bin_path)
-             ]) do
-        Logger.debug("Copying artifact from cache and extracting to #{bin_path}")
-        :ok
-      end
-    else
-      with :ok <- File.mkdir_p(Path.dirname(bin_path)),
-           :ok <- File.mkdir_p(cache_dir),
-           :ok <- File.write(cache_dir, tar_binary),
-           :ok <- check_file_integrity(full_cache_path),
-           :ok <-
-             :erl_tar.extract({:binary, tar_binary}, [
-               :compressed,
-               cwd: to_charlist(bin_path)
-             ]) do
-        :ok
-      end
+    with :ok <-
+           :erl_tar.extract({:binary, tar_binary}, [
+             :compressed,
+             cwd: to_charlist(bin_path)
+           ]) do
+      Logger.debug("Copying artifact from release and extracting to #{bin_path}")
+      :ok
     end
-
-    target_urls = Enum.map(default_targets(), &get_url(default_base_url(), &1))
-
-    result = download_artifacts_with_checksums!(target_urls)
-
-    checksum_file_path = Path.join(File.cwd!(), "checksum-sqlite-vss.exs")
-
-    pairs =
-      for %{path: path, checksum: checksum, checksum_algo: algo} <- result, into: %{} do
-        basename = Path.basename(path)
-        checksum = "#{algo}:#{checksum}"
-        {basename, checksum}
-      end
-
-    lines =
-      for {filename, checksum} <- Enum.sort(pairs) do
-        ~s(  "#{filename}" => #{inspect(checksum, limit: :infinity)},\n)
-      end
-
-    File.write!(checksum_file_path, ["%{\n", lines, "}\n"])
-
-    map_from_file = map_from_file(checksum_file_path)
-
-    check_integrity_from_map(map_from_file, checksum_file_path)
-  end
-
-  def check_integrity_from_map(checksum_map, file_path) do
-    basename = Path.basename(file_path)
-
-    case Map.fetch(checksum_map, basename) do
-      {:ok, algo_with_hash} ->
-        [algo, hash] = String.split(algo_with_hash, ":")
-        algo = String.to_existing_atom(algo)
-
-        case File.read(file_path) do
-          {:ok, content} ->
-            file_hash =
-              algo
-              |> :crypto.hash(content)
-              |> Base.encode16(case: :lower)
-
-            if file_hash == hash do
-              :ok
-            else
-              {:error, "the integrity check failed because the checksum of files does not match"}
-            end
-
-          {:error, reason} ->
-            {:error,
-             "cannot read the file for checksum comparison: #{inspect(file_path)}. " <>
-               "Reason: #{inspect(reason)}"}
-        end
-
-      :error ->
-        {:error,
-         "the precompiled artifact does not exist in the checksum file." <>
-           " Please consider running: `mix sqlite_vss.install` to generate the checksum file."}
-    end
-  end
-
-  def map_from_file(checksum_file_path) do
-    with {:ok, contents} <- File.read(checksum_file_path),
-         {%{} = contents, _} <- Code.eval_string(contents) do
-      contents
-    else
-      _ -> %{}
-    end
-  end
-
-  def check_file_integrity(file_path) do
-    checksum_file_path = Path.join(File.cwd!(), "checksum-sqlite-vss.exs")
-
-    checksum_file_path
-    |> map_from_file()
-    |> check_integrity_from_map(file_path)
-  end
-
-  def download_artifacts_with_checksums!(urls) do
-    cache_dir =
-      :filename.basedir(
-        :user_cache,
-        Path.join("sqlite_vss_precompiled", "precompiled_extensions"),
-        %{}
-      )
-
-    tasks = Task.async_stream(urls, fn url -> {url, fetch_body!(url)} end)
-    :ok = File.mkdir_p(cache_dir)
-
-    Enum.flat_map(tasks, fn {:ok, result} ->
-      with {:download, {url, body}} <- {:download, result},
-           hash <- :crypto.hash(:sha256, body),
-           path <- Path.join(cache_dir, basename_from_url(url)),
-           {:file, :ok} <- {:file, File.write(path, body)} do
-        checksum = Base.encode16(hash, case: :lower)
-
-        Logger.debug("Artifact cached at #{path} with checksum #{inspect(checksum)} (:sha256)")
-
-        [
-          %{
-            url: url,
-            path: path,
-            checksum: checksum,
-            checksum_algo: :sha256
-          }
-        ]
-      else
-        {context, result} ->
-          raise "could not finish the download of artifacts. " <>
-                  "Context: #{inspect(context)}. Reason: #{inspect(result)}"
-      end
-    end)
-  end
-
-  defp basename_from_url(url) do
-    uri = URI.parse(url)
-
-    uri.path
-    |> String.split("/")
-    |> List.last()
   end
 
   @doc """
@@ -277,10 +132,6 @@ defmodule SqliteVss do
              "precompiled artifact is not available for this target: \"i686-unknown-linux-gnu\".\nThe available targets are:\n - linux-x86_64\n - macos-aarch64\n - macos-x86_64"}
         end
     end
-  end
-
-  defp default_targets do
-    ["linux-x86_64", "macos-aarch64", "macos-x86_64"]
   end
 
   defp http_options(scheme) do

@@ -1,6 +1,8 @@
 defmodule SqliteVss.MixProject do
   use Mix.Project
 
+  @source_url "https://github.com/asg017/sqlite-vss/bindings/elixir"
+
   def project do
     [
       app: :sqlite_vss,
@@ -15,7 +17,8 @@ defmodule SqliteVss.MixProject do
         main: "SqliteVss",
         extras: ["README.md"],
         source_ref: "v0.1.0"
-      ]
+      ],
+      package: package()
     ]
   end
 
@@ -32,8 +35,19 @@ defmodule SqliteVss.MixProject do
       {:ex_doc, "~> 0.14", only: :dev, runtime: false},
       {:ecto_sqlite3, ">= 0.0.0"},
       {:castore, ">= 0.0.0"},
-      {:hex_core, "~> 0.10.0"},
-      {:bypass, "~>  2.1.0", only: :test}
+      {:hex_core, "~> 0.10.0"}
+    ]
+  end
+
+  defp package do
+    [
+      files: [
+        "lib",
+        "mix.exs",
+        "README.md",
+      ],
+      links: %{"GitHub" => @source_url},
+      maintainers: ["Alex Garcia", "Tommy Rodriguez"]
     ]
   end
 end
