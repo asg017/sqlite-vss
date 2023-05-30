@@ -82,21 +82,21 @@ $(TARGET_LOADABLE_RELEASE): $(prefix) src/sqlite-vss.cpp src/sqlite-vector.cpp s
 $(TARGET_STATIC): export SQLITE_VSS_CMAKE_VERSION = $(CMAKE_VERSION)
 $(TARGET_STATIC_RELEASE): export SQLITE_VSS_CMAKE_VERSION = $(CMAKE_VERSION)
 
-$(TARGET_STATIC): $(prefix) src/sqlite-vss.cpp src/sqlite-vector.cpp src/sqlite-vss.h.in
+$(TARGET_STATIC) $(TARGET_STATIC_VECTOR_H) $(TARGET_STATIC_VSS_H): $(prefix) src/sqlite-vss.cpp src/sqlite-vector.cpp src/sqlite-vss.h.in
 	cmake -B build; make -C build
 	cp build/libsqlite_vector0.a $(TARGET_STATIC_VECTOR)
 	cp build/libsqlite_vss0.a $(TARGET_STATIC_VSS)
 	cp build/vendor/faiss/faiss/libfaiss_avx2.a $(TARGET_STATIC_FAISS_AVX2)
-	cp build/sqlite-vss.h $(TARGET_STATIC_VSS_H)
 	cp build/sqlite-vector.h $(TARGET_STATIC_VECTOR_H)
+	cp build/sqlite-vss.h $(TARGET_STATIC_VSS_H)
 
-$(TARGET_STATIC_RELEASE): $(prefix) src/sqlite-vss.cpp src/sqlite-vector.cpp src/sqlite-vss.h.in src/sqlite-vector.h.in
+$(TARGET_STATIC_RELEASE) $(TARGET_STATIC_RELEASE_VECTOR_H) $(TARGET_STATIC_RELEASE_VSS_H): $(prefix) src/sqlite-vss.cpp src/sqlite-vector.cpp src/sqlite-vss.h.in src/sqlite-vector.h.in
 	cmake -DCMAKE_BUILD_TYPE=Release -B build_release; make -C build_release
 	cp build_release/libsqlite_vector0.a $(TARGET_STATIC_RELEASE_VECTOR)
 	cp build_release/libsqlite_vss0.a $(TARGET_STATIC_RELEASE_VSS)
 	cp build_release/vendor/faiss/faiss/libfaiss_avx2.a $(TARGET_STATIC_RELEASE_FAISS_AVX2)
-	cp build_release/sqlite-vss.h $(TARGET_STATIC_RELEASE_VSS_H)
 	cp build_release/sqlite-vector.h $(TARGET_STATIC_RELEASE_VECTOR_H)
+	cp build_release/sqlite-vss.h $(TARGET_STATIC_RELEASE_VSS_H)
 
 
 $(TARGET_WHEELS): $(prefix)
@@ -156,6 +156,18 @@ bindings/ruby/lib/version.rb: bindings/ruby/lib/version.rb.tmpl VERSION
 bindings/rust/Cargo.toml: bindings/rust/Cargo.toml.tmpl VERSION
 	VERSION=$(VERSION) envsubst < $< > $@
 
+rust: bindings/rust/Cargo.toml
+
+bindings/go/vector/sqlite-vector.h: $(TARGET_STATIC_VECTOR_H)
+	cp $< $@
+
+bindings/go/vss/sqlite-vss.h: $(TARGET_STATIC_VSS_H)
+	cp $< $@
+
+go:
+	make bindings/go/vector/sqlite-vector.h
+	make bindings/go/vss/sqlite-vss.h
+
 version:
 	make python-versions
 	make python
@@ -163,6 +175,7 @@ version:
 	make deno
 	make bindings/ruby/lib/version.rb
 	make bindings/rust/Cargo.toml
+	make go
 
 test-loadable:
 	$(PYTHON) tests/test-loadable.py
@@ -200,4 +213,4 @@ site-build:
 .PHONY: clean test test-3.41.0 \
 	loadable loadable-release static static-release \
 	patch-openmp patch-openmp-undo \
-	python python-release python-versions datasette npm deno version
+	python python-release python-versions datasette npm deno go rust version
