@@ -1,4 +1,4 @@
 # automatically generated, do not edit by hand.
 module SqliteVss
-  VERSION = "0.1.1-alpha.9"
+  VERSION = "0.1.1-alpha.10"
 end
