@@ -45,6 +45,17 @@ Exqlite.Basic.load_extension(conn, SqliteVss.loadable_path_vss0())
 IO.puts("version: #{version}")
 ```
 
+To load the extension files for an Ecto Repo add the following to your runtime.exs config.
+
+```
+# global
+  config :exqlite, load_extensions: [SqliteVss.loadable_path_vector0(), SqliteVss.loadable_path_vss0()]
+
+# per connection in a Phoenix app
+config :my_app, MyApp.Repo,
+  load_extensions: [SqliteVss.loadable_path_vector0(), SqliteVss.loadable_path_vss0()]
+```
+
 ## Running the demo
 
 ```
