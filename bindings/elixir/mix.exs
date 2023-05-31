@@ -45,6 +45,7 @@ defmodule SqliteVss.MixProject do
         "lib",
         "mix.exs",
         "README.md",
+        "checksum-sqlite-vss.exs"
       ],
       links: %{"GitHub" => @source_url},
       maintainers: ["Alex Garcia", "Tommy Rodriguez"]
