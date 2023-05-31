@@ -1,6 +1,6 @@
 # Golang bindings for `sqlite-vss`
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/asg017/sqlite-hello/bindings/go.svg)](https://pkg.go.dev/github.com/asg017/sqlite-hello/bindings/go)
+[![Go Reference](https://pkg.go.dev/badge/github.com/asg017/sqlite-vss/bindings/go.svg)](https://pkg.go.dev/github.com/asg017/sqlite-vss/bindings/go)
 
 ## Linking `sqlite-vss` libraries
 

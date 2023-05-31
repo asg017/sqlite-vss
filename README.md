@@ -99,6 +99,17 @@ sudo apt-get install -y libgomp1 libatlas-base-dev liblapack-dev
 > **Note:**
 > The `0` in the filename (`vss0.dylib`/ `vss0.so`) denotes the major version of `sqlite-vss`. Currently `sqlite-vss` is pre v1, so expect breaking changes in future versions.
 
+| Language       | Install                                                    | Ref                                                                                                                                                                                       |
+| -------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Python         | `pip install sqlite-vss`                                   | [![PyPI](https://img.shields.io/pypi/v/sqlite-vss.svg?color=blue&logo=python&logoColor=white)](https://pypi.org/project/sqlite-vss/)                                                      |
+| Node.js        | `npm install sqlite-vss`                                   | [![npm](https://img.shields.io/npm/v/sqlite-vss.svg?color=green&logo=nodedotjs&logoColor=white)](https://www.npmjs.com/package/sqlite-vss)                                                |
+| Ruby           | `gem install sqlite-vss`                                   | ![Gem](https://img.shields.io/gem/v/sqlite-vss?color=red&logo=rubygems&logoColor=white)                                                                                                   |
+| Deno           | [`deno.land/x/sqlite_vss`](https://deno.land/x/sqlite_vss) | [![deno version](https://deno.land/badge/sqlite_vss/version?color=fef8d2)](https://deno.land/x/sqlite_vss)                                                                                |
+| Go             | `go get -u github.com/asg017/sqlite-vss/bindings/go`       | [![Go Reference](https://pkg.go.dev/badge/github.com/asg017/sqlite-vss/bindings/go.svg)](https://pkg.go.dev/github.com/asg017/sqlite-vss/bindings/go)                                     |
+| Rust           | `cargo add sqlite-vss`                                     | [![Crates.io](https://img.shields.io/crates/v/sqlite-vss?logo=rust)](https://crates.io/crates/sqlite-vss)                                                                                 |
+| Datasette      | `datasette install datasette-sqlite-vss`                   | [![Datasette](https://img.shields.io/pypi/v/datasette-sqlite-vss.svg?color=B6B6D9&label=Datasette+plugin&logoColor=white&logo=python)](https://datasette.io/plugins/datasette-sqlite-vss) |
+| Github Release |                                                            | ![GitHub tag (latest SemVer pre-release)](https://img.shields.io/github/v/tag/asg017/sqlite-vss?color=lightgrey&include_prereleases&label=Github+release&logo=github)                     |
+
 ### With the `sqlite3` CLI
 
 For using `sqlite-vss` with [the official SQLite command line shell](https://www.sqlite.org/cli.html), download the `vector0.dylib`/`vss0.dylib` (for MacOS Big Sur 11 or higher) or `vector0.so`/`vss0.so` (Linux) files from a release and load it into your SQLite environment.
