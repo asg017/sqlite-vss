@@ -20,10 +20,8 @@ import (
 	sqlite "github.com/mattn/go-sqlite3"
 )
 
-// #cgo LDFLAGS: -L../../dist/debug -Wl,-undefined,dynamic_lookup
+// #cgo LDFLAGS: -L../../dist/debug -Wl,-undefined,dynamic_lookup -lstdc++
 import "C"
-
-
 
 func main() {
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
@@ -37,7 +35,7 @@ func main() {
 		log.Fatal(err)
 	}
 	defer tasks.Finalize(m)
-	st_encode := func (text string) string {
+	st_encode := func(text string) string {
 		result, err := m.Encode(context.Background(), text, int(bert.MeanPooling))
 		if err != nil {
 			log.Fatal(err)
@@ -65,22 +63,21 @@ func main() {
 	}
 	defer db.Close()
 
-
 	// initialize fruits and vss_fruits tables
 	_, err = db.Exec("CREATE TABLE IF NOT EXISTS fruits (id INTEGER PRIMARY KEY AUTOINCREMENT, name text)")
 	if err != nil {
 		log.Fatal(err)
 	}
 	// 384 == number of dimensions that the model outputs
-	_, err = db.Exec("CREATE VIRTUAL TABLE vss_fruits USING vss0(embedding(384))")
-	if err != nil {
-		log.Fatal(err)
-	}
-	tx, err := db.Begin()
+	_, err = db.Exec("CREATE VIRTUAL TABLE IF NOT EXISTS vss_fruits USING vss0(embedding(384))")
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	tx, err := db.Begin()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// insert these fruits into the fruits table, then generate
 	// embeddings for each fruit and store those vectors in vss_fruits
@@ -90,8 +87,10 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		id, _ := f.LastInsertId()
-
+		id, err := f.LastInsertId()
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		_, err = tx.Exec("INSERT INTO vss_fruits(rowid, embedding) values (?, st_encode(?))", id, fruit)
 		if err != nil {
@@ -100,38 +99,38 @@ func main() {
 	}
 	tx.Commit()
 
+	rows, err := db.Query(`
+            with similar_matches as (
+              select rowid, vss_distance_linf(embedding, st_encode(?1)) distance
+              from vss_fruits
+	          where vss_search(embedding, st_encode(?1))
+              limit 20
+            ), final as (
+              select 
+                fruits.rowid,
+                fruits.name,
+                similar_matches.distance
+              from similar_matches
+              left join fruits on fruits.rowid = similar_matches.rowid
+              group by fruits.name
+            )
+            select rowid, name, distance from final`,
+		"red")
+	if err != nil {
+		log.Fatal("vss_search query error:", err)
+	}
+	defer rows.Close()
 
-	// If this code is ran (vss_search()), it will panic with:
-	/*
-		yld[53484]: missing symbol called
-		SIGABRT: abort
-		PC=0x1037dd0de m=8 sigcode=0
-		signal arrived during cgo execution
-	*/
-	if false {
-		rows, err := db.Query(`
-			select rowid, //, distance
-			from vss_fruits
-			where vss_search(embedding, st_encode(?1))
-			limit 10;
-			`, "red")
-		if err != nil {
-			log.Fatal("vss_search query error:", err)
-		}
-		defer rows.Close()
-
-		// panic happens here at .Next()
-		for rows.Next() {
-			var rowid int64
-			var name string
-			var distance float64
-			if err := rows.Scan(&rowid, &name, &distance); err != nil {
-				log.Fatal(err)
-			}
-			log.Printf("rowid=%d name=%s distance=%f\n", rowid, name, distance)
-		}
-		if err := rows.Err(); err != nil {
+	for rows.Next() {
+		var rowid int64
+		var name string
+		var distance float64
+		if err := rows.Scan(&rowid, &name, &distance); err != nil {
 			log.Fatal(err)
 		}
+		log.Printf("rowid=%d name=%s distance=%f\n", rowid, name, distance)
+	}
+	if err := rows.Err(); err != nil {
+		log.Fatal(err)
 	}
 }
