@@ -114,7 +114,7 @@ func main() {
               left join fruits on fruits.rowid = similar_matches.rowid
               group by fruits.name
             )
-            select rowid, name, distance from final`,
+            select rowid, name, distance from final order by distance`,
 		"red")
 	if err != nil {
 		log.Fatal("vss_search query error:", err)
