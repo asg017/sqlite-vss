@@ -71,7 +71,7 @@ You most likely will need to install the following libraries before compiling:
 
 ```
 sudo apt-get update
-sudo apt-get install libgomp1 libatlas-base-dev liblapack-dev
+sudo apt-get install libgomp1 libatlas-base-dev liblapack-dev libsqlite3-dev
 ```
 
 ## API Reference
