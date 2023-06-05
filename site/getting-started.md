@@ -1,5 +1,7 @@
----
----
+<script setup>
+import { data } from './project.data.ts'
+const { VERSION } = data;
+</script>
 
 # Getting Started
 
@@ -15,30 +17,35 @@ You have several options to include `sqlite-vss` into your projects, including P
 pip install sqlite-vss
 ```
 
+```bash [Datasette]
+datasette install datasette-sqlite-vss
+```
+
 ```bash [Node.js]
 npm install sqlite-vss
+```
+
+```js-vue [Deno]
+import * as sqlite_vss from "https://deno.land/x/sqlite_vss@v{{VERSION}}/mod.ts";
 ```
 
 ```bash [Ruby]
 gem install sqlite-vss
 ```
 
-```js [Deno]
-import * as sqlite_vss from "https://deno.land/x/sqlite_vss@v0.1.0/mod.ts";
-```
-
-```bash [Datasette]
-datasette install datasette-sqlite-vss
-```
-
-<!--```bash [Go]
-go get github.com/asg017/sqlite-vss/go
+```elixir-vue [Elixir]
+{:sqlite_vss, "~> {{ VERSION }}"}
 ```
 
 ```bash [Rust]
 cargo add sqlite-vss
 ```
 
+```bash [Go]
+go get -u github.com/asg017/sqlite-vss/bindings/go
+```
+
+<!--
 ```bash [sqlite-package-manager]
 spm install github.com/asg017/sqlite-vss
 ```

@@ -73,3 +73,9 @@ You most likely will need to install the following libraries before compiling:
 sudo apt-get update
 sudo apt-get install libgomp1 libatlas-base-dev liblapack-dev
 ```
+
+Explainations for these packages:
+
+- `libgomp1`: OpenMP implementation, for multi-threading. Required by Faiss
+- `libatlas-base-dev`:
+- `liblapack-dev`:

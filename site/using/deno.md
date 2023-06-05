@@ -5,6 +5,8 @@ const { VERSION } = data;
 
 # `sqlite-vss` with Deno
 
+[![deno version](https://deno.land/badge/sqlite_vss/version?color=fef8d2)](https://deno.land/x/sqlite_vss)
+
 [![deno.land/x release](https://img.shields.io/github/v/release/asg017/sqlite-vss?color=fef8d2&include_prereleases&label=deno.land%2Fx&logo=deno)](https://deno.land/x/sqlite_vss)
 
 `sqlite-vss` is available to Deno developers with the [`x/sqlite_vss`](https://deno.land/x/sqlite_vss) Deno module. It works with [`x/sqlite3`](https://deno.land/x/sqlite3), the native Deno SQLite module.

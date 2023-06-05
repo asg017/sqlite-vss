@@ -199,7 +199,7 @@ test:
 patch-openmp:
 	patch --forward --reject-file=/dev/null --quiet -i scripts/openmp_static.patch vendor/faiss/faiss/CMakeLists.txt 2> /dev/null || true
 
- patch-openmp-undo:
+patch-openmp-undo:
 	patch -R vendor/faiss/faiss/CMakeLists.txt < scripts/openmp_static.patch
 
 test-loadable-3.41.0:

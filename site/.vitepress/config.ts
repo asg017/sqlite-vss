@@ -65,29 +65,33 @@ function nav(): DefaultTheme.NavItem[] {
               link: `https://pypi.org/project/${PROJECT}`,
             },
             {
+              text: "Datasette: Plugin",
+              link: `https://datasette.io/plugins/datasette-${PROJECT}`,
+            },
+            {
               text: "Node.js: NPM package",
               link: `https://www.npmjs.com/package/${PROJECT}`,
+            },
+            {
+              text: "Deno: deno.land/x module",
+              link: `https://deno.land/x/${PROJECT.replace("-", "_")}`,
             },
             {
               text: "Ruby: Ruby gem",
               link: `https://rubygems.org/gems/${PROJECT}`,
             },
             {
-              text: "Datasette: Plugin",
-              link: `https://datasette.io/plugins/datasette-${PROJECT}`,
+              text: "Elixir: Hex package",
+              link: `https://crates.io/crates/${PROJECT.replace("-", "_")}`,
             },
             {
-              text: "Deno: deno.land/x module",
-              link: `https://deno.land/x/${PROJECT.replace("-", "_")}`,
+              text: "Rust: Cargo crate",
+              link: `https://crates.io/crates/${PROJECT}`,
             },
-            //{
-            //  text: "Golang: Go module",
-            //  link: `https://pkg.go.dev/github.com/asg017/${PROJECT}`,
-            //},
-            //{
-            //  text: "Rust: Cargo crate",
-            //  link: `https://crates.io/crates/${PROJECT}`,
-            //},
+            {
+              text: "Golang: Go module",
+              link: `https://pkg.go.dev/github.com/asg017/${PROJECT}/bindings/go`,
+            },
           ],
         },
       ],
@@ -115,12 +119,13 @@ function sidebar(): DefaultTheme.Sidebar {
       collapsed: true,
       items: [
         { text: "Python", link: "/python" },
+        { text: "Datasette", link: "/datasette" },
         { text: "Node.js", link: "/nodejs" },
         { text: "Deno", link: "/deno" },
-        //{ text: "Ruby", link: "/ruby" },
-        //{ text: "Go", link: "/go" },
-        //{ text: "Rust", link: "/rust" },
-        { text: "Datasette", link: "/datasette" },
+        { text: "Ruby", link: "/ruby" },
+        { text: "Elixir", link: "/elixir" },
+        { text: "Rust", link: "/rust" },
+        { text: "Go", link: "/go" },
         { text: "Loadable Extension", link: "/loadable" },
         { text: "Turso", link: "/turso" },
       ],
@@ -128,19 +133,7 @@ function sidebar(): DefaultTheme.Sidebar {
     //guides,
     {
       text: "Comparisons with...",
-      collapsed: true,
-      items: [
-        {
-          text: "Vector DBs (Pinecone, Qdrant, etc.)",
-          link: "/compare#vector-dbs",
-        },
-        { text: "JSON or Pickle", link: "/compare#json-pickle" },
-        { text: "Faiss", link: "/compare#faiss" },
-        { text: "datasette-faiss", link: "/compare#datasette-faiss" },
-        { text: "Chroma", link: "/compare#chroma" },
-        { text: "pgvector", link: "/compare#pgvector" },
-        { text: "txtai", link: "/compare#txtai" },
-      ],
+      link: "/compare",
     },
     {
       text: "Documentation",

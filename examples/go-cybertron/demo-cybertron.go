@@ -20,7 +20,8 @@ import (
 	sqlite "github.com/mattn/go-sqlite3"
 )
 
-// #cgo LDFLAGS: -L../../dist/debug -Wl,-undefined,dynamic_lookup -lstdc++
+// #cgo linux,amd64 LDFLAGS: -L../../dist/debug -Wl,-undefined,dynamic_lookup -lstdc++
+// #cgo darwin,amd64 LDFLAGS: -L../../dist/debug -Wl,-undefined,dynamic_lookup -lomp
 import "C"
 
 func main() {
@@ -106,7 +107,7 @@ func main() {
 	          where vss_search(embedding, st_encode(?1))
               limit 20
             ), final as (
-              select 
+              select
                 fruits.rowid,
                 fruits.name,
                 similar_matches.distance

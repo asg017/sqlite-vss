@@ -4,8 +4,8 @@ layout: home
 
 hero:
   name: "sqlite-vss"
-  text: "A Vector Search SQLite Extension"
-  tagline: "A local-first vector databases"
+  text: "A SQLite Extension for Vector Search"
+  tagline: "Local-first vector databases"
   actions:
     - theme: brand
       text: Getting Started
@@ -18,7 +18,7 @@ hero:
   #  alt: lol
 features:
   - title: Easy installation
-    details: Pre-compiled extensions for MacOS and Linux. Packages available for Python, Node.js, and Deno
+    details: Pre-compiled extensions for MacOS and Linux. Packages available for Python, Node.js, Ruby, Deno, Go, and Rust
   - title: Embeddable
     details: Like SQLite, no external server, no network access, zero configuration
   - title: Based on Faiss
