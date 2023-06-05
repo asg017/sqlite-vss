@@ -9,19 +9,19 @@ fi
 
 VERSION="$(cat VERSION)"
 
-echo "Publishing version v$(VERSION)..."
+echo "Publishing version v$VERSION..."
 
 make version
 git add --all
-git commit -m "v$(VERSION)"
-git tag v$(VERSION)
-git push origin main v$(VERSION)
+git commit -m "v$VERSION"
+git tag v$VERSION
+git push origin main v$VERSION
 
 if grep -qE "alpha|beta" VERSION; then
-    gh release create v$(VERSION) --title=v$(VERSION) --prerelease --notes=""
+    gh release create v$VERSION --title=v$VERSION --prerelease --notes=""
 else
-    gh release create v$(VERSION) --title=v$(VERSION)
+    gh release create v$VERSION --title=v$VERSION
 fi
 
 
-echo "✅ Published! version v$(VERSION)"
+echo "✅ Published! version v$VERSION"
