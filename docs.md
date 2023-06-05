@@ -40,6 +40,9 @@ make loadable-release
 
 If you ran `make loadable`, then under `dist/debug` you'll find debug version of `vector0` and `vss0`, with file extensions `.dylib`, `.so`, or `.dll`, depending on your operating system. If you ran `make loadable-release`, you'll find optimized version of `vector0` and `vss`under `dist/release`.
 
+Not all computers support [AVX2 instructions](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions#CPUs_with_AVX2), which can result in a `Illegal instruction (core dumped)` error when trying to `.load ./vss0`. A compile-time option is being [considered](https://github.com/asg017/sqlite-vss/issues/14). As a temporary fix edit the `sqlite-vss/CMakeLists.txt` and replace `faiss_avx2` with `faiss`.
+
+
 ### Platform-specific compiling tips
 
 #### MacOS (x86_64)
