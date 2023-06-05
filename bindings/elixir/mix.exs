@@ -2,11 +2,12 @@ defmodule SqliteVss.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/asg017/sqlite-vss/bindings/elixir"
+  @version File.read!(Path.expand("../../VERSION", __DIR__)) |> String.trim()
 
   def project do
     [
       app: :sqlite_vss,
-      version: "0.1.0",
+      version: @version,
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -16,8 +17,9 @@ defmodule SqliteVss.MixProject do
       docs: [
         main: "SqliteVss",
         extras: ["README.md"],
-        source_ref: "v0.1.0"
+        source_ref: "v" <> @version
       ],
+      description: description(),
       package: package()
     ]
   end
@@ -39,16 +41,21 @@ defmodule SqliteVss.MixProject do
     ]
   end
 
+  defp description() do
+    "sqlite-vss please."
+  end
+
   defp package do
     [
       files: [
         "lib",
         "mix.exs",
         "README.md",
-        "checksum-sqlite-vss.exs"
+        "sqlite-vss-checksum.exs"
       ],
       links: %{"GitHub" => @source_url},
-      maintainers: ["Alex Garcia", "Tommy Rodriguez"]
+      maintainers: ["Alex Garcia", "Tommy Rodriguez"],
+      licenses: ["MIT"],
     ]
   end
 end
