@@ -3,12 +3,12 @@
 #define _SQLITE_VSS_H
 
 #include "sqlite3ext.h"
-#define SQLITE_VSS_VERSION "v0.1.1-alpha.15"
+#define SQLITE_VSS_VERSION "v0.1.1-alpha.16"
 
 #define SQLITE_VSS_VERSION_MAJOR 0
 #define SQLITE_VSS_VERSION_MINOR 1
 #define SQLITE_VSS_VERSION_PATCH 1
-#define SQLITE_VSS_VERSION_TWEAK 15
+#define SQLITE_VSS_VERSION_TWEAK 16
 
 
 #ifdef __cplusplus
