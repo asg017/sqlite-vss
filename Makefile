@@ -211,7 +211,11 @@ site-dev:
 site-build:
 	npm --prefix site run build
 
+publish-release:
+	./scripts/publish_release.sh
+
 .PHONY: clean test test-3.41.0 \
 	loadable loadable-release static static-release \
+	publish-release \
 	patch-openmp patch-openmp-undo \
 	python python-release python-versions datasette npm deno go rust version
