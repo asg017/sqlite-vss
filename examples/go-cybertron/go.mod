@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/asg017/sqlite-vss/bindings/go v0.0.0-20230530231750-2d0dd01d3dfa
-	github.com/mattn/go-sqlite3 v1.14.16
+	github.com/mattn/go-sqlite3 v1.14.17
 	github.com/nlpodyssey/cybertron v0.1.2
 	github.com/rs/zerolog v1.27.0
 )
