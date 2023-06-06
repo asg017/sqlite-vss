@@ -48,6 +48,7 @@ defmodule SqliteVss.MixProject do
   defp package do
     [
       files: [
+        "VERSION",
         "lib",
         "mix.exs",
         "README.md",
