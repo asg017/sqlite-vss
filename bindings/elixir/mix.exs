@@ -2,7 +2,7 @@ defmodule SqliteVss.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/asg017/sqlite-vss/bindings/elixir"
-  @version File.read!(Path.expand("../../VERSION", __DIR__)) |> String.trim()
+  @version File.read!(Path.expand("./VERSION", __DIR__)) |> String.trim()
 
   def project do
     [
