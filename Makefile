@@ -168,6 +168,11 @@ go:
 	make bindings/go/vector/sqlite-vector.h
 	make bindings/go/vss/sqlite-vss.h
 
+bindings/elixir/VERSION: VERSION
+	cp $< $@
+
+elixir: bindings/elixir/VERSION
+
 version:
 	make python-versions
 	make python
@@ -177,6 +182,7 @@ version:
 	make bindings/rust/Cargo.toml
 	make go
 	make rust
+	make elixir
 
 test-loadable:
 	$(PYTHON) tests/test-loadable.py
@@ -218,4 +224,4 @@ publish-release:
 	loadable loadable-release static static-release \
 	publish-release \
 	patch-openmp patch-openmp-undo \
-	python python-release python-versions datasette npm deno go rust version
+	python python-release python-versions datasette elixir npm deno go rust version
