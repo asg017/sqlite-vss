@@ -2,7 +2,11 @@
 
 [![PyPI](https://img.shields.io/pypi/v/sqlite-vss.svg?color=blue&logo=python&logoColor=white)](https://pypi.org/project/sqlite-vss/)
 
-Python developers can use `sqlite-vss` with the [`sqlite-vss` PyPi package](https://pypi.org/project/sqlite-vss/), which can be installed with:
+Python developers can use `sqlite-vss` with the [`sqlite-vss` PyPi package](https://pypi.org/project/sqlite-vss/).
+
+## Installing
+
+which can be installed with:
 
 ```bash
 pip install sqlite-vss
