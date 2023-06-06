@@ -237,6 +237,7 @@ jobs:
           otp-version: "24"
           rebar3-version: "3.16.1"
           elixir-version: "1.14"
+      - run: cp ./VERSION ./bindings/elixir
       - run: ./scripts/elixir_generate_checksum.sh "${{ needs.upload-extensions.outputs.checksums }}"
       - run: mix deps.get
         working-directory: ./bindings/elixir
