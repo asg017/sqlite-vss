@@ -1,4 +1,3 @@
-#include <cstdio>
 #include <cstdlib>
 #include "sqlite-vss.h"
 
@@ -707,7 +706,7 @@ static int init(
     return rc;
   }
 
-  auto columns = std::auto_ptr(columnsRaw);
+  auto columns = std::auto_ptr<std::vector<VssIndexColumn>>(columnsRaw);
 
   for (auto column = columns->begin(); column != columns->end(); ++column) {
     sqlite3_str_appendf(str, ", \"%w\"", column->name.c_str());
