@@ -1041,7 +1041,7 @@ static int vssIndexFilter(
     index->search(nq, query_vector->data(), pCur->search_k, pCur->search_distances->data(), pCur->search_ids->data());
     delete query_vector;
 
-  } else if (strcmp(idxStr, "range_search") == NULL) {
+  } else if (strcmp(idxStr, "range_search") == 0) {
 
     pCur->query_type = QueryType::range_search;
     VssRangeSearchParams* params = (VssRangeSearchParams*) sqlite3_value_pointer(argv[0], "vss0_rangesearchparams");
