@@ -27,6 +27,7 @@ SQLITE_EXTENSION_INIT1
 #pragma region work
 
 static void vss_version(sqlite3_context * context, int argc, sqlite3_value ** argv) {
+
   sqlite3_result_text(context, SQLITE_VSS_VERSION, -1, SQLITE_STATIC);
 }
 
@@ -57,6 +58,7 @@ static void vss_distance_l1(sqlite3_context * context, int argc, sqlite3_value *
   auto a = vector_api->xValueAsVector(argv[0]);
 
   if(a == NULL) {
+
     sqlite3_result_error(context, "lhs is not a vector", -1);
     return;
   }
@@ -64,6 +66,7 @@ static void vss_distance_l1(sqlite3_context * context, int argc, sqlite3_value *
   auto b = vector_api->xValueAsVector(argv[1]);
 
   if(b == NULL) {
+
     sqlite3_result_error(context, "rhs is not a vector", -1);
     delete a;
     return;
@@ -78,6 +81,7 @@ static void vss_distance_l1(sqlite3_context * context, int argc, sqlite3_value *
 
   int d = a->size();
   sqlite3_result_double(context, faiss::fvec_L1(a->data(), b->data(), d));
+
   delete a;
   delete b;
 }
@@ -267,7 +271,7 @@ struct VssSearchParams {
 void delSearchParams(void * p) {
 
   VssSearchParams * vx = (VssSearchParams *)p;
-  delete vx->data;
+  delete vx->vector;
   delete vx;
 }
 
@@ -594,9 +598,9 @@ struct VssIndexColumn {
   std::string factory;
 };
 
-std::vector<VssIndexColumn>* parse_constructor(int argc, const char *const*argv) {
+std::vector<VssIndexColumn> * parse_constructor(int argc, const char *const*argv) {
 
-  std::vector<VssIndexColumn>* columns = new std::vector<VssIndexColumn>();
+  std::vector<VssIndexColumn> * columns = new std::vector<VssIndexColumn>();
   for(int i = 3; i < argc; i++) {
 
     auto arg = std::string(argv[i]);
@@ -633,7 +637,7 @@ std::vector<VssIndexColumn>* parse_constructor(int argc, const char *const*argv)
     }
     columns->push_back(VssIndexColumn{name, dimensions, factory});
   }
-  // TODO
+
   return columns;
 }
 
@@ -729,6 +733,7 @@ static int init(
   pNew->delete_to_delete_ids = new std::vector<std::vector<faiss::idx_t>*>();
 
   for(int i = 0; i < pNew->indexCount; i++) {
+
     pNew->trainings->push_back(new std::vector<float>());
     pNew->insert_to_add_data->push_back(new std::vector<float>());
     pNew->insert_to_add_ids->push_back(new std::vector<faiss::idx_t>());
