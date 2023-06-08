@@ -181,6 +181,7 @@ static void vector_value_at(sqlite3_context *context, int argc, sqlite3_value **
   try {
     float result = v->at(at);
     sqlite3_result_double(context, result);
+    delete v;
   }
    catch (const std::out_of_range& oor) {
     char * errmsg = sqlite3_mprintf("%d out of range: %s", at, oor.what());
