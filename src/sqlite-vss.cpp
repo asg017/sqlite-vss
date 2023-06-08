@@ -208,7 +208,7 @@ static void vss_fvec_add(sqlite3_context *context, int argc, sqlite3_value **arg
   c.reserve(d);
 
   faiss::fvec_add(d, a->data(), b->data(), c.data());
-  vector_api->xResultVector(context, c);
+  vector_api->xResultVector(context, &c);
   delete a;
   delete b;
 }
@@ -246,7 +246,7 @@ static void vss_fvec_sub(sqlite3_context * context, int argc, sqlite3_value **ar
   std::vector<float> c;
   c.reserve(d);
   faiss::fvec_sub(d, a->data(), b->data(), c.data());
-  vector_api->xResultVector(context, c);
+  vector_api->xResultVector(context, &c);
   delete a;
   delete b;
 }
