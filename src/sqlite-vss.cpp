@@ -1242,7 +1242,7 @@ static int vssIndexSync(sqlite3_vtab * pVTab) {
 
           p->indexes->at(i)->add_with_ids(insert_ids->size(), insert_data->data(), (faiss::idx_t *) insert_ids->data());
 
-        } catch(faiss::FaissException& e) {
+        } catch(faiss::FaissException & e) {
 
           sqlite3_free(pVTab->zErrMsg);
           pVTab->zErrMsg = sqlite3_mprintf("Error adding vector to index at column index %d. Full error: %s", i, e.msg.c_str());
@@ -1409,14 +1409,14 @@ static int vssIndexUpdate(
 }
 
 static void vssSearchFunc(
-  sqlite3_context *context,
+  sqlite3_context * context,
   int argc,
   sqlite3_value **argv) { }
 
 static void faissMemoryUsageFunc(
-  sqlite3_context *context,
+  sqlite3_context * context,
   int argc,
-  sqlite3_value **argv) {
+  sqlite3_value ** argv) {
 
   sqlite3_result_int64(context, faiss::get_mem_usage_kb());
 }
@@ -1433,14 +1433,14 @@ static int vssIndexFindFunction(
   void (** pxFunc)(sqlite3_context *, int, sqlite3_value **),
   void ** ppArg) {
 
-  if( sqlite3_stricmp(zName, "vss_search")==0 ) {
+  if( sqlite3_stricmp(zName, "vss_search") == 0 ) {
 
     *pxFunc = vssSearchFunc;
     *ppArg = 0;
     return VSS_SEARCH_FUNCTION;
   }
 
-  if( sqlite3_stricmp(zName, "vss_range_search")==0 ) {
+  if( sqlite3_stricmp(zName, "vss_range_search") == 0 ) {
 
     *pxFunc = vssRangeSearchFunc;
     *ppArg = 0;
