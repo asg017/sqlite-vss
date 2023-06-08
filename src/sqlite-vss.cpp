@@ -700,7 +700,7 @@ static int init(
   sqlite3_str_appendall(str, "create table x(distance hidden, operation hidden");
   auto columnsRaw = parse_constructor(argc, argv);
 
-  if(columns == NULL) {
+  if(columnsRaw == NULL) {
 
     *pzErr = sqlite3_mprintf("Error parsing constructor");
     return rc;
