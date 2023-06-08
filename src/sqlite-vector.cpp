@@ -124,11 +124,12 @@ static std::vector<float> * valueAsVector(sqlite3_value*value) {
       return vec;
     }
   }
+
   // Option 3: if value is a JSON array coercible to float vector, use that
   //if(sqlite3_value_subtype(value) == JSON_SUBTYPE) {
   if(sqlite3_value_type(value) == SQLITE_TEXT) {
 
-    vec = vectorFromTextValue(value);
+    auto vec = vectorFromTextValue(value);
 
     if(vec != NULL) {
       return vec;
