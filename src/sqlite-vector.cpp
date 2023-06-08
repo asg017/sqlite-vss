@@ -102,6 +102,7 @@ std::vector<float> * vectorFromTextValue(sqlite3_value*value) {
 
 // Returns vector pointer MUST be deleted
 static std::vector<float>* valueAsVector(sqlite3_value*value) {
+
   // Option 1: If the value is a "vectorf32v0" pointer, create vector from that
   VectorFloat* v = (VectorFloat*) sqlite3_value_pointer(value, VECTOR_FLOAT_POINTER_NAME);
   if (v!=NULL) return new std::vector<float>(v->data, v->data + v->size);
