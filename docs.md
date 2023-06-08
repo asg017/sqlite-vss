@@ -96,7 +96,7 @@ The constructor of the `vss0` module takes in a list of column definitions. Curr
 
 An optional `factory=` option can be placed on individual columns. These are [Faiss factory strings](https://github.com/facebookresearch/faiss/wiki/The-index-factory) that give you more control over how the Faiss index is created. Consult the Faiss documentation to determine which factory makes the most sense for your use case. It's recommended that you include `IDMap2` to your factory string, in order to reconstruct vectors in queries. The default factory string is `"Flat,IDMap2"`, an exhaustive search index.
 
-By contention the table name should be prefixed with `vss_`. If your data exists in a "normal" table named `"xyz"`, then name the vss0 table `vss_xyz`.
+By convention the table name should be prefixed with `vss_`. If your data exists in a "normal" table named `"xyz"`, then name the vss0 table `vss_xyz`.
 
 #### Training
 
