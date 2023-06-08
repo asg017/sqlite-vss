@@ -258,9 +258,18 @@ static void vss_fvec_sub(sqlite3_context * context, int argc, sqlite3_value **ar
 #pragma region vtab
 
 struct VssSearchParams {
+
   std::vector<float> * vector;
   sqlite3_int64 k;
 };
+
+// Callback for SQLite deleting memory associated with VssSearchParams pointers.
+void delSearchParams(void * p) {
+
+  VssSearchParams * vx = (VssSearchParams *)p;
+  delete vx->data;
+  delete vx;
+}
 
 static void VssSearchParamsFunc(
   sqlite3_context * context,
@@ -277,10 +286,10 @@ static void VssSearchParamsFunc(
   }
 
   sqlite3_int64 k = sqlite3_value_int64(argv[1]);
-  VssSearchParams* params = new VssSearchParams();
+  VssSearchParams * params = new VssSearchParams();
   params->vector = vector;
   params->k = k;
-  sqlite3_result_pointer(context, params, "vss0_searchparams", 0);
+  sqlite3_result_pointer(context, params, "vss0_searchparams", delSearchParams);
 }
 
 struct VssRangeSearchParams {
@@ -293,8 +302,8 @@ static void VssRangeSearchParamsFunc(
   int argc,
   sqlite3_value ** argv) {
 
-  auto * vector_api = (vector0_api*) sqlite3_user_data(context);
-  auto * vector = vector_api->xValueAsVector(argv[0]);
+  auto vector_api = (vector0_api*) sqlite3_user_data(context);
+  auto vector = vector_api->xValueAsVector(argv[0]);
 
   if(vector == NULL) {
     sqlite3_result_error(context, "1st argument is not a vector", -1);
@@ -305,7 +314,7 @@ static void VssRangeSearchParamsFunc(
   auto * params = new VssRangeSearchParams();
   params->vector = vector;
   params->distance = distance;
-  sqlite3_result_pointer(context, params, "vss0_rangesearchparams", 0);
+  sqlite3_result_pointer(context, params, "vss0_rangesearchparams", delSearchParams);
 }
 
 static int write_index_insert(faiss::Index * index, sqlite3*db, char * schema, char * name, int i) {
