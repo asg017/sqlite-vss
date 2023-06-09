@@ -38,7 +38,7 @@ struct Vector0Global {
   sqlite3 *db;
 };
 
-static void resultVector(sqlite3_context * context, std::vector<float>* v) {
+static void resultVector(sqlite3_context * context, std::unique_ptr<std::vector<float>> & v) {
   VectorFloat * vx = new VectorFloat();
   vx->size = v->size();
   vx->data = (float *) sqlite3_malloc(v->size()*sizeof(float));
@@ -47,7 +47,7 @@ static void resultVector(sqlite3_context * context, std::vector<float>* v) {
 }
 
 #pragma region generic
-std::vector<float> * vectorFromBlobValue(sqlite3_value*value, const char ** pzErrMsg) {
+std::unique_ptr<std::vector<float>> vectorFromBlobValue(sqlite3_value*value, const char ** pzErrMsg) {
   int n = sqlite3_value_bytes(value);
   const void * b;
   char header;
@@ -55,7 +55,7 @@ std::vector<float> * vectorFromBlobValue(sqlite3_value*value, const char ** pzEr
 
   if(n < (2)) {
     *pzErrMsg = "Vector blob size less than header length";
-    return NULL;
+    return nullptr;
   }
   b = sqlite3_value_blob(value);
   memcpy(&header, ((char *) b + 0), sizeof(char));
@@ -63,72 +63,72 @@ std::vector<float> * vectorFromBlobValue(sqlite3_value*value, const char ** pzEr
 
   if(header != VECTOR_BLOB_HEADER_BYTE) {
     *pzErrMsg = "Blob not well-formatted vector blob";
-    return NULL;
+    return nullptr;
   }
   if(type != VECTOR_BLOB_HEADER_TYPE) {
     *pzErrMsg = "Blob type not right";
-    return NULL;
+    return nullptr;
   }
   int numElements = (n - 2)/sizeof(float);
   float * v = (float *) ((char *)b + 2);
-  return new std::vector<float>(v, v+numElements);
+  return std::unique_ptr<std::vector<float>>(new std::vector<float>(v, v+numElements));
 }
 
-std::vector<float> * vectorFromRawBlobValue(sqlite3_value*value, const char ** pzErrMsg) {
+std::unique_ptr<std::vector<float>> vectorFromRawBlobValue(sqlite3_value*value, const char ** pzErrMsg) {
   int n = sqlite3_value_bytes(value);
   // must be divisible by 4
   if(n%4) {
     *pzErrMsg = "Invalid raw blob length, must be divisible by 4";
-    return NULL;
+    return nullptr;
   }
   const void * b = sqlite3_value_blob(value);
 
   float * v = (float *) ((char *)b);
-  return new std::vector<float>(v, v+ (n / 4));
+  return std::unique_ptr<std::vector<float>>(new std::vector<float>(v, v+ (n / 4)));
 }
 
-std::vector<float> * vectorFromTextValue(sqlite3_value*value) {
-  std::vector<float> v;
+std::unique_ptr<std::vector<float>> vectorFromTextValue(sqlite3_value*value) {
+  std::unique_ptr<std::vector<float>> v;
 
   try {
     json data = json::parse(sqlite3_value_text(value));
-    data.get_to(v);
+    data.get_to(*v);
   } catch (const json::exception&) {
-    return NULL;
+    return nullptr;
   }
 
-  return  new std::vector<float>(v);
+  return v;
 }
 
 // Returns vector pointer MUST be deleted
-static std::vector<float>* valueAsVector(sqlite3_value*value) {
+static std::unique_ptr<std::vector<float>> valueAsVector(sqlite3_value*value) {
   // Option 1: If the value is a "vectorf32v0" pointer, create vector from that
   VectorFloat* v = (VectorFloat*) sqlite3_value_pointer(value, VECTOR_FLOAT_POINTER_NAME);
-  if (v!=NULL) return new std::vector<float>(v->data, v->data + v->size);
-  std::vector<float> * vec;
+  if (v!=nullptr) return std::unique_ptr<std::vector<float>>(new std::vector<float>(v->data, v->data + v->size));
+  std::unique_ptr<std::vector<float>> vec;
 
   // Option 2: value is a blob in vector format
   if(sqlite3_value_type(value) == SQLITE_BLOB) {
     const char * pzErrMsg = 0;
-    if((vec = vectorFromBlobValue(value, &pzErrMsg)) != NULL) {
+    if((vec = vectorFromBlobValue(value, &pzErrMsg)) != nullptr) {
       return vec;
     }
-    if((vec = vectorFromRawBlobValue(value, &pzErrMsg)) != NULL) {
+    if((vec = vectorFromRawBlobValue(value, &pzErrMsg)) != nullptr) {
       return vec;
     }
   }
   // Option 3: if value is a JSON array coercible to float vector, use that
   //if(sqlite3_value_subtype(value) == JSON_SUBTYPE) {
   if(sqlite3_value_type(value) == SQLITE_TEXT) {
-    if((vec = vectorFromTextValue(value)) != NULL) {
+    if((vec = vectorFromTextValue(value)) != nullptr) {
       return vec;
     }else {
-      return NULL;
+      return nullptr;
     }
   }
 
   // else, value isn't a vector
-  return NULL;
+  return nullptr;
 }
 #pragma endregion
 
@@ -138,8 +138,8 @@ static void vector_version(sqlite3_context *context, int argc, sqlite3_value **a
 }
 static void vector_debug(sqlite3_context *context, int argc, sqlite3_value **argv) {
   if(argc){
-    std::vector<float>* v = valueAsVector(argv[0]);
-    if(v==NULL) {
+    auto v = valueAsVector(argv[0]);
+    if(v==nullptr) {
       sqlite3_result_error(context, "value not a vector", -1);
       return;
     }
@@ -151,7 +151,6 @@ static void vector_debug(sqlite3_context *context, int argc, sqlite3_value **arg
     }
     sqlite3_str_appendchar(str, 1, ']');
     sqlite3_result_text(context, sqlite3_str_finish(str), -1, sqlite3_free);
-    delete v;
 
   }else {
     sqlite3_result_text(context, "yo", -1, SQLITE_STATIC);
@@ -163,20 +162,18 @@ static void vector_debug(sqlite3_context *context, int argc, sqlite3_value **arg
 #pragma region vector generation
 // TODO should return fvec, ivec, or bvec depending on input. How do bvec, though?
 static void vector_from(sqlite3_context *context, int argc, sqlite3_value **argv) {
-  std::vector<float> * v = new std::vector<float>();
-  v->reserve(argc);
+  auto v = std::unique_ptr<std::vector<float>>(new std::vector<float>(argc));
   for(int i = 0; i < argc; i++) {
     v->push_back(sqlite3_value_double(argv[i]));
   }
   resultVector(context, v);
-  delete v;
 }
 #pragma endregion
 
 #pragma region vector general
 static void vector_value_at(sqlite3_context *context, int argc, sqlite3_value **argv) {
-  std::vector<float>*v = valueAsVector(argv[0]);
-  if(v == NULL) return;
+  auto v = valueAsVector(argv[0]);
+  if(v == nullptr) return;
   int at = sqlite3_value_int(argv[1]);
   try {
     float result = v->at(at);
@@ -184,7 +181,7 @@ static void vector_value_at(sqlite3_context *context, int argc, sqlite3_value **
   }
    catch (const std::out_of_range& oor) {
     char * errmsg = sqlite3_mprintf("%d out of range: %s", at, oor.what());
-    if(errmsg != NULL){
+    if(errmsg != nullptr){
       sqlite3_result_error(context, errmsg, -1);
       sqlite3_free(errmsg);
     }
@@ -194,7 +191,7 @@ static void vector_value_at(sqlite3_context *context, int argc, sqlite3_value **
 
 static void vector_length(sqlite3_context *context, int argc, sqlite3_value **argv) {
   VectorFloat* v = (VectorFloat*) sqlite3_value_pointer(argv[0], VECTOR_FLOAT_POINTER_NAME);
-  if(v==NULL) return;
+  if(v==nullptr) return;
   sqlite3_result_int64(context, v->size);
 }
 #pragma endregion
@@ -204,8 +201,8 @@ static void vector_length(sqlite3_context *context, int argc, sqlite3_value **ar
 
 #pragma region json
 static void vector_to_json(sqlite3_context *context, int argc, sqlite3_value **argv) {
-  std::vector<float>*v = valueAsVector(argv[0]);
-  if(v == NULL) return;
+  auto v = valueAsVector(argv[0]);
+  if(v == nullptr) return;
 
   json j = json(*v);
   sqlite3_result_text(context, j.dump().c_str(), -1, SQLITE_TRANSIENT);
@@ -213,19 +210,12 @@ static void vector_to_json(sqlite3_context *context, int argc, sqlite3_value **a
 }
 static void vector_from_json(sqlite3_context *context, int argc, sqlite3_value **argv) {
   const char * text = (const char *) sqlite3_value_text(argv[0]);
-  std::vector<float>* v =vectorFromTextValue(argv[0]);
-  if(v == NULL) {
+  auto v =vectorFromTextValue(argv[0]);
+  if(v == nullptr) {
     sqlite3_result_error(context, "input not valid json, or contains non-float data", -1);
   }else {
     resultVector(context, v);
-    delete v;
   }
-
-  //json j = json::parse(text);
-  //std::vector<float> *v = new std::vector<float>();
-  //j.get_to(*v);
-
-
 }
 #pragma endregion
 
@@ -238,8 +228,8 @@ static void vector_from_json(sqlite3_context *context, int argc, sqlite3_value *
 |a|a|A
 */
 static void vector_to_blob(sqlite3_context *context, int argc, sqlite3_value **argv) {
-  std::vector<float>*v = valueAsVector(argv[0]);
-  if(v == NULL) return;
+  auto v = valueAsVector(argv[0]);
+  if(v == nullptr) return;
 
   int sz = v->size();
   int n = (sizeof(char)) + (sizeof(char)) + (sz * 4);
@@ -250,25 +240,23 @@ static void vector_to_blob(sqlite3_context *context, int argc, sqlite3_value **a
   memcpy((void *) ((char *) b+1), (void *) &VECTOR_BLOB_HEADER_TYPE, sizeof(char));
   memcpy((void *) ((char *) b+2), (void *) v->data(), sz*4);
   sqlite3_result_blob64(context, b, n, sqlite3_free);
-  delete v;
 
 }
 
 static void vector_from_blob(sqlite3_context *context, int argc, sqlite3_value **argv) {
   const char * pzErrMsg;
-  std::vector<float> * vec = vectorFromBlobValue(argv[0], &pzErrMsg);
-  if(vec == NULL) {
+  auto vec = vectorFromBlobValue(argv[0], &pzErrMsg);
+  if(vec == nullptr) {
     sqlite3_result_error(context, pzErrMsg, -1);
   } else {
     resultVector(context, vec);
-    delete vec;
   }
 }
 
 
 static void vector_to_raw(sqlite3_context *context, int argc, sqlite3_value **argv) {
-  std::vector<float>*v = valueAsVector(argv[0]);
-  if(v == NULL) return;
+  auto v = valueAsVector(argv[0]);
+  if(v == nullptr) return;
 
   int sz = v->size();
   int n = sz * sizeof(float);
@@ -276,17 +264,15 @@ static void vector_to_raw(sqlite3_context *context, int argc, sqlite3_value **ar
   memset(b, 0, n);
   memcpy((void *) ((char *) b), (void *) v->data(), n);
   sqlite3_result_blob64(context, b, n, sqlite3_free);
-  delete v;
 
 }
 static void vector_from_raw(sqlite3_context *context, int argc, sqlite3_value **argv) {
   const char * pzErrMsg;
-  std::vector<float> * vec = vectorFromRawBlobValue(argv[0], &pzErrMsg);
-  if(vec == NULL) {
+  auto vec = vectorFromRawBlobValue(argv[0], &pzErrMsg);
+  if(vec == nullptr) {
     sqlite3_result_error(context, pzErrMsg, -1);
   } else {
     resultVector(context, vec);
-    delete vec;
   }
 }
 #pragma endregion
@@ -314,7 +300,7 @@ struct fvecsEach_cursor {
   // current dimensions
   int iCurrentD;
   // pointer to current vector being read in
-  std::vector<float>* pCurrentVector;
+  std::unique_ptr<std::vector<float>> pCurrentVector;
 };
 
 static int fvecsEachConnect(
@@ -402,7 +388,7 @@ static int fvecsEachFilter(
 
   memcpy(&pCur->iCurrentD, pCur->pBlob, sizeof(int));
   float * v = (float *) ((char *)pCur->pBlob + sizeof(int));
-  pCur->pCurrentVector = new std::vector<float>(v, v+pCur->iCurrentD);
+  pCur->pCurrentVector = std::unique_ptr<std::vector<float>>(new std::vector<float>(v, v+pCur->iCurrentD));
   pCur->p = sizeof(int) + (pCur->iCurrentD*sizeof(float));
 
   return SQLITE_OK;
@@ -556,17 +542,17 @@ extern "C" {
     int flags;
   } aFunc[] = {
     //{ (char*) "vector0",            1,  p,    vector0,          SQLITE_UTF8 },
-    { (char*) "vector_version",     0,  NULL, vector_version,   SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS },
-    { (char*) "vector_debug",       0,  NULL, vector_debug,     SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS },
-    { (char*) "vector_debug",       1,  NULL, vector_debug,     SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS },
-    { (char*) "vector_length",      1,  NULL, vector_length,    SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS },
-    { (char*) "vector_value_at",    2,  NULL, vector_value_at,  SQLITE_UTF8|SQLITE_INNOCUOUS},
-    { (char*) "vector_from_json",   1,  NULL, vector_from_json, SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS},
-    { (char*) "vector_to_json",     1,  NULL, vector_to_json,   SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS},
-    { (char*) "vector_from_blob",   1,  NULL, vector_from_blob, SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS},
-    { (char*) "vector_to_blob",     1,  NULL, vector_to_blob,   SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS},
-    { (char*) "vector_from_raw",    1,  NULL, vector_from_raw,  SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS},
-    { (char*) "vector_to_raw",      1,  NULL, vector_to_raw,    SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS},
+    { (char*) "vector_version",     0,  nullptr, vector_version,   SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS },
+    { (char*) "vector_debug",       0,  nullptr, vector_debug,     SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS },
+    { (char*) "vector_debug",       1,  nullptr, vector_debug,     SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS },
+    { (char*) "vector_length",      1,  nullptr, vector_length,    SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS },
+    { (char*) "vector_value_at",    2,  nullptr, vector_value_at,  SQLITE_UTF8|SQLITE_INNOCUOUS},
+    { (char*) "vector_from_json",   1,  nullptr, vector_from_json, SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS},
+    { (char*) "vector_to_json",     1,  nullptr, vector_to_json,   SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS},
+    { (char*) "vector_from_blob",   1,  nullptr, vector_from_blob, SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS},
+    { (char*) "vector_to_blob",     1,  nullptr, vector_to_blob,   SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS},
+    { (char*) "vector_from_raw",    1,  nullptr, vector_from_raw,  SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS},
+    { (char*) "vector_to_raw",      1,  nullptr, vector_to_raw,    SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS},
   };
     for(int i=0; i<sizeof(aFunc)/sizeof(aFunc[0]) && rc==SQLITE_OK; i++){
       rc = sqlite3_create_function_v2(db, aFunc[i].zFName, aFunc[i].nArg,
