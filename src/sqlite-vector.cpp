@@ -29,11 +29,6 @@ void delVectorFloat(void*p) {
   delete vx;
 }
 
-struct Vector0Global {
-  vector0_api api;
-  sqlite3 *db;
-};
-
 static void resultVector(sqlite3_context * context, ptr_vec & v) {
 
   VectorFloat * vx = new VectorFloat();
@@ -147,31 +142,26 @@ static void vector_version(sqlite3_context *context, int argc, sqlite3_value **a
   sqlite3_result_text(context, SQLITE_VSS_VERSION, -1, SQLITE_STATIC);
 }
 
-static void vector_debug(sqlite3_context *context, int argc, sqlite3_value **argv) {
+static void vector_debug(sqlite3_context * context, int argc, sqlite3_value ** argv) {
 
-  if(argc) {
-
-    auto v = valueAsVector(argv[0]);
-    if(v == nullptr) {
-      sqlite3_result_error(context, "Value is not a vector", -1);
-      return;
-    }
-
-    sqlite3_str * str = sqlite3_str_new(0);
-    sqlite3_str_appendf(str, "size: %lld [", v->size());
-
-    for(int i = 0; i < v->size(); i++) {
-      if(i == 0)
-        sqlite3_str_appendf(str, "%f", v->at(i));
-      else
-        sqlite3_str_appendf(str, ", %f", v->at(i));
-    }
-    sqlite3_str_appendchar(str, 1, ']');
-    sqlite3_result_text(context, sqlite3_str_finish(str), -1, sqlite3_free);
-
-  } else {
-    sqlite3_result_text(context, "yo", -1, SQLITE_STATIC);
+  auto v = valueAsVector(argv[0]);
+  if(v == nullptr) {
+    sqlite3_result_error(context, "Value is not a vector", -1);
+    return;
   }
+
+  sqlite3_str * str = sqlite3_str_new(0);
+  sqlite3_str_appendf(str, "size: %lld [", v->size());
+
+  for(int i = 0; i < v->size(); i++) {
+    if(i == 0)
+      sqlite3_str_appendf(str, "%f", v->at(i));
+    else
+      sqlite3_str_appendf(str, ", %f", v->at(i));
+  }
+  sqlite3_str_appendchar(str, 1, ']');
+  sqlite3_result_text(context, sqlite3_str_finish(str), -1, sqlite3_free);
+  sqlite3_result_text(context, "yo", -1, SQLITE_STATIC);
 }
 #pragma endregion
 
@@ -517,11 +507,15 @@ static sqlite3_module fvecsEachModule = {
 
 #pragma region entrypoint
 
-static void vector0(sqlite3_context *context, int argc, sqlite3_value **argv) {
+struct Vector0Global {
+  vector0_api api;
+  sqlite3 *db;
+};
 
-  Vector0Global *pGlobal = (Vector0Global*)sqlite3_user_data(context);
-  vector0_api **ppApi;
-  ppApi = (vector0_api**)sqlite3_value_pointer(argv[0], "vector0_api_ptr");
+static void vector0(sqlite3_context * context, int argc, sqlite3_value ** argv) {
+
+  auto pGlobal = (Vector0Global*)sqlite3_user_data(context);
+  vector0_api ** ppApi = (vector0_api**)sqlite3_value_pointer(argv[0], "vector0_api_ptr");
   if(ppApi)
     *ppApi = &pGlobal->api;
 }
@@ -534,66 +528,60 @@ extern "C" {
 
   int sqlite3_vector_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi) {
 
+    int rc = SQLITE_OK;
     SQLITE_EXTENSION_INIT2(pApi);
-    Vector0Global * pGlobal = nullptr;
-    pGlobal = (Vector0Global*)sqlite3_malloc(sizeof(Vector0Global));
-    if(pGlobal == nullptr)
+    Vector0Global *pGlobal = (Vector0Global*)sqlite3_malloc(sizeof(Vector0Global));
+    if(pGlobal == nullptr) {
       return SQLITE_NOMEM;
+    }
 
+    void *p = (void*)pGlobal;
     memset(pGlobal, 0, sizeof(Vector0Global));
     pGlobal->db = db;
     pGlobal->api.iVersion = 0;
     pGlobal->api.xValueAsVector = valueAsVector;
     pGlobal->api.xResultVector = resultVector;
-
+    rc = sqlite3_create_function_v2(db, "vector0", 1,
+                               SQLITE_UTF8,
+                               p,
+                               vector0, 0, 0, sqlite3_free);
     static const struct {
       char *zFName;
       int nArg;
-      int flags;
       void* pAux;
       void (*xFunc)(sqlite3_context*,int,sqlite3_value**);
-      void (*xDestroy)(void *);
+      int flags;
     } aFunc[] = {
-      { (char*) "vector0",            1,  SQLITE_UTF8,                                            pGlobal,  vector0,          sqlite3_free},
-      { (char*) "vector_version",     0,  SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,  nullptr,  vector_version,   nullptr },
-      { (char*) "vector_debug",       0,  SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,  nullptr,  vector_debug,     nullptr },
-      { (char*) "vector_debug",       1,  SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,  nullptr,  vector_debug,     nullptr },
-      { (char*) "vector_length",      1,  SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,  nullptr,  vector_length,    nullptr },
-      { (char*) "vector_value_at",    2,  SQLITE_UTF8 | SQLITE_INNOCUOUS,                         nullptr,  vector_value_at,  nullptr },
-      { (char*) "vector_from_json",   1,  SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,  nullptr,  vector_from_json, nullptr },
-      { (char*) "vector_to_json",     1,  SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,  nullptr,  vector_to_json,   nullptr },
-      { (char*) "vector_from_blob",   1,  SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,  nullptr,  vector_from_blob, nullptr },
-      { (char*) "vector_to_blob",     1,  SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,  nullptr,  vector_to_blob,   nullptr },
-      { (char*) "vector_from_raw",    1,  SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,  nullptr,  vector_from_raw,  nullptr },
-      { (char*) "vector_to_raw",      1,  SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,  nullptr,  vector_to_raw,    nullptr },
+      { (char*) "vector_version",     0,  NULL, vector_version,   SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS },
+      { (char*) "vector_debug",       0,  NULL, vector_debug,     SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS },
+      { (char*) "vector_debug",       1,  NULL, vector_debug,     SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS },
+      { (char*) "vector_length",      1,  NULL, vector_length,    SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS },
+      { (char*) "vector_value_at",    2,  NULL, vector_value_at,  SQLITE_UTF8|SQLITE_INNOCUOUS},
+      { (char*) "vector_from_json",   1,  NULL, vector_from_json, SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS},
+      { (char*) "vector_to_json",     1,  NULL, vector_to_json,   SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS},
+      { (char*) "vector_from_blob",   1,  NULL, vector_from_blob, SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS},
+      { (char*) "vector_to_blob",     1,  NULL, vector_to_blob,   SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS},
+      { (char*) "vector_from_raw",    1,  NULL, vector_from_raw,  SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS},
+      { (char*) "vector_to_raw",      1,  NULL, vector_to_raw,    SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS},
     };
-
-    for(int i=0; i < sizeof(aFunc) / sizeof(aFunc[0]); i++) {
-
-      auto rc = sqlite3_create_function_v2(
-        db,
-        aFunc[i].zFName,
-        aFunc[i].nArg,
-        aFunc[i].flags,
-        aFunc[i].pAux,
-        aFunc[i].xFunc,
-        0,
-        0,
-        aFunc[i].xDestroy);
-
+    for(int i=0; i<sizeof(aFunc) / sizeof(aFunc[0]) && rc==SQLITE_OK; i++) {
+      rc = sqlite3_create_function_v2(db, aFunc[i].zFName, aFunc[i].nArg,
+                               aFunc[i].flags,
+                               aFunc[i].pAux,
+                               aFunc[i].xFunc, 0, 0, 0);
       if(rc != SQLITE_OK) {
         *pzErrMsg = sqlite3_mprintf("%s: %s", aFunc[i].zFName, sqlite3_errmsg(db));
         return rc;
       }
     }
 
-    auto rc = sqlite3_create_module(db, "vector_fvecs_each", &fvecsEachModule, 0);
+
+    rc = sqlite3_create_module(db, "vector_fvecs_each", &fvecsEachModule, 0);
     if(rc != SQLITE_OK) {
       *pzErrMsg = sqlite3_mprintf("%s", sqlite3_errmsg(db));
-      return rc;
     }
 
-    return SQLITE_OK;
+    return rc;
   }
 }
 

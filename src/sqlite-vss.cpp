@@ -1286,19 +1286,16 @@ static sqlite3_module vssIndexModule = {
 
 #pragma region entrypoint
 
-void cleanup(void *p){}
+vector0_api * vector0_api_from_db(sqlite3 * db) {
 
-vector0_api *vector0_api_from_db(sqlite3 *db) {
-
-  vector0_api *pRet = 0;
-  sqlite3_stmt *pStmt = 0;
+  vector0_api * pRet = nullptr;
+  sqlite3_stmt * pStmt = nullptr;
 
   if(SQLITE_OK == sqlite3_prepare(db, "select vector0(?1)", -1, &pStmt, 0) ) {
     sqlite3_bind_pointer(pStmt, 1, (void*)&pRet, "vector0_api_ptr", nullptr);
     sqlite3_step(pStmt);
+    sqlite3_finalize(pStmt);
   }
-
-  sqlite3_finalize(pStmt);
   return pRet;
 }
 
@@ -1308,7 +1305,7 @@ extern "C" {
   __declspec(dllexport)
   #endif
 
-  int sqlite3_vss_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi) {
+  int sqlite3_vss_init(sqlite3 * db, char ** pzErrMsg, const sqlite3_api_routines * pApi) {
 
     SQLITE_EXTENSION_INIT2(pApi);
     vector0_api * vector_api = vector0_api_from_db(db);
