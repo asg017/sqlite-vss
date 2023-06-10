@@ -542,9 +542,10 @@ extern "C" {
     pGlobal->api.xValueAsVector = valueAsVector;
     pGlobal->api.xResultVector = resultVector;
     auto rc = sqlite3_create_function_v2(db, "vector0", 1,
-                               SQLITE_UTF8,
-                               pGlobal,
-                               vector0, nullptr, nullptr, sqlite3_free);
+      SQLITE_UTF8,
+      pGlobal,
+      vector0, nullptr, nullptr, sqlite3_free);
+
     static const struct {
       char *zFName;
       int nArg;
@@ -555,7 +556,7 @@ extern "C" {
       { (char*) "vector_version",     0,  nullptr, vector_version,   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
       { (char*) "vector_debug",       1,  nullptr, vector_debug,     SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
       { (char*) "vector_length",      1,  nullptr, vector_length,    SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
-      { (char*) "vector_value_at",    2,  nullptr, vector_value_at,  SQLITE_UTF8 | SQLITE_INNOCUOUS},
+      { (char*) "vector_value_at",    2,  nullptr, vector_value_at,  SQLITE_UTF8 | SQLITE_INNOCUOUS },
       { (char*) "vector_from_json",   1,  nullptr, vector_from_json, SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
       { (char*) "vector_to_json",     1,  nullptr, vector_to_json,   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
       { (char*) "vector_from_blob",   1,  nullptr, vector_from_blob, SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
@@ -563,11 +564,14 @@ extern "C" {
       { (char*) "vector_from_raw",    1,  nullptr, vector_from_raw,  SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
       { (char*) "vector_to_raw",      1,  nullptr, vector_to_raw,    SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
     };
-    for(int i=0; i<sizeof(aFunc) / sizeof(aFunc[0]) && rc==SQLITE_OK; i++) {
+
+    for(int i=0; i < sizeof(aFunc) / sizeof(aFunc[0]) && rc == SQLITE_OK; i++) {
+
       rc = sqlite3_create_function_v2(db, aFunc[i].zFName, aFunc[i].nArg,
-                               aFunc[i].flags,
-                               aFunc[i].pAux,
-                               aFunc[i].xFunc, nullptr, nullptr, nullptr);
+        aFunc[i].flags,
+        aFunc[i].pAux,
+        aFunc[i].xFunc, nullptr, nullptr, nullptr);
+
       if(rc != SQLITE_OK) {
         *pzErrMsg = sqlite3_mprintf("%s: %s", aFunc[i].zFName, sqlite3_errmsg(db));
         return rc;
