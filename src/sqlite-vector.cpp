@@ -570,13 +570,18 @@ extern "C" {
       { (char*) "vector_to_raw",      1,  nullptr, vector_to_raw,    SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
     };
 
-    for(int i=0; i<sizeof(aFunc) / sizeof(aFunc[0]) && rc == SQLITE_OK; i++) {
+    for(int i=0; i < sizeof(aFunc) / sizeof(aFunc[0]) && rc == SQLITE_OK; i++) {
 
       rc = sqlite3_create_function_v2(
-        db, aFunc[i].zFName, aFunc[i].nArg,
+        db,
+        aFunc[i].zFName,
+        aFunc[i].nArg,
         aFunc[i].flags,
         aFunc[i].pAux,
-        aFunc[i].xFunc, 0, 0, 0);
+        aFunc[i].xFunc,
+        0,
+        0,
+        0);
 
       if(rc != SQLITE_OK) {
         *pzErrMsg = sqlite3_mprintf("%s: %s", aFunc[i].zFName, sqlite3_errmsg(db));
