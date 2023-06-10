@@ -620,7 +620,7 @@ static int init(
     int i;
     for (auto column = columns->begin(); column != columns->end(); ++column) {
       try {
-        faiss::Index * index = faiss::index_factory(column->dimensions, column->factory.c_str());
+        auto index = faiss::index_factory(column->dimensions, column->factory.c_str());
         pNew->indexes.push_back(index);
       } catch(faiss::FaissException& e) {
         *pzErr = sqlite3_mprintf("Error building index factory for %s: %s", column->name.c_str(), e.msg.c_str());
