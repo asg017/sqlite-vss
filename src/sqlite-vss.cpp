@@ -1318,23 +1318,47 @@ extern "C" {
       return SQLITE_ERROR;
     }
 
-    sqlite3_create_function_v2(db, "vss_version", 0, SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS, 0, vss_version, 0, 0, 0);
-    sqlite3_create_function_v2(db, "vss_debug", 0, SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS, 0, vss_debug, 0, 0, 0);
+    static const struct {
+      char *zFName;
+      int nArg;
+      int flags;
+      vector0_api * api;
+      void (*xFunc)(sqlite3_context*,int,sqlite3_value**);
+    } aFunc[] = {
+      { (char*) "vss_version",              0, SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS, nullptr,    vss_version },
+      { (char*) "vss_debug",                0, SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS, nullptr,    vss_debug },
+      { (char*) "vss_distance_l1",          2, SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS, vector_api, vss_distance_l1 },
+      { (char*) "vss_distance_l2",          2, SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS, vector_api, vss_distance_l2 },
+      { (char*) "vss_distance_linf",        2, SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS, vector_api, vss_distance_linf },
+      { (char*) "vss_inner_product",        2, SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS, vector_api, vss_inner_product },
+      { (char*) "vss_fvec_add",             2, SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS, vector_api, vss_fvec_add },
+      { (char*) "vss_fvec_sub",             2, SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS, vector_api, vss_fvec_sub },
+      { (char*) "vss_search",               2, SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS, vector_api, vssSearchFunc },
+      { (char*) "vss_search_params",        2, 0,                                                     vector_api, VssSearchParamsFunc },
+      { (char*) "vss_range_search",         2, SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS, vector_api, vssRangeSearchFunc },
+      { (char*) "vss_range_search_params",  2, 0,                                                     vector_api, VssRangeSearchParamsFunc }
+    };
 
-    sqlite3_create_function_v2(db, "vss_distance_l1", 2, SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS, vector_api, vss_distance_l1, 0, 0, 0);
-    sqlite3_create_function_v2(db, "vss_distance_l2", 2, SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS, vector_api, vss_distance_l2, 0, 0, 0);
-    sqlite3_create_function_v2(db, "vss_distance_linf", 2, SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS, vector_api, vss_distance_linf, 0, 0, 0);
-    sqlite3_create_function_v2(db, "vss_inner_product", 2, SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS, vector_api, vss_inner_product, 0, 0, 0);
-    sqlite3_create_function_v2(db, "vss_fvec_add", 2, SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS, vector_api, vss_fvec_add, 0, 0, 0);
-    sqlite3_create_function_v2(db, "vss_fvec_sub", 2, SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS, vector_api, vss_fvec_sub, 0, 0, 0);
+    for(int i=0; i < sizeof(aFunc) / sizeof(aFunc[0]); i++) {
 
-    sqlite3_create_function_v2(db, "vss_search", 2, SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS, vector_api, vssSearchFunc, 0, 0, 0);
-    sqlite3_create_function_v2(db, "vss_search_params", 2, 0, vector_api, VssSearchParamsFunc, 0, 0, 0);
-    sqlite3_create_function_v2(db, "vss_range_search", 2, SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS, vector_api, vssRangeSearchFunc, 0, 0, 0);
-    sqlite3_create_function_v2(db, "vss_range_search_params", 2, 0, vector_api, VssRangeSearchParamsFunc, 0, 0, 0);
+      auto rc = sqlite3_create_function_v2(
+        db,
+        aFunc[i].zFName,
+        aFunc[i].nArg,
+        aFunc[i].flags,
+        aFunc[i].api,
+        aFunc[i].xFunc,
+        0,
+        0,
+        0);
 
-    sqlite3_create_module_v2  (db, "vss0", &vssIndexModule, vector_api, 0);
-    return 0;
+      if(rc != SQLITE_OK) {
+        *pzErrMsg = sqlite3_mprintf("%s: %s", aFunc[i].zFName, sqlite3_errmsg(db));
+        return rc;
+      }
+    }
+
+    return sqlite3_create_module_v2(db, "vss0", &vssIndexModule, vector_api, 0);
   }
 }
 

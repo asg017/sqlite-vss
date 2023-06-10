@@ -534,45 +534,43 @@ extern "C" {
 
   int sqlite3_vector_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi) {
 
-    int rc = SQLITE_OK;
     SQLITE_EXTENSION_INIT2(pApi);
-    Vector0Global *pGlobal = nullptr;
+    Vector0Global * pGlobal = nullptr;
     pGlobal = (Vector0Global*)sqlite3_malloc(sizeof(Vector0Global));
     if(pGlobal == nullptr)
       return SQLITE_NOMEM;
 
-    void *p = (void*)pGlobal;
     memset(pGlobal, 0, sizeof(Vector0Global));
     pGlobal->db = db;
     pGlobal->api.iVersion = 0;
     pGlobal->api.xValueAsVector = valueAsVector;
     pGlobal->api.xResultVector = resultVector;
 
-    rc = sqlite3_create_function_v2(db, "vector0", 1, SQLITE_UTF8, p, vector0, 0, 0, sqlite3_free);
-
     static const struct {
       char *zFName;
       int nArg;
+      int flags;
       void* pAux;
       void (*xFunc)(sqlite3_context*,int,sqlite3_value**);
-      int flags;
+      void (*xDestroy)(void *);
     } aFunc[] = {
-      { (char*) "vector_version",     0,  nullptr, vector_version,   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
-      { (char*) "vector_debug",       0,  nullptr, vector_debug,     SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
-      { (char*) "vector_debug",       1,  nullptr, vector_debug,     SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
-      { (char*) "vector_length",      1,  nullptr, vector_length,    SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
-      { (char*) "vector_value_at",    2,  nullptr, vector_value_at,  SQLITE_UTF8 | SQLITE_INNOCUOUS },
-      { (char*) "vector_from_json",   1,  nullptr, vector_from_json, SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
-      { (char*) "vector_to_json",     1,  nullptr, vector_to_json,   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
-      { (char*) "vector_from_blob",   1,  nullptr, vector_from_blob, SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
-      { (char*) "vector_to_blob",     1,  nullptr, vector_to_blob,   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
-      { (char*) "vector_from_raw",    1,  nullptr, vector_from_raw,  SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
-      { (char*) "vector_to_raw",      1,  nullptr, vector_to_raw,    SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
+      { (char*) "vector0",            1,  SQLITE_UTF8,                                            pGlobal,  vector0,          sqlite3_free},
+      { (char*) "vector_version",     0,  SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,  nullptr,  vector_version,   nullptr },
+      { (char*) "vector_debug",       0,  SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,  nullptr,  vector_debug,     nullptr },
+      { (char*) "vector_debug",       1,  SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,  nullptr,  vector_debug,     nullptr },
+      { (char*) "vector_length",      1,  SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,  nullptr,  vector_length,    nullptr },
+      { (char*) "vector_value_at",    2,  SQLITE_UTF8 | SQLITE_INNOCUOUS,                         nullptr,  vector_value_at,  nullptr },
+      { (char*) "vector_from_json",   1,  SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,  nullptr,  vector_from_json, nullptr },
+      { (char*) "vector_to_json",     1,  SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,  nullptr,  vector_to_json,   nullptr },
+      { (char*) "vector_from_blob",   1,  SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,  nullptr,  vector_from_blob, nullptr },
+      { (char*) "vector_to_blob",     1,  SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,  nullptr,  vector_to_blob,   nullptr },
+      { (char*) "vector_from_raw",    1,  SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,  nullptr,  vector_from_raw,  nullptr },
+      { (char*) "vector_to_raw",      1,  SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,  nullptr,  vector_to_raw,    nullptr },
     };
 
-    for(int i=0; i < sizeof(aFunc) / sizeof(aFunc[0]) && rc == SQLITE_OK; i++) {
+    for(int i=0; i < sizeof(aFunc) / sizeof(aFunc[0]); i++) {
 
-      rc = sqlite3_create_function_v2(
+      auto rc = sqlite3_create_function_v2(
         db,
         aFunc[i].zFName,
         aFunc[i].nArg,
@@ -581,7 +579,7 @@ extern "C" {
         aFunc[i].xFunc,
         0,
         0,
-        0);
+        aFunc[i].xDestroy);
 
       if(rc != SQLITE_OK) {
         *pzErrMsg = sqlite3_mprintf("%s: %s", aFunc[i].zFName, sqlite3_errmsg(db));
@@ -589,7 +587,7 @@ extern "C" {
       }
     }
 
-    rc = sqlite3_create_module(db, "vector_fvecs_each", &fvecsEachModule, 0);
+    auto rc = sqlite3_create_module(db, "vector_fvecs_each", &fvecsEachModule, 0);
     if(rc != SQLITE_OK) {
       *pzErrMsg = sqlite3_mprintf("%s", sqlite3_errmsg(db));
       return rc;
