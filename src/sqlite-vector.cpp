@@ -541,6 +541,7 @@ extern "C" {
     pGlobal->api.iVersion = 0;
     pGlobal->api.xValueAsVector = valueAsVector;
     pGlobal->api.xResultVector = resultVector;
+
     auto rc = sqlite3_create_function_v2(db, "vector0", 1,
       SQLITE_UTF8,
       pGlobal,
@@ -565,7 +566,7 @@ extern "C" {
       { (char*) "vector_to_raw",      1,  nullptr, vector_to_raw,    SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
     };
 
-    for(int i=0; i < sizeof(aFunc) / sizeof(aFunc[0]) && rc == SQLITE_OK; i++) {
+    for(int i = 0; i < sizeof(aFunc) / sizeof(aFunc[0]) && rc == SQLITE_OK; i++) {
 
       rc = sqlite3_create_function_v2(db, aFunc[i].zFName, aFunc[i].nArg,
         aFunc[i].flags,
