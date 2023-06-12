@@ -158,7 +158,6 @@ static int write_index_insert(
 
   if (rc != SQLITE_OK || stmt == nullptr) {
 
-    printf("error prepping stmt\n");
     sqlite3_free(sql);
     return SQLITE_ERROR;
   }
@@ -190,8 +189,6 @@ static int write_index_insert(
     return SQLITE_OK;
 
   } else {
-
-    printf("ooops!!\n");
 
     // INSERT failed, return error
     return SQLITE_ERROR;
@@ -614,17 +611,15 @@ static int vssIndexBestIndex(
   sqlite3_vtab * tab,
   sqlite3_index_info * pIdxInfo) {
 
-  printf("best index, %d\n", pIdxInfo->nConstraint);
-
   int iSearchTerm = -1;
   int iXSearchColumn = -1;
   int iLimit = -1;
 
+  printf("\t vssIndexBestIndex %i - %i - %i\n", iSearchTerm, iXSearchColumn, iLimit);
+
   for(int i = 0; i < pIdxInfo->nConstraint; i++) {
 
     auto constraint = pIdxInfo->aConstraint[i];
-
-    printf("\t[%d] col=%d, op=%d \n", i, pIdxInfo->aConstraint[i].iColumn, pIdxInfo->aConstraint[i].op);
 
     if(!constraint.usable)
       continue;
@@ -702,12 +697,8 @@ static int vssIndexFilter(
   cursor->search_ids = std::vector<faiss::idx_t>(cursor->limit);
   index->search(1, params->vector->data(), cursor->limit, cursor->search_distances.data(), cursor->search_ids.data());
 
-  for (auto iter = cursor->search_distances.begin(); iter != cursor->search_distances.end(); ++iter) {
-    std::cout << *iter << std::endl;
-  }
-
   cursor->current = 0;
-  printf("\tindex filter, %d\n", cursor->limit);
+
   return SQLITE_OK;
 }
 
@@ -782,6 +773,8 @@ static int vssIndexUpdate(
 
   auto p = (vss_index_vtab *) pVTab;
 
+  printf("\t vssIndexUpdate %i \n", argc);
+
   if (argc == 1 && sqlite3_value_type(argv[0]) != SQLITE_NULL) {
 
     // DELETE operation
@@ -844,6 +837,26 @@ static int vssIndexUpdate(
 
 #pragma region Entrypoint functions
 
+static int vssIndexBegin(sqlite3_vtab * tab) {
+  printf("BEGIN\n");
+  return SQLITE_OK;
+}
+
+static int vssIndexSync(sqlite3_vtab * pVTab) {
+  printf("SYNC\n");
+  return SQLITE_OK;
+}
+
+static int vssIndexCommit(sqlite3_vtab * pVTab) {
+  printf("COMMIT\n");
+  return SQLITE_OK;
+}
+
+static int vssIndexRollback(sqlite3_vtab * pVTab) {
+  printf("ROLLBACK\n");
+  return SQLITE_OK;
+}
+
 static sqlite3_module vssIndexModule = {
   /* iVersion    */ 3,
   /* xCreate     */ vssIndexCreate,
@@ -859,10 +872,10 @@ static sqlite3_module vssIndexModule = {
   /* xColumn     */ vssIndexColumn,
   /* xRowid      */ vssIndexRowid,
   /* xUpdate     */ vssIndexUpdate,
-  /* xBegin      */ nullptr,
-  /* xSync       */ nullptr,
-  /* xCommit     */ nullptr,
-  /* xRollback   */ nullptr,
+  /* xBegin      */ vssIndexBegin,
+  /* xSync       */ vssIndexSync,
+  /* xCommit     */ vssIndexCommit,
+  /* xRollback   */ vssIndexRollback,
   /* xFindMethod */ vssIndexFindFunction,
   /* xRename     */ nullptr,
   /* xSavepoint  */ nullptr,
