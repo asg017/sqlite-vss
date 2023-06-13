@@ -852,6 +852,7 @@ static int vssIndexClose(sqlite3_vtab_cursor *cur) {
 }
 
 static int vssIndexBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
+
     int iSearchTerm = -1;
     int iRangeSearchTerm = -1;
     int iXSearchColumn = -1;
@@ -878,7 +879,9 @@ static int vssIndexBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
             iLimit = i;
         }
     }
+
     if (iSearchTerm >= 0) {
+
         pIdxInfo->idxNum = iXSearchColumn - VSS_INDEX_COLUMN_VECTORS;
         pIdxInfo->idxStr = (char *)"search";
         pIdxInfo->aConstraintUsage[iSearchTerm].argvIndex = 1;
@@ -889,9 +892,12 @@ static int vssIndexBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
         }
         pIdxInfo->estimatedCost = 300.0;
         pIdxInfo->estimatedRows = 10;
+
         return SQLITE_OK;
     }
+
     if (iRangeSearchTerm >= 0) {
+
         pIdxInfo->idxNum = iXSearchColumn - VSS_INDEX_COLUMN_VECTORS;
         pIdxInfo->idxStr = (char *)"range_search";
         pIdxInfo->aConstraintUsage[iRangeSearchTerm].argvIndex = 1;
@@ -900,6 +906,7 @@ static int vssIndexBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
         pIdxInfo->estimatedRows = 10;
         return SQLITE_OK;
     }
+
     pIdxInfo->idxNum = -1;
     pIdxInfo->idxStr = (char *)"fullscan";
     pIdxInfo->estimatedCost = 3000000.0;
@@ -978,9 +985,13 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
         }
 
         pCursor->search_distances.reserve(pCursor->search_k * nq);
+        pCursor->search_ids.reserve(pCursor->search_k * nq);
 
-        index->search(nq, query_vector->data(), pCursor->search_k,
-                      pCursor->search_distances.data(), pCursor->search_ids.data());
+        index->search(nq,
+                      query_vector->data(),
+                      pCursor->search_k,
+                      pCursor->search_distances.data(),
+                      pCursor->search_ids.data());
 
     } else if (strcmp(idxStr, "range_search") == 0) {
 
@@ -1078,7 +1089,7 @@ static int vssIndexEof(sqlite3_vtab_cursor *cur) {
 
       case QueryType::search:
           return pCursor->iCurrent >= pCursor->search_k ||
-                (pCursor->search_ids.at(pCursor->iCurrent) == -1);
+                pCursor->iCurrent >= pCursor->search_ids.size();
 
       case QueryType::range_search:
           return pCursor->iCurrent >= pCursor->range_search_result->lims[1];
@@ -1489,6 +1500,7 @@ __declspec(dllexport)
             return SQLITE_ERROR;
         }
 
+        // TODO: This should preferably be done the same way it's done in sqlite-vector.cpp by using an array.
         sqlite3_create_function_v2(db, "vss_version", 0,
                                   SQLITE_UTF8 | SQLITE_DETERMINISTIC |
                                       SQLITE_INNOCUOUS,
