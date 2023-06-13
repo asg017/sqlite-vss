@@ -23,15 +23,22 @@ SQLITE_EXTENSION_INIT1
 
 #include "sqlite-vector.h"
 
+using namespace std;
+
+typedef unique_ptr<vector<float>> vec_ptr;
+
 // https://github.com/sqlite/sqlite/blob/master/src/json.c#L88-L89
 //#define JSON_SUBTYPE  74    /* Ascii for "J" */
 
 #pragma region work
 
 static void vss_version(sqlite3_context *context, int argc, sqlite3_value **argv) {
+
   sqlite3_result_text(context, SQLITE_VSS_VERSION, -1, SQLITE_STATIC);
 }
+
 static void vss_debug(sqlite3_context *context, int argc, sqlite3_value **argv) {
+
   const char * debug = sqlite3_mprintf("version: %s\nfaiss version: %d.%d.%d\nfaiss compile options: %s",
   SQLITE_VSS_VERSION, FAISS_VERSION_MAJOR, FAISS_VERSION_MINOR, FAISS_VERSION_PATCH,
   faiss::get_compile_options().c_str());
@@ -39,216 +46,175 @@ static void vss_debug(sqlite3_context *context, int argc, sqlite3_value **argv) 
   sqlite3_free((void *) debug);
 }
 
-
 #pragma endregion
 
 #pragma region distances
 
 static void vss_distance_l1(sqlite3_context *context, int argc, sqlite3_value **argv) {
-  std::vector<float>* a;
-  std::vector<float>* b;
+
   vector0_api * vector_api = (vector0_api*) sqlite3_user_data(context);
 
-  a = vector_api->xValueAsVector(argv[0]);
+  vec_ptr a = vector_api->xValueAsVector(argv[0]);
   if(a==NULL) {
     sqlite3_result_error(context, "a is not a vector", -1);
     return;
   }
-  b = vector_api->xValueAsVector(argv[1]);
+
+  vec_ptr b = vector_api->xValueAsVector(argv[1]);
   if(b==NULL) {
     sqlite3_result_error(context, "b is not a vector", -1);
-    delete a;
     return;
   }
+
   if(a->size() != b->size()) {
     sqlite3_result_error(context, "b is not a vector", -1);
-    delete a;
-    delete b;
     return;
   }
   int d = a->size();
   sqlite3_result_double(context, faiss::fvec_L1(a->data(), b->data(), d));
-  delete a;
-  delete b;
 }
 
 static void vss_distance_l2(sqlite3_context *context, int argc, sqlite3_value **argv) {
-  std::vector<float>* a;
-  std::vector<float>* b;
   vector0_api * vector_api = (vector0_api*) sqlite3_user_data(context);
 
-  a = vector_api->xValueAsVector(argv[0]);
+  vec_ptr a = vector_api->xValueAsVector(argv[0]);
   if(a==NULL) {
     sqlite3_result_error(context, "a is not a vector", -1);
     return;
   }
-  b = vector_api->xValueAsVector(argv[1]);
+  vec_ptr b = vector_api->xValueAsVector(argv[1]);
   if(b==NULL) {
     sqlite3_result_error(context, "b is not a vector", -1);
-    delete a;
     return;
   }
   if(a->size() != b->size()) {
     sqlite3_result_error(context, "TODO", -1);
-    delete a;
-    delete b;
     return;
   }
   int d = a->size();
   sqlite3_result_double(context, faiss::fvec_L2sqr(a->data(), b->data(), d));
-  delete a;
-  delete b;
 }
 
 static void vss_distance_linf(sqlite3_context *context, int argc, sqlite3_value **argv) {
-  std::vector<float>* a;
-  std::vector<float>* b;
   vector0_api * vector_api = (vector0_api*) sqlite3_user_data(context);
 
-  a = vector_api->xValueAsVector(argv[0]);
+  vec_ptr a = vector_api->xValueAsVector(argv[0]);
   if(a==NULL) {
     sqlite3_result_error(context, "a is not a vector", -1);
     return;
   }
-  b = vector_api->xValueAsVector(argv[1]);
+  vec_ptr b = vector_api->xValueAsVector(argv[1]);
   if(b==NULL) {
     sqlite3_result_error(context, "b is not a vector", -1);
-    delete a;
     return;
   }
   if(a->size() != b->size()) {
     sqlite3_result_error(context, "b is not a vector", -1);
-    delete a;
-    delete b;
     return;
   }
   int d = a->size();
   sqlite3_result_double(context, faiss::fvec_Linf(a->data(), b->data(), d));
-  delete a;
-  delete b;
 }
 
 static void vss_inner_product(sqlite3_context *context, int argc, sqlite3_value **argv) {
-  std::vector<float>* a;
-  std::vector<float>* b;
   vector0_api * vector_api = (vector0_api*) sqlite3_user_data(context);
 
-  a = vector_api->xValueAsVector(argv[0]);
+  vec_ptr a = vector_api->xValueAsVector(argv[0]);
   if(a==NULL) {
     sqlite3_result_error(context, "a is not a vector", -1);
     return;
   }
-  b = vector_api->xValueAsVector(argv[1]);
+  vec_ptr b = vector_api->xValueAsVector(argv[1]);
   if(b==NULL) {
     sqlite3_result_error(context, "b is not a vector", -1);
-    delete a;
     return;
   }
   if(a->size() != b->size()) {
     sqlite3_result_error(context, "b is not a vector", -1);
-    delete a;
-    delete b;
     return;
   }
   int d = a->size();
   sqlite3_result_double(context, faiss::fvec_inner_product(a->data(), b->data(), d));
-  delete a;
-  delete b;
 }
 
 static void vss_fvec_add(sqlite3_context *context, int argc, sqlite3_value **argv) {
-  std::vector<float>* a;
-  std::vector<float>* b;
-  std::vector<float>* c;
   vector0_api * vector_api = (vector0_api*) sqlite3_user_data(context);
 
-  a = vector_api->xValueAsVector(argv[0]);
+  vec_ptr a = vector_api->xValueAsVector(argv[0]);
   if(a==NULL) {
     sqlite3_result_error(context, "a is not a vector", -1);
     return;
   }
-  b = vector_api->xValueAsVector(argv[1]);
+  vec_ptr b = vector_api->xValueAsVector(argv[1]);
   if(b==NULL) {
     sqlite3_result_error(context, "b is not a vector", -1);
-    delete a;
     return;
   }
   if(a->size() != b->size()) {
     sqlite3_result_error(context, "b is not a vector", -1);
-    delete a;
-    delete b;
     return;
   }
   int d = a->size();
-  c = new std::vector<float>(d);
+  vec_ptr c(new vector<float>(d));
   faiss::fvec_add(d, a->data(), b->data(), c->data());
   vector_api->xResultVector(context, *c);
-  delete a;
-  delete b;
-  delete c;
 }
 
 static void vss_fvec_sub(sqlite3_context *context, int argc, sqlite3_value **argv) {
-  std::vector<float>* a;
-  std::vector<float>* b;
-  std::vector<float>* c;
   vector0_api * vector_api = (vector0_api*) sqlite3_user_data(context);
 
-  a = vector_api->xValueAsVector(argv[0]);
+  vec_ptr a = vector_api->xValueAsVector(argv[0]);
   if(a==NULL) {
     sqlite3_result_error(context, "a is not a vector", -1);
     return;
   }
-  b = vector_api->xValueAsVector(argv[1]);
+  vec_ptr b = vector_api->xValueAsVector(argv[1]);
   if(b==NULL) {
     sqlite3_result_error(context, "b is not a vector", -1);
-    delete a;
     return;
   }
   if(a->size() != b->size()) {
     sqlite3_result_error(context, "b is not a vector", -1);
-    delete a;
-    delete b;
     return;
   }
   int d = a->size();
-  c = new std::vector<float>(d);
+  vec_ptr c = vec_ptr(new std::vector<float>(d));
   faiss::fvec_sub(d, a->data(), b->data(), c->data());
   vector_api->xResultVector(context, *c);
-  delete a;
-  delete b;
-  delete c;
 }
-
 
 #pragma endregion
 
 #pragma region vtab
 
-
-
 struct VssSearchParams {
+
   std::vector<float> * vector;
   sqlite3_int64 k;
 };
 
+void delVssSearchParams(void * p) {
+  VssSearchParams * vs = (VssSearchParams *)p;
+  delete vs;
+}
+
 static void VssSearchParamsFunc(
   sqlite3_context *context,
   int argc,
-  sqlite3_value **argv
-){
+  sqlite3_value **argv) {
+
   vector0_api * vector_api = (vector0_api*) sqlite3_user_data(context);
 
-  std::vector<float> * vector = vector_api->xValueAsVector(argv[0]);
+  vec_ptr vector = vector_api->xValueAsVector(argv[0]);
   if(vector==NULL) {
     sqlite3_result_error(context, "1st argument is not a vector", -1);
     return;
   }
   sqlite3_int64 k = sqlite3_value_int64(argv[1]);
-  VssSearchParams* params = new VssSearchParams();
-  params->vector = vector;
+  VssSearchParams * params = new VssSearchParams();
+  params->vector = vector.release();
   params->k = k;
-  sqlite3_result_pointer(context, params, "vss0_searchparams", 0);
+  sqlite3_result_pointer(context, params, "vss0_searchparams", delVssSearchParams);
 }
 
 struct VssRangeSearchParams {
@@ -259,22 +225,23 @@ struct VssRangeSearchParams {
 static void VssRangeSearchParamsFunc(
   sqlite3_context *context,
   int argc,
-  sqlite3_value **argv
-){
+  sqlite3_value **argv) {
+
   vector0_api * vector_api = (vector0_api*) sqlite3_user_data(context);
-  std::vector<float> * vector = vector_api->xValueAsVector(argv[0]);
+  vec_ptr vector = vector_api->xValueAsVector(argv[0]);
   if(vector==NULL) {
     sqlite3_result_error(context, "1st argument is not a vector", -1);
     return;
   }
   float distance = sqlite3_value_double(argv[1]);
   VssRangeSearchParams* params = new VssRangeSearchParams();
-  params->vector = vector;
+  params->vector = vector.release();
   params->distance = distance;
-  sqlite3_result_pointer(context, params, "vss0_rangesearchparams", 0);
+  sqlite3_result_pointer(context, params, "vss0_rangesearchparams", delVssSearchParams);
 }
 
 static int write_index_insert(faiss::Index * index, sqlite3*db, char * schema, char * name, int i) {
+
   faiss::VectorIOWriter * w = new faiss::VectorIOWriter();
   faiss::write_index(index, w);
   sqlite3_int64 nIn = w->data.size();
@@ -819,18 +786,18 @@ static int vssIndexBestIndex(
 static int vssIndexFilter(
   sqlite3_vtab_cursor *pVtabCursor,
   int idxNum, const char *idxStr,
-  int argc, sqlite3_value **argv
-){
+  int argc, sqlite3_value **argv) {
+
   //printf("filter argc=%d, idxStr='%s', idxNum=%d\n", argc, idxStr, idxNum);
   vss_index_cursor *pCur = (vss_index_cursor *)pVtabCursor;
   if (strcmp(idxStr, "search")==0) {
     pCur->query_type = QueryType::search;
-    std::vector<float> * query_vector;
+    vec_ptr query_vector;
 
     VssSearchParams* params;
     if ( (params = (VssSearchParams*) sqlite3_value_pointer(argv[0], "vss0_searchparams")) != NULL) {
       pCur->search_k = params->k;
-      query_vector = new std::vector<float>(*params->vector);
+      query_vector = vec_ptr(new std::vector<float>(*params->vector));
     }
     // https://sqlite.org/forum/info/6b32f818ba1d97ef
     else if(sqlite3_libversion_number() < 3041000) {
@@ -857,7 +824,6 @@ static int vssIndexFilter(
     if(query_vector->size() != index->d) {
       sqlite3_free(pVtabCursor->pVtab->zErrMsg);
       pVtabCursor->pVtab->zErrMsg = sqlite3_mprintf("input query size doesn't match index dimensions: %ld != %ld", query_vector->size(), index->d);
-      delete query_vector;
       return SQLITE_ERROR;
     }
     if(pCur->search_k <= 0) {
@@ -1117,7 +1083,7 @@ static int vssIndexUpdate(
     // if no operation, we adding it to the index
     bool noOperation = sqlite3_value_type(argv[2+VSS_INDEX_COLUMN_OPERATION]) == SQLITE_NULL;
     if (noOperation) {
-      std::vector<float>* vec;
+      vec_ptr vec;
       sqlite3_int64 rowid = sqlite3_value_int64(argv[1]);
       bool inserted_rowid = false;
       for(int i = 0; i < p->indexCount; i++) {
@@ -1126,7 +1092,6 @@ static int vssIndexUpdate(
           if(!p->indexes->at(i)->is_trained) {
             sqlite3_free(pVTab->zErrMsg);
             pVTab->zErrMsg = sqlite3_mprintf("Index at i=%d requires training before inserting data.", i);
-            delete vec;
             return SQLITE_ERROR;
           }
 
@@ -1134,7 +1099,6 @@ static int vssIndexUpdate(
             sqlite_int64 retrowid;
             int rc = shadow_data_insert(p->db, p->schema, p->name, &rowid, &retrowid);
             if (rc != SQLITE_OK) {
-              delete vec;
               return rc;
             }
             inserted_rowid = true;
@@ -1148,7 +1112,6 @@ static int vssIndexUpdate(
 
           p->isInsertData = true;
           *pRowid = rowid;
-          delete vec;
         }
       }
 
@@ -1156,13 +1119,12 @@ static int vssIndexUpdate(
     } else {
       std::string operation ((char *) sqlite3_value_text(argv[2+VSS_INDEX_COLUMN_OPERATION]));
       if(operation.compare("training") == 0) {
-        std::vector<float>* vec;
+        vec_ptr vec;
         for(int i = 0; i < p->indexCount; i++) {
           if ( (vec = p->vector_api->xValueAsVector(argv[2+VSS_INDEX_COLUMN_VECTORS+i])) != NULL ) {
             p->trainings->at(i)->reserve(vec->size() + distance(vec->begin(), vec->end()));
             p->trainings->at(i)->insert(p->trainings->at(i)->end(), vec->begin(), vec->end());
             p->isTraining = true;
-            delete vec;
           }
         }
       }
