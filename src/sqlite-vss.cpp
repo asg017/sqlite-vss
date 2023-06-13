@@ -39,8 +39,11 @@ static void vss_debug(sqlite3_context *context, int argc,
 
     const char *debug = sqlite3_mprintf(
         "version: %s\nfaiss version: %d.%d.%d\nfaiss compile options: %s",
-        SQLITE_VSS_VERSION, FAISS_VERSION_MAJOR, FAISS_VERSION_MINOR,
-        FAISS_VERSION_PATCH, faiss::get_compile_options().c_str());
+        SQLITE_VSS_VERSION,
+        FAISS_VERSION_MAJOR,
+        FAISS_VERSION_MINOR,
+        FAISS_VERSION_PATCH,
+        faiss::get_compile_options().c_str());
 
     sqlite3_result_text(context, debug, -1, SQLITE_TRANSIENT);
     sqlite3_free((void *)debug);
@@ -289,33 +292,35 @@ static void VssRangeSearchParamsFunc(sqlite3_context *context, int argc,
 static int write_index_insert(faiss::Index *index, sqlite3 *db, char *schema,
                               char *name, int i) {
 
-    faiss::VectorIOWriter *w = new faiss::VectorIOWriter();
-    faiss::write_index(index, w);
-    sqlite3_int64 nIn = w->data.size();
+    faiss::VectorIOWriter w = new faiss::VectorIOWriter();
+    faiss::write_index(index, &w);
+    sqlite3_int64 nIn = w.data.size();
 
     // First try to insert into xyz_index. If that fails with a rowid constraint
     // error, that means the index is already on disk, we just have to UPDATE
     // instead.
 
     sqlite3_stmt *stmt;
-    char *q = sqlite3_mprintf(
+    char *sql = sqlite3_mprintf(
         "insert into \"%w\".\"%w_index\"(rowid, idx) values (?, ?)", schema,
         name);
-    int rc = sqlite3_prepare_v2(db, q, -1, &stmt, 0);
+
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
     if (rc != SQLITE_OK || stmt == 0) {
         // printf("error prepping stmt\n");
         return SQLITE_ERROR;
     }
+
     rc = sqlite3_bind_int64(stmt, 1, i);
-    rc = sqlite3_bind_blob64(stmt, 2, w->data.data(), nIn, SQLITE_TRANSIENT);
+    rc = sqlite3_bind_blob64(stmt, 2, w.data.data(), nIn, SQLITE_TRANSIENT);
     if (rc != SQLITE_OK) {
-        // printf("error binding blob: %s\n", sqlite3_errmsg(db));
-        sqlite3_free(q);
+        sqlite3_free(sql);
         return SQLITE_ERROR;
     }
+
     int result = sqlite3_step(stmt);
     sqlite3_finalize(stmt);
-    sqlite3_free(q);
+    sqlite3_free(sql);
 
     // INSERT was success, index wasn't written yet, all good to exit
     if (result == SQLITE_DONE) {
@@ -328,30 +333,32 @@ static int write_index_insert(faiss::Index *index, sqlite3 *db, char *schema,
 
     // INSERT failed because index already is on disk, so do UPDATE instead
 
-    q = sqlite3_mprintf(
+    sql = sqlite3_mprintf(
         "UPDATE \"%w\".\"%w_index\" SET idx = ? WHERE rowid = ?", schema, name);
-    rc = sqlite3_prepare_v2(db, q, -1, &stmt, 0);
+    rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
     if (rc != SQLITE_OK || stmt == 0) {
         return SQLITE_ERROR;
     }
-    rc = sqlite3_bind_blob64(stmt, 1, w->data.data(), nIn, SQLITE_TRANSIENT);
+
+    rc = sqlite3_bind_blob64(stmt, 1, w.data.data(), nIn, SQLITE_TRANSIENT);
     if (rc != SQLITE_OK) {
-        sqlite3_free(q);
+        sqlite3_free(sql);
         return SQLITE_ERROR;
     }
+
     rc = sqlite3_bind_int64(stmt, 2, i);
     if (rc != SQLITE_OK) {
-        sqlite3_free(q);
+        sqlite3_free(sql);
         return SQLITE_ERROR;
     }
+
     result = sqlite3_step(stmt);
     sqlite3_finalize(stmt);
-    sqlite3_free(q);
+    sqlite3_free(sql);
 
     if (result == SQLITE_DONE) {
         return SQLITE_OK;
     }
-    delete w;
     return result;
 }
 
