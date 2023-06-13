@@ -43,9 +43,12 @@ struct Vector0Global {
 void resultVector(sqlite3_context *context, vector<float> *vecIn) {
 
     VectorFloat *vecRes = new VectorFloat();
+
     vecRes->size = vecIn->size();
     vecRes->data = (float *)sqlite3_malloc(vecIn->size() * sizeof(float));
+
     memcpy(vecRes->data, vecIn->data(), vecIn->size() * sizeof(float));
+
     sqlite3_result_pointer(context, vecRes, VECTOR_FLOAT_POINTER_NAME, nullptr);
 }
 
