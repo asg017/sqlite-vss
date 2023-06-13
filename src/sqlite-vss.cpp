@@ -565,16 +565,10 @@ struct vss_index_vtab {
     // Vector holding all the  faiss Indices the vtab uses, and their state, implying which items are to be deleted and inserted.
     std::vector<vss_index> indexes;
 
-    // float vector that holds training vectors for indices that require it.
-    // This, and the elements, must be freed at disconnect.
-    //std::vector<std::vector<float> *> trainings;
-    //std::vector<std::vector<float> *> insert_to_add_data;
-    //std::vector<std::vector<faiss::idx_t> *> insert_to_add_ids;
-    // std::vector<std::vector<faiss::idx_t> *> delete_to_delete_ids;
-
     // whether the current transaction is inserting training data for at least 1
     // column
     bool isTraining;
+
     // whether the current transaction is inserting data for at least 1 column
     bool isInsertData;
 };
