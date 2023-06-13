@@ -546,29 +546,26 @@ struct vss_index {
 
 struct vss_index_vtab {
 
-    sqlite3_vtab base; /* Base class - must be first */
+    sqlite3_vtab base; // Base class - must be first
     sqlite3 *db;
     vector0_api *vector_api;
 
-    // name of the virtual table. Must be freed during disconnect
+    // Name of the virtual table. Must be freed during disconnect
     char *name;
 
-    // name of the schema the virtual table exists in. Must be freed during
+    // Name of the schema the virtual table exists in. Must be freed during
     // disconnect
     char *schema;
-
-    // number of index columns in the virtual table
-    //sqlite3_int64 indexCount;
 
     // Vector holding all the  faiss Indices the vtab uses, and their state,
     // implying which items are to be deleted and inserted.
     vector<vss_index> indexes;
 
-    // whether the current transaction is inserting training data for at least 1
+    // Whether the current transaction is inserting training data for at least 1
     // column
     bool isTraining;
 
-    // whether the current transaction is inserting data for at least 1 column
+    // Whether the current transaction is inserting data for at least 1 column
     bool isInsertData;
 };
 
@@ -576,7 +573,7 @@ enum QueryType { search, range_search, fullscan };
 
 struct vss_index_cursor {
 
-    sqlite3_vtab_cursor base; /* Base class - must be first */
+    sqlite3_vtab_cursor base; // Base class - must be first
     vss_index_vtab *table;
 
     sqlite3_int64 iCurrent;
@@ -584,20 +581,21 @@ struct vss_index_cursor {
 
     QueryType query_type;
 
-    // for query_type == QueryType::search
+    // For query_type == QueryType::search
     sqlite3_int64 search_k;
     vector<faiss::idx_t> search_ids;
     vector<float> search_distances;
 
-    // for query_type == QueryType::range_search
+    // For query_type == QueryType::range_search
     faiss::RangeSearchResult *range_search_result;
 
-    // for query_type == QueryType::fullscan
+    // For query_type == QueryType::fullscan
     sqlite3_stmt *stmt;
     int step_result;
 };
 
 struct VssIndexColumn {
+
     string name;
     sqlite3_int64 dimensions;
     string factory;
