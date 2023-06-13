@@ -39,13 +39,13 @@ struct Vector0Global {
   sqlite3 *db;
 };
 
-void resultVector(sqlite3_context * context, vector<float> & vecIn) {
+void resultVector(sqlite3_context * context, vector<float> * vecIn) {
 
   VectorFloat * vecRes = new VectorFloat();
-  vecRes->size = vecIn.size();
-  vecRes->data = (float *) sqlite3_malloc(vecIn.size() * sizeof(float));
-  memcpy(vecRes->data, vecIn.data(), vecIn.size() * sizeof(float));
-  sqlite3_result_pointer(context, vecRes, VECTOR_FLOAT_POINTER_NAME, delVectorFloat);
+  vecRes->size = vecIn->size();
+  vecRes->data = (float *) sqlite3_malloc(vecIn->size() * sizeof(float));
+  memcpy(vecRes->data, vecIn->data(), vecIn->size() * sizeof(float));
+  sqlite3_result_pointer(context, vecRes, VECTOR_FLOAT_POINTER_NAME, nullptr);
 }
 
 #pragma region generic
@@ -176,7 +176,7 @@ static void vector_from(sqlite3_context * context, int argc, sqlite3_value **arg
   for(int i = 0; i < argc; i++) {
     vec.push_back(sqlite3_value_double(argv[i]));
   }
-  resultVector(context, vec);
+  resultVector(context, &vec);
 }
 
 #pragma endregion
@@ -228,7 +228,7 @@ static void vector_from_json(sqlite3_context *context, int argc, sqlite3_value *
   if(v == NULL) {
     sqlite3_result_error(context, "input not valid json, or contains non-float data", -1);
   }else {
-    resultVector(context, *v);
+    resultVector(context, v.get());
   }
 }
 #pragma endregion
@@ -263,7 +263,7 @@ static void vector_from_blob(sqlite3_context *context, int argc, sqlite3_value *
   if(vec == NULL) {
     sqlite3_result_error(context, pzErrMsg, -1);
   } else {
-    resultVector(context, *vec);
+    resultVector(context, vec.get());
   }
 }
 
@@ -285,7 +285,7 @@ static void vector_from_raw(sqlite3_context *context, int argc, sqlite3_value **
   if(vec == NULL) {
     sqlite3_result_error(context, pzErrMsg, -1);
   } else {
-    resultVector(context, *vec);
+    resultVector(context, vec.get());
   }
 }
 
@@ -447,7 +447,7 @@ static int fvecsEachColumn(
       sqlite3_result_int(context, pCur->iCurrentD);
       break;
     case FVECS_EACH_VECTOR:
-      resultVector(context, *pCur->pCurrentVector);
+      resultVector(context, pCur->pCurrentVector.get());
       break;
     case FVECS_EACH_INPUT:
       sqlite3_result_null(context);

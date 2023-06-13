@@ -15,7 +15,7 @@ typedef struct vector0_api vector0_api;
 struct vector0_api {
   int iVersion;
   std::unique_ptr<std::vector<float>> (*xValueAsVector)(sqlite3_value*value);
-  void (*xResultVector)(sqlite3_context*context, std::vector<float> &);
+  void (*xResultVector)(sqlite3_context*context, std::vector<float> *);
 };
 #endif /* end of C++ specific APIs*/
 
