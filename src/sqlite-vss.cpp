@@ -372,40 +372,42 @@ static int shadow_data_insert(sqlite3 *db, char *schema, char *name,
     sqlite3_stmt *stmt;
 
     if (rowid == NULL) {
+
         char *sql = sqlite3_mprintf(
             "insert into \"%w\".\"%w_data\"(x) values (?)", schema, name);
+
         int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
         sqlite3_free(sql);
 
-        if (rc != SQLITE_OK || stmt == 0) {
-            // printf("error prepping stmt: %s \n", sqlite3_errmsg(db));
+        if (rc != SQLITE_OK || stmt == nullptr) {
             return SQLITE_ERROR;
         }
+
         sqlite3_bind_null(stmt, 1);
         if (sqlite3_step(stmt) != SQLITE_DONE) {
-            // printf("error inserting?\n");
             sqlite3_finalize(stmt);
             return SQLITE_ERROR;
         }
     } else {
-        char *q = sqlite3_mprintf(
+
+        char *sql = sqlite3_mprintf(
             "insert into \"%w\".\"%w_data\"(rowid, x) values (?, ?);", schema,
             name);
-        int rc = sqlite3_prepare_v2(db, q, -1, &stmt, 0);
-        sqlite3_free(q);
+
+        int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
+        sqlite3_free(sql);
 
         if (rc != SQLITE_OK || stmt == 0) {
-            // printf("error prepping stmt: %s \n", sqlite3_errmsg(db));
             return SQLITE_ERROR;
         }
+
         sqlite3_bind_int64(stmt, 1, *rowid);
         sqlite3_bind_null(stmt, 2);
         if (sqlite3_step(stmt) != SQLITE_DONE) {
-            // printf("error inserting: %s\n", sqlite3_errmsg(db));
             sqlite3_finalize(stmt);
             return SQLITE_ERROR;
         }
-        if (retRowid != NULL)
+        if (retRowid != nullptr)
             *retRowid = sqlite3_last_insert_rowid(db);
     }
     sqlite3_finalize(stmt);
@@ -415,48 +417,61 @@ static int shadow_data_insert(sqlite3 *db, char *schema, char *name,
 static int shadow_data_delete(sqlite3 *db, char *schema, char *name,
                               sqlite3_int64 rowid) {
     sqlite3_stmt *stmt;
+
+    // TODO: We should strive to use only one concept and idea while creating SQL statements.
     sqlite3_str *query = sqlite3_str_new(0);
+
     sqlite3_str_appendf(query, "delete from \"%w\".\"%w_data\" where rowid = ?",
                         schema, name);
-    char *q = sqlite3_str_finish(query);
-    int rc = sqlite3_prepare_v2(db, q, -1, &stmt, 0);
-    if (rc != SQLITE_OK || stmt == 0) {
+
+    char *sql = sqlite3_str_finish(query);
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
+    if (rc != SQLITE_OK || stmt == nullptr) {
         return SQLITE_ERROR;
     }
+
     sqlite3_bind_int64(stmt, 1, rowid);
     if (sqlite3_step(stmt) != SQLITE_DONE) {
         sqlite3_finalize(stmt);
         return SQLITE_ERROR;
     }
-    sqlite3_free(q);
+
+    sqlite3_free(sql);
     sqlite3_finalize(stmt);
     return SQLITE_OK;
 }
 
 static faiss::Index *read_index_select(sqlite3 *db, const char *name, int i) {
+
     sqlite3_stmt *stmt;
-    char *q =
+    char *sql =
         sqlite3_mprintf("select idx from \"%w_index\" where rowid = ?", name);
-    int rc = sqlite3_prepare_v2(db, q, -1, &stmt, 0);
-    if (rc != SQLITE_OK || stmt == 0) {
-        // printf("error prepping stmt: %s\n", sqlite3_errmsg(db));
+
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
+    if (rc != SQLITE_OK || stmt == nullptr) {
         sqlite3_finalize(stmt);
-        return 0;
+        sqlite3_free(sql);
+        return nullptr;
     }
+
     sqlite3_bind_int64(stmt, 1, i);
     if (sqlite3_step(stmt) != SQLITE_ROW) {
-        // printf("connect no row??\n");
         sqlite3_finalize(stmt);
-        return 0;
+        sqlite3_free(sql);
+        return nullptr;
     }
+
     const void *index_data = sqlite3_column_blob(stmt, 0);
     int64_t n = sqlite3_column_bytes(stmt, 0);
-    faiss::VectorIOReader *r = new faiss::VectorIOReader();
+
+    faiss::VectorIOReader reader;
     std::copy((const uint8_t *)index_data, ((const uint8_t *)index_data) + n,
-              std::back_inserter(r->data));
-    sqlite3_free(q);
+              std::back_inserter(reader.data));
+
+    sqlite3_free(sql);
     sqlite3_finalize(stmt);
-    return faiss::read_index(r);
+
+    return faiss::read_index(reader);
 }
 
 static int create_shadow_tables(sqlite3 *db, const char *schema,
