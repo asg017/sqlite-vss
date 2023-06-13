@@ -26,7 +26,7 @@ using namespace std;
 
 typedef unique_ptr<vector<float>> vec_ptr;
 
-#pragma region meta
+#pragma region Meta
 
 static void vss_version(sqlite3_context *context, int argc,
                         sqlite3_value **argv) {
@@ -37,38 +37,41 @@ static void vss_version(sqlite3_context *context, int argc,
 static void vss_debug(sqlite3_context *context, int argc,
                       sqlite3_value **argv) {
 
-    const char *debug = sqlite3_mprintf(
+    auto resTxt = sqlite3_mprintf(
         "version: %s\nfaiss version: %d.%d.%d\nfaiss compile options: %s",
-        SQLITE_VSS_VERSION, FAISS_VERSION_MAJOR, FAISS_VERSION_MINOR,
-        FAISS_VERSION_PATCH, faiss::get_compile_options().c_str());
+        SQLITE_VSS_VERSION,
+        FAISS_VERSION_MAJOR,
+        FAISS_VERSION_MINOR,
+        FAISS_VERSION_PATCH,
+        faiss::get_compile_options().c_str());
 
-    sqlite3_result_text(context, debug, -1, SQLITE_TRANSIENT);
-    sqlite3_free((void *)debug);
+    sqlite3_result_text(context, resTxt, -1, SQLITE_TRANSIENT);
+    sqlite3_free(resTxt);
 }
 
 #pragma endregion
 
-#pragma region distances
+#pragma region Distances
 
 static void vss_distance_l1(sqlite3_context *context, int argc,
                             sqlite3_value **argv) {
 
-    vector0_api *vector_api = (vector0_api *)sqlite3_user_data(context);
+    auto vector_api = (vector0_api *)sqlite3_user_data(context);
 
     vec_ptr a = vector_api->xValueAsVector(argv[0]);
     if (a == nullptr) {
-        sqlite3_result_error(context, "a is not a vector", -1);
+        sqlite3_result_error(context, "LHS is not a vector", -1);
         return;
     }
 
     vec_ptr b = vector_api->xValueAsVector(argv[1]);
     if (b == nullptr) {
-        sqlite3_result_error(context, "b is not a vector", -1);
+        sqlite3_result_error(context, "RHS is not a vector", -1);
         return;
     }
 
     if (a->size() != b->size()) {
-        sqlite3_result_error(context, "a and b is not vectors of the same size",
+        sqlite3_result_error(context, "LHS and RHS are not vectors of the same size",
                              -1);
         return;
     }
@@ -84,18 +87,18 @@ static void vss_distance_l2(sqlite3_context *context, int argc,
 
     vec_ptr a = vector_api->xValueAsVector(argv[0]);
     if (a == nullptr) {
-        sqlite3_result_error(context, "a is not a vector", -1);
+        sqlite3_result_error(context, "LHS is not a vector", -1);
         return;
     }
 
     vec_ptr b = vector_api->xValueAsVector(argv[1]);
     if (b == nullptr) {
-        sqlite3_result_error(context, "b is not a vector", -1);
+        sqlite3_result_error(context, "RHS is not a vector", -1);
         return;
     }
 
     if (a->size() != b->size()) {
-        sqlite3_result_error(context, "a and b is not vectors of the same size",
+        sqlite3_result_error(context, "LHS and RHS are not vectors of the same size",
                              -1);
         return;
     }
@@ -111,18 +114,18 @@ static void vss_distance_linf(sqlite3_context *context, int argc,
 
     vec_ptr a = vector_api->xValueAsVector(argv[0]);
     if (a == nullptr) {
-        sqlite3_result_error(context, "a is not a vector", -1);
+        sqlite3_result_error(context, "LHS is not a vector", -1);
         return;
     }
 
     vec_ptr b = vector_api->xValueAsVector(argv[1]);
     if (b == nullptr) {
-        sqlite3_result_error(context, "b is not a vector", -1);
+        sqlite3_result_error(context, "RHS is not a vector", -1);
         return;
     }
 
     if (a->size() != b->size()) {
-        sqlite3_result_error(context, "a and b is not vectors of the same size",
+        sqlite3_result_error(context, "LHS and RHS are not vectors of the same size",
                              -1);
         return;
     }
@@ -138,18 +141,18 @@ static void vss_inner_product(sqlite3_context *context, int argc,
 
     vec_ptr a = vector_api->xValueAsVector(argv[0]);
     if (a == nullptr) {
-        sqlite3_result_error(context, "a is not a vector", -1);
+        sqlite3_result_error(context, "LHS is not a vector", -1);
         return;
     }
 
     vec_ptr b = vector_api->xValueAsVector(argv[1]);
     if (b == nullptr) {
-        sqlite3_result_error(context, "b is not a vector", -1);
+        sqlite3_result_error(context, "RHS is not a vector", -1);
         return;
     }
 
     if (a->size() != b->size()) {
-        sqlite3_result_error(context, "a and b is not vectors of the same size",
+        sqlite3_result_error(context, "LHS and RHS are not vectors of the same size",
                              -1);
         return;
     }
@@ -166,18 +169,18 @@ static void vss_fvec_add(sqlite3_context *context, int argc,
 
     vec_ptr a = vector_api->xValueAsVector(argv[0]);
     if (a == nullptr) {
-        sqlite3_result_error(context, "a is not a vector", -1);
+        sqlite3_result_error(context, "LHS is not a vector", -1);
         return;
     }
 
     vec_ptr b = vector_api->xValueAsVector(argv[1]);
     if (b == nullptr) {
-        sqlite3_result_error(context, "b is not a vector", -1);
+        sqlite3_result_error(context, "RHS is not a vector", -1);
         return;
     }
 
     if (a->size() != b->size()) {
-        sqlite3_result_error(context, "a and b is not vectors of the same size",
+        sqlite3_result_error(context, "LHS and RHS are not vectors of the same size",
                              -1);
         return;
     }
@@ -196,18 +199,18 @@ static void vss_fvec_sub(sqlite3_context *context, int argc,
 
     vec_ptr a = vector_api->xValueAsVector(argv[0]);
     if (a == nullptr) {
-        sqlite3_result_error(context, "a is not a vector", -1);
+        sqlite3_result_error(context, "LHS is not a vector", -1);
         return;
     }
 
     vec_ptr b = vector_api->xValueAsVector(argv[1]);
     if (b == nullptr) {
-        sqlite3_result_error(context, "b is not a vector", -1);
+        sqlite3_result_error(context, "RHS is not a vector", -1);
         return;
     }
 
     if (a->size() != b->size()) {
-        sqlite3_result_error(context, "a and b is not vectors of the same size",
+        sqlite3_result_error(context, "LHS and RHS are not vectors of the same size",
                              -1);
         return;
     }
