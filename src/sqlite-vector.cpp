@@ -27,7 +27,7 @@ struct VecX {
 };
 
 
-void del(void*p) {
+void delVectorFloat(void*p) {
   VectorFloat * vx = (VectorFloat *)p;
   sqlite3_free(vx->data);
   delete vx;
@@ -38,15 +38,17 @@ struct Vector0Global {
   sqlite3 *db;
 };
 
-static void resultVector(sqlite3_context * context, std::vector<float>* v) {
-  VectorFloat * vx = new VectorFloat();
-  vx->size = v->size();
-  vx->data = (float *) sqlite3_malloc(v->size()*sizeof(float));
-  memcpy(vx->data, v->data(), v->size()*sizeof(float));
-  sqlite3_result_pointer(context, vx, VECTOR_FLOAT_POINTER_NAME, del);
+static void resultVector(sqlite3_context * context, std::vector<float> & vecIn) {
+
+  VectorFloat * vecRes = new VectorFloat();
+  vecRes->size = vecIn.size();
+  vecRes->data = (float *) sqlite3_malloc(vecIn.size() * sizeof(float));
+  memcpy(vecRes->data, vecIn.data(), vecIn.size() * sizeof(float));
+  sqlite3_result_pointer(context, vecRes, VECTOR_FLOAT_POINTER_NAME, delVectorFloat);
 }
 
 #pragma region generic
+
 std::vector<float> * vectorFromBlobValue(sqlite3_value*value, const char ** pzErrMsg) {
   int n = sqlite3_value_bytes(value);
   const void * b;
@@ -161,15 +163,17 @@ static void vector_debug(sqlite3_context *context, int argc, sqlite3_value **arg
 
 
 #pragma region vector generation
+
 // TODO should return fvec, ivec, or bvec depending on input. How do bvec, though?
 static void vector_from(sqlite3_context *context, int argc, sqlite3_value **argv) {
-  std::vector<float> * v = new std::vector<float>();
-  v->reserve(argc);
+
+  std::vector<float> * vec = new std::vector<float>();
+  vec->reserve(argc);
   for(int i = 0; i < argc; i++) {
-    v->push_back(sqlite3_value_double(argv[i]));
+    vec->push_back(sqlite3_value_double(argv[i]));
   }
-  resultVector(context, v);
-  delete v;
+  resultVector(context, *vec);
+  delete vec;
 }
 #pragma endregion
 
@@ -217,7 +221,7 @@ static void vector_from_json(sqlite3_context *context, int argc, sqlite3_value *
   if(v == NULL) {
     sqlite3_result_error(context, "input not valid json, or contains non-float data", -1);
   }else {
-    resultVector(context, v);
+    resultVector(context, *v);
     delete v;
   }
 
@@ -260,7 +264,7 @@ static void vector_from_blob(sqlite3_context *context, int argc, sqlite3_value *
   if(vec == NULL) {
     sqlite3_result_error(context, pzErrMsg, -1);
   } else {
-    resultVector(context, vec);
+    resultVector(context, *vec);
     delete vec;
   }
 }
@@ -285,7 +289,7 @@ static void vector_from_raw(sqlite3_context *context, int argc, sqlite3_value **
   if(vec == NULL) {
     sqlite3_result_error(context, pzErrMsg, -1);
   } else {
-    resultVector(context, vec);
+    resultVector(context, *vec);
     delete vec;
   }
 }
@@ -445,7 +449,7 @@ static int fvecsEachColumn(
       sqlite3_result_int(context, pCur->iCurrentD);
       break;
     case FVECS_EACH_VECTOR:
-      resultVector(context, pCur->pCurrentVector);
+      resultVector(context, *pCur->pCurrentVector);
       break;
     case FVECS_EACH_INPUT:
       sqlite3_result_null(context);

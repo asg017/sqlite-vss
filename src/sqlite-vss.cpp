@@ -182,7 +182,7 @@ static void vss_fvec_add(sqlite3_context *context, int argc, sqlite3_value **arg
   int d = a->size();
   c = new std::vector<float>(d);
   faiss::fvec_add(d, a->data(), b->data(), c->data());
-  vector_api->xResultVector(context, c);
+  vector_api->xResultVector(context, *c);
   delete a;
   delete b;
   delete c;
@@ -214,7 +214,7 @@ static void vss_fvec_sub(sqlite3_context *context, int argc, sqlite3_value **arg
   int d = a->size();
   c = new std::vector<float>(d);
   faiss::fvec_sub(d, a->data(), b->data(), c->data());
-  vector_api->xResultVector(context, c);
+  vector_api->xResultVector(context, *c);
   delete a;
   delete b;
   delete c;
@@ -995,7 +995,7 @@ static int vssIndexColumn(
       sqlite3_free(errmsg);
       return SQLITE_ERROR;
     }
-    pCur->table->vector_api->xResultVector(ctx, v);
+    pCur->table->vector_api->xResultVector(ctx, *v);
   }
   return SQLITE_OK;
 }
