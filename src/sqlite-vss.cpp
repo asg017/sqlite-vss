@@ -576,6 +576,9 @@ struct vss_index_vtab : public sqlite3_vtab {
             sqlite3_free(name);
         if (schema)
             sqlite3_free(schema);
+        for (auto iter = indexes.begin(); iter != indexes.end(); ++iter) {
+            delete (*iter);
+        }
     }
 
     sqlite3 *db;
@@ -961,7 +964,6 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
             pVtabCursor->pVtab->zErrMsg = sqlite3_mprintf(
                 "2nd argument to vss_search() must be a vector");
             return SQLITE_ERROR;
-
         }
 
         int nq = 1;
@@ -972,7 +974,8 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
             sqlite3_free(pVtabCursor->pVtab->zErrMsg);
             pVtabCursor->pVtab->zErrMsg = sqlite3_mprintf(
                 "input query size doesn't match index dimensions: %ld != %ld",
-                query_vector->size(), index->d);
+                query_vector->size(),
+                index->d);
             return SQLITE_ERROR;
         }
 
