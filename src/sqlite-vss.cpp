@@ -471,59 +471,56 @@ static faiss::Index *read_index_select(sqlite3 *db, const char *name, int i) {
     sqlite3_free(sql);
     sqlite3_finalize(stmt);
 
-    return faiss::read_index(reader);
+    return faiss::read_index(&reader);
 }
 
 static int create_shadow_tables(sqlite3 *db, const char *schema,
                                 const char *name, int n) {
-    /*sqlite3_str *create_index_str = sqlite3_str_new(db);
-    sqlite3_str_appendf(create_index_str, "CREATE TABLE \"%w\".\"%w_index\"(",
-    schema, name); for(int i = 0; i < n; i++) { const char * format; if(i==0) {
-        format = "c%d";
-      }else {
-        format = ", c%d";
-      }
-      sqlite3_str_appendf(create_index_str, format, i);
-    }
-    sqlite3_str_appendall(create_index_str, ")");*/
-    const char *zCreateIndex =
+
+    char *sql =
         sqlite3_mprintf("CREATE TABLE \"%w\".\"%w_index\"(idx)", schema,
                         name); // sqlite3_str_finish(create_index_str);
-    int rc = sqlite3_exec(db, zCreateIndex, 0, 0, 0);
-    sqlite3_free((void *)zCreateIndex);
+    int rc = sqlite3_exec(db, sql, 0, 0, 0);
+    sqlite3_free(sql);
     if (rc != SQLITE_OK)
         return rc;
 
-    const char *zCreateData =
+    sql =
         sqlite3_mprintf("CREATE TABLE \"%w\".\"%w_data\"(x);", schema, name);
-    rc = sqlite3_exec(db, zCreateData, 0, 0, 0);
-    sqlite3_free((void *)zCreateData);
+    rc = sqlite3_exec(db, sql, 0, 0, 0);
+    sqlite3_free(sql);
     return rc;
 }
 
 static int drop_shadow_tables(sqlite3 *db, char *name) {
+
     const char *drops[2] = {"drop table \"%w_index\";",
                             "drop table \"%w_data\";"};
+
     for (int i = 0; i < 2; i++) {
+
         const char *s = drops[i];
 
         sqlite3_stmt *stmt;
 
+        // TODO: Use of one construct to create SQL statements.
         sqlite3_str *query = sqlite3_str_new(0);
         sqlite3_str_appendf(query, s, name);
-        char *q = sqlite3_str_finish(query);
+        char *sql = sqlite3_str_finish(query);
 
-        int rc = sqlite3_prepare_v2(db, q, -1, &stmt, 0);
-        if (rc != SQLITE_OK || stmt == 0) {
-            // printf("error prepping stmt\n");
+        int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
+        if (rc != SQLITE_OK || stmt == nullptr) {
+            sqlite3_free(sql);
             return SQLITE_ERROR;
         }
+
         if (sqlite3_step(stmt) != SQLITE_DONE) {
-            // printf("error dropping?\n");
+            sqlite3_free(sql);
             sqlite3_finalize(stmt);
             return SQLITE_ERROR;
         }
-        sqlite3_free(q);
+
+        sqlite3_free(sql);
         sqlite3_finalize(stmt);
     }
     return SQLITE_OK;
@@ -534,19 +531,23 @@ static int drop_shadow_tables(sqlite3 *db, char *name) {
 
 typedef struct vss_index_vtab vss_index_vtab;
 struct vss_index_vtab {
+
     sqlite3_vtab base; /* Base class - must be first */
     sqlite3 *db;
     vector0_api *vector_api;
+
     // name of the virtual table. Must be freed during disconnect
     char *name;
+
     // name of the schema the virtual table exists in. Must be freed during
     // disconnect
     char *schema;
+
     // number of index columns in the virtual table
     sqlite3_int64 indexCount;
-    // vector holding all the  faiss Indices the vtab uses. This, and the
-    // elements, must be freed during disconnect.
-    std::vector<faiss::Index *> *indexes;
+
+    // vector holding all the  faiss Indices the vtab uses.
+    std::vector<faiss::Index *> indexes;
 
     // float vector that holds training vectors for indices that require it.
     // This, and the elements, must be freed at disconnect.
@@ -670,7 +671,6 @@ static int init(sqlite3 *db, void *pAux, int argc, const char *const *argv,
 
     pNew->vector_api = (vector0_api *)pAux;
     pNew->indexCount = columns->size();
-    pNew->indexes = new std::vector<faiss::Index *>();
 
     pNew->schema = sqlite3_mprintf("%s", argv[1]);
     pNew->name = sqlite3_mprintf("%s", argv[2]);
@@ -683,7 +683,7 @@ static int init(sqlite3 *db, void *pAux, int argc, const char *const *argv,
             try {
                 faiss::Index *index = faiss::index_factory(
                     column->dimensions, column->factory.c_str());
-                pNew->indexes->push_back(index);
+                pNew->indexes.push_back(index);
             } catch (faiss::FaissException &e) {
                 *pzErr =
                     sqlite3_mprintf("Error building index factory for %s: %s",
@@ -695,8 +695,8 @@ static int init(sqlite3 *db, void *pAux, int argc, const char *const *argv,
 
         // after shadow tables are created, write the initial index state to
         // shadow _index
-        for (int i = 0; i < pNew->indexes->size(); i++) {
-            auto index = pNew->indexes->at(i);
+        for (int i = 0; i < pNew->indexes.size(); i++) {
+            auto index = pNew->indexes.at(i);
             try {
                 int rc = write_index_insert(index, pNew->db, pNew->schema,
                                             pNew->name, i);
@@ -717,7 +717,7 @@ static int init(sqlite3 *db, void *pAux, int argc, const char *const *argv,
                     sqlite3_mprintf("Could not read index at position %d", i);
                 return SQLITE_ERROR;
             }
-            pNew->indexes->push_back(index);
+            pNew->indexes.push_back(index);
         }
     }
 
@@ -752,16 +752,16 @@ static int vssIndexConnect(sqlite3 *db, void *pAux, int argc,
 }
 
 static int vssIndexDisconnect(sqlite3_vtab *pVtab) {
+
     vss_index_vtab *p = (vss_index_vtab *)pVtab;
     // printf("disconnect\n");
     sqlite3_free(p->name);
     sqlite3_free(p->schema);
 
     for (int i = 0; i < p->indexCount; i++) {
-        faiss::Index *index = p->indexes->at(i);
+        faiss::Index *index = p->indexes.at(i);
         delete index;
     }
-    delete p->indexes;
 
     for (int i = 0; i < p->indexCount; i++) {
         delete p->trainings->at(i);
@@ -769,6 +769,7 @@ static int vssIndexDisconnect(sqlite3_vtab *pVtab) {
         delete p->insert_to_add_ids->at(i);
         delete p->delete_to_delete_ids->at(i);
     }
+
     delete p->trainings;
     delete p->insert_to_add_data;
     delete p->insert_to_add_ids;
@@ -779,8 +780,8 @@ static int vssIndexDisconnect(sqlite3_vtab *pVtab) {
 }
 
 static int vssIndexDestroy(sqlite3_vtab *pVtab) {
+
     vss_index_vtab *p = (vss_index_vtab *)pVtab;
-    // printf("destroy\n");
     drop_shadow_tables(p->db, p->name);
     vssIndexDisconnect(pVtab);
     return SQLITE_OK;
@@ -908,7 +909,7 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor, int idxNum,
             return SQLITE_ERROR;
         }
         int nq = 1;
-        faiss::Index *index = pCur->table->indexes->at(idxNum);
+        faiss::Index *index = pCur->table->indexes.at(idxNum);
         if (query_vector->size() != index->d) {
             sqlite3_free(pVtabCursor->pVtab->zErrMsg);
             pVtabCursor->pVtab->zErrMsg = sqlite3_mprintf(
@@ -947,7 +948,7 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor, int idxNum,
         faiss::RangeSearchResult *result =
             new faiss::RangeSearchResult(nq, true);
         // pCur->k = params->k;
-        faiss::Index *index = pCur->table->indexes->at(idxNum);
+        faiss::Index *index = pCur->table->indexes.at(idxNum);
         index->range_search(nq, params->vector->data(), params->distance,
                             result);
         pCur->range_search_result = result;
@@ -1046,7 +1047,7 @@ static int vssIndexColumn(sqlite3_vtab_cursor *cur, sqlite3_context *ctx,
         }
     } else if (i >= VSS_INDEX_COLUMN_VECTORS) {
         faiss::Index *index =
-            pCur->table->indexes->at(i - VSS_INDEX_COLUMN_VECTORS);
+            pCur->table->indexes.at(i - VSS_INDEX_COLUMN_VECTORS);
 
         std::vector<float> v(index->d);
         sqlite3_int64 rowid;
@@ -1084,7 +1085,7 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
         for (std::size_t i = 0; i != p->trainings->size(); ++i) {
             auto training = p->trainings->at(i);
             if (!training->empty()) {
-                faiss::Index *index = p->indexes->at(i);
+                faiss::Index *index = p->indexes.at(i);
                 index->train(training->size() / index->d, training->data());
                 training->clear();
             }
@@ -1097,7 +1098,7 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
         if (!delete_ids->empty()) {
             faiss::IDSelectorBatch *selector = new faiss::IDSelectorBatch(
                 delete_ids->size(), delete_ids->data());
-            size_t numRemoved = p->indexes->at(i)->remove_ids(*selector);
+            size_t numRemoved = p->indexes.at(i)->remove_ids(*selector);
             delete selector;
             needsWriting = true;
             delete_ids->clear();
@@ -1113,7 +1114,7 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
             auto insert_ids = p->insert_to_add_ids->at(i);
             if (!insert_data->empty()) {
                 try {
-                    p->indexes->at(i)->add_with_ids(
+                    p->indexes.at(i)->add_with_ids(
                         insert_ids->size(), insert_data->data(),
                         (faiss::idx_t *)insert_ids->data());
                 } catch (faiss::FaissException &e) {
@@ -1136,7 +1137,7 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
     }
     if (needsWriting) {
         for (int i = 0; i < p->indexCount; i++) {
-            int rc = write_index_insert(p->indexes->at(i), p->db, p->schema,
+            int rc = write_index_insert(p->indexes.at(i), p->db, p->schema,
                                         p->name, i);
             if (rc != SQLITE_OK) {
                 sqlite3_free(pVTab->zErrMsg);
@@ -1198,7 +1199,7 @@ static int vssIndexUpdate(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
                 if ((vec = p->vector_api->xValueAsVector(
                          argv[2 + VSS_INDEX_COLUMN_VECTORS + i])) != NULL) {
                     // make sure the index is already trained, if it's needed
-                    if (!p->indexes->at(i)->is_trained) {
+                    if (!p->indexes.at(i)->is_trained) {
                         sqlite3_free(pVTab->zErrMsg);
                         pVTab->zErrMsg =
                             sqlite3_mprintf("Index at i=%d requires training "
@@ -1216,10 +1217,6 @@ static int vssIndexUpdate(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
                         }
                         inserted_rowid = true;
                     }
-                    /*try {
-                      p->indexes->at(i)->add_with_ids(1, vec->data(),
-                    (faiss::idx_t *) &rowid);
-                    }*/
                     p->insert_to_add_data->at(i)->reserve(
                         vec->size() + distance(vec->begin(), vec->end()));
                     p->insert_to_add_data->at(i)->insert(
