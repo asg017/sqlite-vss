@@ -965,7 +965,7 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
         }
 
         int nq = 1;
-        faiss::Index *index = pCursor->table->indexes.at(idxNum)->index;
+        auto index = pCursor->table->indexes.at(idxNum)->index;
 
         if (query_vector->size() != index->d) {
 
@@ -984,8 +984,8 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
             return SQLITE_ERROR;
         }
 
-        pCursor->search_distances.reserve(pCursor->search_k * nq);
-        pCursor->search_ids.reserve(pCursor->search_k * nq);
+        pCursor->search_distances = vector<float>(pCursor->search_k * nq, 0);
+        pCursor->search_ids = vector<faiss::idx_t>(pCursor->search_k * nq, 0);
 
         index->search(nq,
                       query_vector->data(),
@@ -1009,7 +1009,9 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
 
         faiss::Index *index = pCursor->table->indexes.at(idxNum)->index;
 
-        index->range_search(nq, params->vector->data(), params->distance,
+        index->range_search(nq,
+                            params->vector->data(),
+                            params->distance,
                             result);
 
         pCursor->range_search_result = result;
@@ -1026,6 +1028,7 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
 
         if (res != SQLITE_OK)
             return res;
+
         pCursor->step_result = sqlite3_step(pCursor->stmt);
 
     } else {
@@ -1100,7 +1103,8 @@ static int vssIndexEof(sqlite3_vtab_cursor *cur) {
     return 1;
 }
 
-static int vssIndexColumn(sqlite3_vtab_cursor *cur, sqlite3_context *ctx,
+static int vssIndexColumn(sqlite3_vtab_cursor *cur,
+                          sqlite3_context *ctx,
                           int i) {
 
     auto pCursor = static_cast<vss_index_cursor *>(cur);
@@ -1125,7 +1129,7 @@ static int vssIndexColumn(sqlite3_vtab_cursor *cur, sqlite3_context *ctx,
 
     } else if (i >= VSS_INDEX_COLUMN_VECTORS) {
 
-        faiss::Index *index =
+        auto index =
             pCursor->table->indexes.at(i - VSS_INDEX_COLUMN_VECTORS)->index;
 
         vector<float> v(index->d);
