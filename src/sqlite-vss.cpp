@@ -1021,7 +1021,7 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
         faiss::RangeSearchResult *result =
             new faiss::RangeSearchResult(nq, true);
 
-        faiss::Index *index = pCursor->table->indexes.at(idxNum)->index;
+        auto index = pCursor->table->indexes.at(idxNum)->index;
 
         index->range_search(nq,
                             params->vector->data(),
@@ -1146,12 +1146,12 @@ static int vssIndexColumn(sqlite3_vtab_cursor *cur,
         auto index =
             pCursor->table->indexes.at(i - VSS_INDEX_COLUMN_VECTORS)->index;
 
-        vector<float> v(index->d);
-        sqlite3_int64 rowid;
-        vssIndexRowid(cur, &rowid);
+        vector<float> vec(index->d);
+        sqlite3_int64 rowId;
+        vssIndexRowid(cur, &rowId);
 
         try {
-            index->reconstruct(rowid, v.data());
+            index->reconstruct(rowId, vec.data());
 
         } catch (faiss::FaissException &e) {
 
@@ -1165,7 +1165,7 @@ static int vssIndexColumn(sqlite3_vtab_cursor *cur,
             sqlite3_free(errmsg);
             return SQLITE_ERROR;
         }
-        pCursor->table->vector_api->xResultVector(ctx, &v);
+        pCursor->table->vector_api->xResultVector(ctx, &vec);
     }
     return SQLITE_OK;
 }
@@ -1191,6 +1191,7 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
                     (*iter)->trainings.data());
 
                 (*iter)->trainings.clear();
+                (*iter)->trainings.shrink_to_fit();
             }
         }
         pTable->isTraining = false;
@@ -1283,10 +1284,18 @@ static int vssIndexRollback(sqlite3_vtab *pVTab) {
     auto pTable = static_cast<vss_index_vtab *>(pVTab);
 
     for (auto iter = pTable->indexes.begin(); iter != pTable->indexes.end(); ++iter) {
+
         (*iter)->trainings.clear();
+        (*iter)->trainings.shrink_to_fit();
+
         (*iter)->insert_to_add_data.clear();
+        (*iter)->insert_to_add_data.shrink_to_fit();
+
         (*iter)->insert_to_add_ids.clear();
+        (*iter)->insert_to_add_ids.shrink_to_fit();
+
         (*iter)->delete_to_delete_ids.clear();
+        (*iter)->delete_to_delete_ids.shrink_to_fit();
     }
     return SQLITE_OK;
 }
