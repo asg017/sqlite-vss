@@ -1241,13 +1241,18 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
                     insert_ids.clear();
                     insert_data.clear();
 
+                    insert_data.clear();
+                    insert_data.shrink_to_fit();
+
                     return SQLITE_ERROR;
                 }
 
                 insert_ids.clear();
-                insert_data.clear();
                 insert_ids.shrink_to_fit();
+
+                insert_data.clear();
                 insert_data.shrink_to_fit();
+
                 needsWriting = true;
             }
         }
