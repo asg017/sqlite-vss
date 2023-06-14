@@ -1172,12 +1172,15 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
     bool needsWriting = false;
     if (pTable->isTraining) {
 
-        for (size_t i = 0; i != pTable->indexes.size(); ++i) {
-            auto &training = pTable->indexes.at(i)->trainings;
-            if (!training.empty()) {
-                faiss::Index *index = pTable->indexes.at(i)->index;
-                index->train(training.size() / index->d, training.data());
-                training.clear();
+        for (auto iter = pTable->indexes.begin(); iter != pTable->indexes.end(); ++iter) {
+
+            if (!(*iter)->trainings.empty()) {
+
+                (*iter)->index->train(
+                    (*iter)->trainings.size() / (*iter)->index->d,
+                    (*iter)->trainings.data());
+
+                (*iter)->trainings.clear();
             }
         }
         pTable->isTraining = false;
@@ -1189,6 +1192,7 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
 
             faiss::IDSelectorBatch selector((*iter)->delete_to_delete_ids.size(),
                                             (*iter)->delete_to_delete_ids.data());
+
             size_t numRemoved = (*iter)->index->remove_ids(selector);
             needsWriting = true;
             (*iter)->delete_to_delete_ids.clear();
@@ -1244,7 +1248,8 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
             int rc = write_index_insert((*iter)->index,
                                         pTable->db,
                                         pTable->schema,
-                                        pTable->name, i);
+                                        pTable->name,
+                                        i);
 
             if (rc != SQLITE_OK) {
 
