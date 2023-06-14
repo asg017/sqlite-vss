@@ -288,11 +288,12 @@ static void vssRangeSearchParamsFunc(sqlite3_context *context, int argc,
 static int write_index_insert(faiss::Index *index,
                               sqlite3 *db,
                               char *schema,
-                              char *name, int i) {
+                              char *name,
+                              int rowId) {
 
     faiss::VectorIOWriter writer;
     faiss::write_index(index, &writer);
-    sqlite3_int64 nIn = writer.data.size();
+    sqlite3_int64 indexSize = writer.data.size();
 
     // First try to insert into xyz_index. If that fails with a rowid constraint
     // error, that means the index is already on disk, we just have to UPDATE
@@ -310,8 +311,14 @@ static int write_index_insert(faiss::Index *index,
         return SQLITE_ERROR;
     }
 
-    rc = sqlite3_bind_int64(stmt, 1, i);
-    rc = sqlite3_bind_blob64(stmt, 2, writer.data.data(), nIn, SQLITE_TRANSIENT);
+    rc = sqlite3_bind_int64(stmt, 1, rowId);
+    if (rc != SQLITE_OK) {
+        sqlite3_finalize(stmt);
+        sqlite3_free(sql);
+        return SQLITE_ERROR;
+    }
+
+    rc = sqlite3_bind_blob64(stmt, 2, writer.data.data(), indexSize, SQLITE_TRANSIENT);
     if (rc != SQLITE_OK) {
         sqlite3_finalize(stmt);
         sqlite3_free(sql);
@@ -336,7 +343,7 @@ static int write_index_insert(faiss::Index *index,
     // INSERT failed because index already is on disk, so we do an UPDATE instead
 
     sql = sqlite3_mprintf(
-        "UPDATE \"%w\".\"%w_index\" SET idx = ? WHERE rowid = ?", schema, name);
+        "update \"%w\".\"%w_index\" set idx = ? where rowid = ?", schema, name);
 
     rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
     if (rc != SQLITE_OK || stmt == nullptr) {
@@ -344,14 +351,14 @@ static int write_index_insert(faiss::Index *index,
         return SQLITE_ERROR;
     }
 
-    rc = sqlite3_bind_blob64(stmt, 1, writer.data.data(), nIn, SQLITE_TRANSIENT);
+    rc = sqlite3_bind_blob64(stmt, 1, writer.data.data(), indexSize, SQLITE_TRANSIENT);
     if (rc != SQLITE_OK) {
         sqlite3_finalize(stmt);
         sqlite3_free(sql);
         return SQLITE_ERROR;
     }
 
-    rc = sqlite3_bind_int64(stmt, 2, i);
+    rc = sqlite3_bind_int64(stmt, 2, rowId);
     if (rc != SQLITE_OK) {
         sqlite3_finalize(stmt);
         sqlite3_free(sql);
@@ -422,7 +429,9 @@ static int shadow_data_insert(sqlite3 *db,
     return SQLITE_OK;
 }
 
-static int shadow_data_delete(sqlite3 *db, char *schema, char *name,
+static int shadow_data_delete(sqlite3 *db,
+                              char *schema,
+                              char *name,
                               sqlite3_int64 rowid) {
     sqlite3_stmt *stmt;
 
@@ -473,8 +482,9 @@ static faiss::Index *read_index_select(sqlite3 *db, const char *name, int i) {
     int64_t size = sqlite3_column_bytes(stmt, 0);
 
     faiss::VectorIOReader reader;
-    copy((const uint8_t *)index_data, ((const uint8_t *)index_data) + size,
-              back_inserter(reader.data));
+    copy((const uint8_t *)index_data,
+         ((const uint8_t *)index_data) + size,
+         back_inserter(reader.data));
 
     sqlite3_free(sql);
     sqlite3_finalize(stmt);
@@ -1196,6 +1206,7 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
             size_t numRemoved = (*iter)->index->remove_ids(selector);
             needsWriting = true;
             (*iter)->delete_to_delete_ids.clear();
+            (*iter)->delete_to_delete_ids.shrink_to_fit();
         }
     }
 
@@ -1214,7 +1225,8 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
                 try {
 
                     (*iter)->index->add_with_ids(
-                        insert_ids.size(), insert_data.data(),
+                        insert_ids.size(),
+                        insert_data.data(),
                         (faiss::idx_t *)insert_ids.data());
 
                 } catch (faiss::FaissException &e) {
@@ -1292,7 +1304,9 @@ static int vssIndexUpdate(sqlite3_vtab *pVTab,
         sqlite3_int64 rowid_to_delete = sqlite3_value_int64(argv[0]);
 
         int rc;
-        if ((rc = shadow_data_delete(pTable->db, pTable->schema, pTable->name,
+        if ((rc = shadow_data_delete(pTable->db,
+                                     pTable->schema,
+                                     pTable->name,
                                      rowid_to_delete)) != SQLITE_OK) {
             return rc;
         }
