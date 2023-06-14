@@ -15,14 +15,6 @@ module.exports = async ({ github, context }) => {
       name: `sqlite-vss-${VERSION}-deno-darwin-x86_64.vss0.dylib`,
     },
     {
-      path: `${process.env["ARTIFACT-MACOS-AARCH64-EXTENSION"]}/vector0.dylib`,
-      name: `sqlite-vss-${VERSION}-deno-darwin-aarch64.vector0.dylib`,
-    },
-    {
-      path: `${process.env["ARTIFACT-MACOS-AARCH64-EXTENSION"]}/vss0.dylib`,
-      name: `sqlite-vss-${VERSION}-deno-darwin-aarch64.vss0.dylib`,
-    },
-    {
       path: `${process.env["ARTIFACT-LINUX-X86_64-EXTENSION"]}/vector0.so`,
       name: `sqlite-vss-${VERSION}-deno-linux-x86_64.vector0.so`,
     },
