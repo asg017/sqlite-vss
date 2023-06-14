@@ -549,8 +549,9 @@ struct vss_index {
     explicit vss_index(faiss::Index *index) : index(index) {}
 
     ~vss_index() {
-        if (index != nullptr)
+        if (index != nullptr) {
             delete index;
+        }
     }
 
     faiss::Index *index;
@@ -1273,7 +1274,9 @@ static int vssIndexRollback(sqlite3_vtab *pVTab) {
     return SQLITE_OK;
 }
 
-static int vssIndexUpdate(sqlite3_vtab *pVTab, int argc, sqlite3_value **argv,
+static int vssIndexUpdate(sqlite3_vtab *pVTab,
+                          int argc,
+                          sqlite3_value **argv,
                           sqlite_int64 *pRowid) {
 
     auto pTable = static_cast<vss_index_vtab *>(pVTab);
