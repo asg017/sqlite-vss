@@ -34,7 +34,8 @@ static void vss_version(sqlite3_context *context, int argc,
     sqlite3_result_text(context, SQLITE_VSS_VERSION, -1, SQLITE_STATIC);
 }
 
-static void vss_debug(sqlite3_context *context, int argc,
+static void vss_debug(sqlite3_context *context,
+                      int argc,
                       sqlite3_value **argv) {
 
     auto resTxt = sqlite3_mprintf(
@@ -497,7 +498,7 @@ static int create_shadow_tables(sqlite3 *db,
                                 const char *name,
                                 int n) {
 
-    auto sql = sqlite3_mprintf("CREATE TABLE \"%w\".\"%w_index\"(idx)",
+    auto sql = sqlite3_mprintf("create table \"%w\".\"%w_index\"(idx)",
                                 schema,
                                 name);
 
@@ -506,7 +507,7 @@ static int create_shadow_tables(sqlite3 *db,
     if (rc != SQLITE_OK)
         return rc;
 
-    sql = sqlite3_mprintf("CREATE TABLE \"%w\".\"%w_data\"(x);",
+    sql = sqlite3_mprintf("create table \"%w\".\"%w_data\"(x);",
                           schema,
                           name);
 
