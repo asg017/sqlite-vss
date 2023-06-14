@@ -998,8 +998,11 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
             return SQLITE_ERROR;
         }
 
-        pCursor->search_distances = vector<float>(pCursor->search_k * nq, 0);
-        pCursor->search_ids = vector<faiss::idx_t>(pCursor->search_k * nq, 0);
+        // To avoid trying to select more records than number of records in index.
+        auto searchMax = min(pCursor->search_k * nq, index->ntotal);
+
+        pCursor->search_distances = vector<float>(searchMax, 0);
+        pCursor->search_ids = vector<faiss::idx_t>(searchMax, 0);
 
         index->search(nq,
                       query_vector->data(),
