@@ -529,7 +529,7 @@ class TestVector(unittest.TestCase):
       db.execute("select vector_debug(json('[]'))").fetchone()[0],
       "size: 0 []"
     )
-    with self.assertRaisesRegex(sqlite3.OperationalError, "value not a vector"):
+    with self.assertRaisesRegex(sqlite3.OperationalError, "Value not a vector"):
       db.execute("select vector_debug(']')").fetchone()
 
   def test_vector0(self):
