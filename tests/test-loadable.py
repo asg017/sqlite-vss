@@ -226,10 +226,10 @@ class TestVss(unittest.TestCase):
       {'rowid': 1002, 'distance': 9.0},
     ])
 
-    with self.assertRaisesRegex(sqlite3.OperationalError, 'input query size doesn\'t match index dimensions: 0 != 1'):
+    with self.assertRaisesRegex(sqlite3.OperationalError, 'Input query size doesn\'t match index dimensions: 0 != 1'):
       search('b', '[]', 2)
 
-    with self.assertRaisesRegex(sqlite3.OperationalError, 'input query size doesn\'t match index dimensions: 3 != 1'):
+    with self.assertRaisesRegex(sqlite3.OperationalError, 'Input query size doesn\'t match index dimensions: 3 != 1'):
       search('b', '[0.1, 0.2, 0.3]', 2)
 
     with self.assertRaisesRegex(sqlite3.OperationalError, 'k must be greater than 0, got -1'):
