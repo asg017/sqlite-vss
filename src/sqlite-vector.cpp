@@ -204,6 +204,7 @@ static void vector_from(sqlite3_context *context,
     for (int i = 0; i < argc; i++) {
         vec.push_back(sqlite3_value_double(argv[i]));
     }
+
     resultVector(context, &vec);
 }
 
@@ -390,7 +391,6 @@ struct fvecsEach_cursor : public sqlite3_vtab_cursor {
     }
 
     ~fvecsEach_cursor() {
-
         if (pBlob != nullptr)
             sqlite3_free(pBlob);
     }
@@ -505,7 +505,10 @@ static int fvecsEachFilter(sqlite3_vtab_cursor *pVtabCursor,
 
     memcpy(&pCur->iCurrentD, pCur->pBlob, sizeof(int));
     float *vecBegin = (float *)((char *)pCur->pBlob + sizeof(int));
-    pCur->pCurrentVector = vec_ptr(new vector<float>(vecBegin, vecBegin + pCur->iCurrentD)); // TODO: Shouldn't this mutiply by sizeof(float)?
+
+    // TODO: Shouldn't this multiply by sizeof(float)?
+    pCur->pCurrentVector = vec_ptr(new vector<float>(vecBegin, vecBegin + pCur->iCurrentD));
+
     pCur->p = sizeof(int) + (pCur->iCurrentD * sizeof(float));
 
     return SQLITE_OK;
@@ -515,13 +518,12 @@ static int fvecsEachNext(sqlite3_vtab_cursor *cur) {
 
     auto pCur = static_cast<fvecsEach_cursor *>(cur);
 
-    if (pCur->pBlob)
-        sqlite3_free(pCur->pBlob);
-
+    // TODO: Shouldn't this multiply by sizeof(float)?
     memcpy(&pCur->iCurrentD, ((char *)pCur->pBlob + pCur->p), sizeof(int));
     float *vecBegin = (float *)(((char *)pCur->pBlob + pCur->p) + sizeof(int));
 
     pCur->pCurrentVector->clear();
+    pCur->pCurrentVector->shrink_to_fit();
     pCur->pCurrentVector->reserve(pCur->iCurrentD);
     pCur->pCurrentVector->insert(pCur->pCurrentVector->begin(),
                                  vecBegin,
@@ -534,7 +536,7 @@ static int fvecsEachNext(sqlite3_vtab_cursor *cur) {
 
 static int fvecsEachEof(sqlite3_vtab_cursor *cur) {
 
-    fvecsEach_cursor *pCur = (fvecsEach_cursor *)cur;
+    auto pCur = (fvecsEach_cursor *)cur;
     return pCur->p > pCur->iBlobN;
 }
 
@@ -600,43 +602,12 @@ static sqlite3_module fvecsEachModule = {
 
 #pragma endregion
 
-#pragma region fvecs
-
-static void vector_fvecs(sqlite3_context *context,
-                         int argc,
-                         sqlite3_value **argv) {
-
-    sqlite3_int64 size = sqlite3_value_bytes(argv[0]);
-    const void *blob = sqlite3_value_blob(argv[0]);
-    int d;
-    memcpy((void *)&d, (void *)blob, sizeof(int));
-
-    if (d <= 0 || d >= 1000000) {
-        sqlite3_result_error(context, "Unreasonable dimensions size", -1);
-        return;
-    }
-
-    if (size % ((d + 1) * 4) != 0) {
-        sqlite3_result_error(context, "Wrong blob size", -1);
-        return;
-    }
-
-    size_t n = size / ((d + 1) * 4);
-    printf("sz=%lld, d=%d n=%zu\n", size, d, n);
-
-    float *x = new float[n * (d + 1)];
-    memcpy(x, ((char *)blob) + sizeof(int), (sizeof(float)) * (n * (d + 1)));
-}
-
-#pragma endregion
-
-#pragma region entrypoint
+#pragma region Entrypoint
 
 static void vector0(sqlite3_context *context, int argc, sqlite3_value **argv) {
 
     auto pGlobal = (Vector0Global *)sqlite3_user_data(context);
-    vector0_api **ppApi;
-    ppApi = (vector0_api **)sqlite3_value_pointer(argv[0], "vector0_api_ptr");
+    vector0_api **ppApi = (vector0_api **)sqlite3_value_pointer(argv[0], "vector0_api_ptr");
     if (ppApi)
         *ppApi = &pGlobal->api;
 }
@@ -650,8 +621,7 @@ __declspec(dllexport)
 
         int rc = SQLITE_OK;
         SQLITE_EXTENSION_INIT2(pApi);
-        Vector0Global *pGlobal = nullptr;
-        pGlobal = (Vector0Global *)sqlite3_malloc(sizeof(Vector0Global));
+        auto pGlobal = (Vector0Global *)sqlite3_malloc(sizeof(Vector0Global));
         if (pGlobal == nullptr)
             return SQLITE_NOMEM;
 
@@ -690,7 +660,7 @@ __declspec(dllexport)
             { (char *)"vector_from_blob",  1, nullptr, vector_from_blob, SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
             { (char *)"vector_to_blob",    1, nullptr, vector_to_blob,   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
             { (char *)"vector_from_raw",   1, nullptr, vector_from_raw,  SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
-            { (char *)"vector_to_raw",     1, nullptr, vector_to_raw,  SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
+            { (char *)"vector_to_raw",     1, nullptr, vector_to_raw,    SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
         };
 
         for (int i = 0; i < sizeof(aFunc) / sizeof(aFunc[0]) && rc == SQLITE_OK; i++) {
