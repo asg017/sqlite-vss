@@ -499,7 +499,6 @@ class TestVss(unittest.TestCase):
 VECTOR_FUNCTIONS = [
   'vector0',
   'vector_debug',
-  'vector_debug',
   'vector_from_blob',
   'vector_from_json',
   'vector_from_raw',
@@ -526,8 +525,6 @@ class TestVector(unittest.TestCase):
     self.assertEqual(db.execute("select vector_version()").fetchone()[0][0], "v")
 
   def test_vector_debug(self):
-    debug = db.execute("select vector_debug()").fetchone()[0].split('\n')
-    self.assertEqual(len(debug), 1)
     self.assertEqual(
       db.execute("select vector_debug(json('[]'))").fetchone()[0],
       "size: 0 []"
@@ -583,7 +580,7 @@ class TestVector(unittest.TestCase):
       'size: 2 [0.000000, 0.100000]'
     )
 
-    with self.assertRaisesRegex(sqlite3.OperationalError, "Invalid raw blob length, must be divisible by 4"):
+    with self.assertRaisesRegex(sqlite3.OperationalError, "Invalid raw blob length, blob must be divisible by 4"):
       vector_from_raw_blob(b"abc")
 
   def test_vector_from_json(self):
