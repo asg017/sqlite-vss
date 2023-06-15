@@ -38,12 +38,6 @@ void delVectorFloat(void *p) {
     delete vx;
 }
 
-struct Vector0Global {
-
-    vector0_api api;
-    sqlite3 *db;
-};
-
 void resultVector(sqlite3_context *context, vector<float> *vecIn) {
 
     auto vecRes = new VectorFloat();
@@ -104,8 +98,9 @@ vec_ptr vectorFromRawBlobValue(sqlite3_value *value, const char **pzErrMsg) {
 vec_ptr vectorFromTextValue(sqlite3_value *value) {
 
     try {
+
         json json = json::parse(sqlite3_value_text(value));
-        vec_ptr pVec;
+        vec_ptr pVec(new vector<float>());
         json.get_to(*pVec);
         return pVec;
 
@@ -607,10 +602,16 @@ static sqlite3_module fvecsEachModule = {
 
 static void vector0(sqlite3_context *context, int argc, sqlite3_value **argv) {
 
-    auto pGlobal = (Vector0Global *)sqlite3_user_data(context);
+    auto api = (vector0_api *)sqlite3_user_data(context);
     vector0_api **ppApi = (vector0_api **)sqlite3_value_pointer(argv[0], "vector0_api_ptr");
     if (ppApi)
-        *ppApi = &pGlobal->api;
+        *ppApi = api;
+}
+
+static void delete_api(void * pApi) {
+
+    auto api = static_cast<vector0_api *>(pApi);
+    delete api;
 }
 
 extern "C" {
@@ -622,26 +623,27 @@ __declspec(dllexport)
 
         int rc = SQLITE_OK;
         SQLITE_EXTENSION_INIT2(pApi);
-        auto pGlobal = (Vector0Global *)sqlite3_malloc(sizeof(Vector0Global));
-        if (pGlobal == nullptr)
-            return SQLITE_NOMEM;
 
-        void *p = (void *)pGlobal;
-        memset(pGlobal, 0, sizeof(Vector0Global));
-        pGlobal->db = db;
-        pGlobal->api.iVersion = 0;
-        pGlobal->api.xValueAsVector = valueAsVector;
-        pGlobal->api.xResultVector = resultVector;
+        auto api = new vector0_api();
+        api->iVersion = 0;
+        api->xValueAsVector = valueAsVector;
+        api->xResultVector = resultVector;
 
         rc = sqlite3_create_function_v2(db,
                                         "vector0",
                                         1,
                                         SQLITE_UTF8,
-                                        p,
+                                        api,
                                         vector0,
                                         0,
                                         0,
-                                        sqlite3_free);
+                                        delete_api);
+        if (rc != SQLITE_OK) {
+
+            *pzErrMsg = sqlite3_mprintf("%s: %s", "vector0", sqlite3_errmsg(db));
+            return rc;
+        }
+
         static const struct {
 
             char *zFName;

@@ -54,7 +54,8 @@ static void vss_debug(sqlite3_context *context,
 
 #pragma region Distances
 
-static void vss_distance_l1(sqlite3_context *context, int argc,
+static void vss_distance_l1(sqlite3_context *context,
+                            int argc,
                             sqlite3_value **argv) {
 
     auto vector_api = (vector0_api *)sqlite3_user_data(context);
@@ -192,7 +193,7 @@ static void vss_fvec_add(sqlite3_context *context, int argc,
 static void vss_fvec_sub(sqlite3_context *context, int argc,
                          sqlite3_value **argv) {
 
-    vector0_api *vector_api = (vector0_api *)sqlite3_user_data(context);
+    auto vector_api = (vector0_api *)sqlite3_user_data(context);
 
     vec_ptr lhs = vector_api->xValueAsVector(argv[0]);
     if (lhs == nullptr) {
@@ -249,7 +250,8 @@ void delVssRangeSearchParams(void *p) {
 
 #pragma region Vtab
 
-static void vssSearchParamsFunc(sqlite3_context *context, int argc,
+static void vssSearchParamsFunc(sqlite3_context *context,
+                                int argc,
                                 sqlite3_value **argv) {
 
     auto vector_api = (vector0_api *)sqlite3_user_data(context);
@@ -1527,7 +1529,7 @@ vector0_api *vector0_api_from_db(sqlite3 *db) {
     vector0_api *pRet = nullptr;
     sqlite3_stmt *pStmt = nullptr;
 
-    if (SQLITE_OK == sqlite3_prepare(db, "SELECT vector0(?1)", -1, &pStmt, nullptr)) {
+    if (SQLITE_OK == sqlite3_prepare(db, "select vector0(?1)", -1, &pStmt, nullptr)) {
 
         sqlite3_bind_pointer(pStmt, 1, (void *)&pRet, "vector0_api_ptr", nullptr);
         sqlite3_step(pStmt);
@@ -1556,61 +1558,95 @@ __declspec(dllexport)
         }
 
         // TODO: This should preferably be done the same way it's done in sqlite-vector.cpp by using an array.
-        sqlite3_create_function_v2(db, "vss_version", 0,
-                                  SQLITE_UTF8 | SQLITE_DETERMINISTIC |
-                                      SQLITE_INNOCUOUS,
-                                  0, vss_version, 0, 0, 0);
+        sqlite3_create_function_v2(db,
+                                   "vss_version",
+                                   0,
+                                   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
+                                   0,
+                                   vss_version,
+                                   0, 0, 0);
 
-        sqlite3_create_function_v2(db, "vss_debug", 0,
-                                  SQLITE_UTF8 | SQLITE_DETERMINISTIC |
-                                      SQLITE_INNOCUOUS,
-                                  0, vss_debug, 0, 0, 0);
+        sqlite3_create_function_v2(db,
+                                   "vss_debug",
+                                   0,
+                                   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
+                                   0,
+                                   vss_debug,
+                                   0, 0, 0);
 
-        sqlite3_create_function_v2(db, "vss_distance_l1", 2,
-                                  SQLITE_UTF8 | SQLITE_DETERMINISTIC |
-                                      SQLITE_INNOCUOUS,
-                                  vector_api, vss_distance_l1, 0, 0, 0);
+        sqlite3_create_function_v2(db,
+                                   "vss_distance_l1",
+                                   2,
+                                   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
+                                   vector_api,
+                                   vss_distance_l1,
+                                   0, 0, 0);
 
-        sqlite3_create_function_v2(db, "vss_distance_l2", 2,
-                                  SQLITE_UTF8 | SQLITE_DETERMINISTIC |
-                                      SQLITE_INNOCUOUS,
-                                  vector_api, vss_distance_l2, 0, 0, 0);
+        sqlite3_create_function_v2(db, "vss_distance_l2",
+                                   2,
+                                   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
+                                   vector_api,
+                                   vss_distance_l2,
+                                   0, 0, 0);
 
-        sqlite3_create_function_v2(db, "vss_distance_linf", 2,
-                                  SQLITE_UTF8 | SQLITE_DETERMINISTIC |
-                                      SQLITE_INNOCUOUS,
-                                  vector_api, vss_distance_linf, 0, 0, 0);
+        sqlite3_create_function_v2(db, "vss_distance_linf",
+                                   2,
+                                   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
+                                   vector_api,
+                                   vss_distance_linf,
+                                   0, 0, 0);
 
-        sqlite3_create_function_v2(db, "vss_inner_product", 2,
-                                  SQLITE_UTF8 | SQLITE_DETERMINISTIC |
-                                      SQLITE_INNOCUOUS,
-                                  vector_api, vss_inner_product, 0, 0, 0);
+        sqlite3_create_function_v2(db, "vss_inner_product",
+                                   2,
+                                   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
+                                   vector_api,
+                                   vss_inner_product,
+                                   0, 0, 0);
 
-        sqlite3_create_function_v2(db, "vss_fvec_add", 2,
-                                  SQLITE_UTF8 | SQLITE_DETERMINISTIC |
-                                      SQLITE_INNOCUOUS,
-                                  vector_api, vss_fvec_add, 0, 0, 0);
+        sqlite3_create_function_v2(db, "vss_fvec_add",
+                                   2,
+                                   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
+                                   vector_api,
+                                   vss_fvec_add,
+                                   0, 0, 0);
 
-        sqlite3_create_function_v2(db, "vss_fvec_sub", 2,
-                                  SQLITE_UTF8 | SQLITE_DETERMINISTIC |
-                                      SQLITE_INNOCUOUS,
-                                  vector_api, vss_fvec_sub, 0, 0, 0);
+        sqlite3_create_function_v2(db, "vss_fvec_sub",
+                                   2,
+                                   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
+                                   vector_api,
+                                   vss_fvec_sub,
+                                   0, 0, 0);
 
-        sqlite3_create_function_v2(db, "vss_search", 2,
-                                  SQLITE_UTF8 | SQLITE_DETERMINISTIC |
-                                      SQLITE_INNOCUOUS,
-                                  vector_api, vssSearchFunc, 0, 0, 0);
+        sqlite3_create_function_v2(db, "vss_search",
+                                   2,
+                                   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
+                                   vector_api,
+                                   vssSearchFunc,
+                                   0, 0, 0);
 
-        sqlite3_create_function_v2(db, "vss_search_params", 2, 0, vector_api,
-                                  vssSearchParamsFunc, 0, 0, 0);
+        sqlite3_create_function_v2(db,
+                                   "vss_search_params",
+                                   2,
+                                   0,
+                                   vector_api,
+                                   vssSearchParamsFunc,
+                                   0, 0, 0);
 
-        sqlite3_create_function_v2(db, "vss_range_search", 2,
-                                  SQLITE_UTF8 | SQLITE_DETERMINISTIC |
-                                      SQLITE_INNOCUOUS,
-                                  vector_api, vssRangeSearchFunc, 0, 0, 0);
+        sqlite3_create_function_v2(db,
+                                   "vss_range_search",
+                                   2,
+                                   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
+                                   vector_api,
+                                   vssRangeSearchFunc,
+                                   0, 0, 0);
 
-        sqlite3_create_function_v2(db, "vss_range_search_params", 2, 0, vector_api,
-                                  vssRangeSearchParamsFunc, 0, 0, 0);
+        sqlite3_create_function_v2(db,
+                                   "vss_range_search_params",
+                                   2,
+                                   0,
+                                   vector_api,
+                                   vssRangeSearchParamsFunc,
+                                   0, 0, 0);
 
         sqlite3_create_module_v2(db, "vss0", &vssIndexModule, vector_api, 0);
 
