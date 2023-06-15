@@ -987,6 +987,9 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
 
         if (query_vector->size() != index->d) {
 
+            // TODO: To support index that transforms vectors
+            // (to conserve spage, eg?), we should probably
+            // have some logic in place that transforms the vectors here?
             sqlite3_free(pVtabCursor->pVtab->zErrMsg);
             pVtabCursor->pVtab->zErrMsg = sqlite3_mprintf(
                 "Input query size doesn't match index dimensions: %ld != %ld",

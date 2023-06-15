@@ -200,7 +200,8 @@ static void vector_from(sqlite3_context *context,
                         int argc,
                         sqlite3_value **argv) {
 
-    vector<float> vec(argc);
+    vector<float> vec;
+    vec.reserve(argc);
     for (int i = 0; i < argc; i++) {
         vec.push_back(sqlite3_value_double(argv[i]));
     }
