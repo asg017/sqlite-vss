@@ -1543,7 +1543,8 @@ extern "C" {
 #ifdef _WIN32
 __declspec(dllexport)
 #endif
-    int sqlite3_vss_init(sqlite3 *db, char **pzErrMsg,
+    int sqlite3_vss_init(sqlite3 *db,
+                         char **pzErrMsg,
                          const sqlite3_api_routines *pApi) {
 
         SQLITE_EXTENSION_INIT2(pApi);
@@ -1646,6 +1647,14 @@ __declspec(dllexport)
                                    0,
                                    vector_api,
                                    vssRangeSearchParamsFunc,
+                                   0, 0, 0);
+
+        sqlite3_create_function_v2(db,
+                                   "vss_memory_usage",
+                                   0,
+                                   0,
+                                   nullptr,
+                                   faissMemoryUsageFunc,
                                    0, 0, 0);
 
         sqlite3_create_module_v2(db, "vss0", &vssIndexModule, vector_api, 0);
