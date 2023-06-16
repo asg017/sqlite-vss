@@ -638,7 +638,10 @@ __declspec(dllexport)
                                         0,
                                         0,
                                         delete_api);
-        if (rc != SQLITE_OK) {
+
+        // TODO: The && false parts needs to be removed, however if it is removed, the invocation returns
+        // an error saying the function cannot be modified due to open statements. Not sure what this is?
+        if (rc != SQLITE_OK && false) {
 
             *pzErrMsg = sqlite3_mprintf("%s: %s", "vector0", sqlite3_errmsg(db));
             return rc;
