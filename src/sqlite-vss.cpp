@@ -615,12 +615,9 @@ struct vss_index_cursor : public sqlite3_vtab_cursor {
     explicit vss_index_cursor(vss_index_vtab *table)
       : table(table),
         sqlite3_vtab_cursor({0}),
-        stmt(nullptr),
-        range_search_result(nullptr) { }
+        stmt(nullptr) { }
 
     ~vss_index_cursor() {
-        if (range_search_result != nullptr)
-            delete range_search_result;
         if (stmt != nullptr)
             sqlite3_finalize(stmt);
     }
@@ -638,7 +635,7 @@ struct vss_index_cursor : public sqlite3_vtab_cursor {
     vector<float> search_distances;
 
     // For query_type == QueryType::range_search
-    faiss::RangeSearchResult *range_search_result;
+    unique_ptr<faiss::RangeSearchResult> range_search_result;
 
     // For query_type == QueryType::fullscan
     sqlite3_stmt *stmt;
@@ -712,7 +709,7 @@ static int init(sqlite3 *db,
 
     sqlite3_str *str = sqlite3_str_new(nullptr);
     sqlite3_str_appendall(str,
-                          "CREATE TABLE x(distance hidden, operation hidden");
+                          "create table x(distance hidden, operation hidden");
 
     auto columns = parse_constructor(argc, argv);
 
@@ -937,9 +934,8 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
         pCursor->query_type = QueryType::search;
         vec_ptr query_vector;
 
-        VssSearchParams *params;
-        if ((params = (VssSearchParams *)sqlite3_value_pointer(
-                 argv[0], "vss0_searchparams")) != nullptr) {
+        auto params = static_cast<VssSearchParams *>(sqlite3_value_pointer(argv[0], "vss0_searchparams"));
+        if (params != nullptr) {
 
             pCursor->limit = params->k;
             query_vector = vec_ptr(new vector<float>(*params->vector));
@@ -1015,24 +1011,20 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
 
         pCursor->query_type = QueryType::range_search;
 
-        VssRangeSearchParams *params =
-            (VssRangeSearchParams *)sqlite3_value_pointer(
-                argv[0], "vss0_rangesearchparams");
+        auto params = static_cast<VssRangeSearchParams *>(
+            sqlite3_value_pointer(argv[0], "vss0_rangesearchparams"));
 
         int nq = 1;
 
         vector<faiss::idx_t> nns(params->distance * nq);
-        faiss::RangeSearchResult *result =
-            new faiss::RangeSearchResult(nq, true);
+        pCursor->range_search_result = unique_ptr<faiss::RangeSearchResult>(new faiss::RangeSearchResult(nq, true));
 
         auto index = pCursor->table->indexes.at(idxNum)->index;
 
         index->range_search(nq,
                             params->vector->data(),
                             params->distance,
-                            result);
-
-        pCursor->range_search_result = result;
+                            pCursor->range_search_result.get());
 
     } else if (strcmp(idxStr, "fullscan") == 0) {
 
@@ -1506,10 +1498,22 @@ vector0_api *vector0_api_from_db(sqlite3 *db) {
     vector0_api *pRet = nullptr;
     sqlite3_stmt *pStmt = nullptr;
 
-    if (SQLITE_OK == sqlite3_prepare(db, "select vector0(?1)", -1, &pStmt, nullptr)) {
+    auto rc = sqlite3_prepare(db, "select vector0(?1)", -1, &pStmt, nullptr);
+    if (rc != SQLITE_OK)
+        return nullptr;
 
-        sqlite3_bind_pointer(pStmt, 1, (void *)&pRet, "vector0_api_ptr", nullptr);
-        sqlite3_step(pStmt);
+    rc = sqlite3_bind_pointer(pStmt, 1, (void *)&pRet, "vector0_api_ptr", nullptr);
+    if (rc != SQLITE_OK) {
+
+        sqlite3_finalize(pStmt);
+        return nullptr;
+    }
+
+    rc = sqlite3_step(pStmt);
+    if (rc != SQLITE_ROW) {
+
+        sqlite3_finalize(pStmt);
+        return nullptr;
     }
 
     sqlite3_finalize(pStmt);
@@ -1526,7 +1530,7 @@ __declspec(dllexport)
 
         SQLITE_EXTENSION_INIT2(pApi);
 
-        vector0_api *vector_api = vector0_api_from_db(db);
+        auto vector_api = vector0_api_from_db(db);
 
         if (vector_api == nullptr) {
 
@@ -1634,7 +1638,12 @@ __declspec(dllexport)
                                    faissMemoryUsageFunc,
                                    0, 0, 0);
 
-        sqlite3_create_module_v2(db, "vss0", &vssIndexModule, vector_api, 0);
+        auto rc = sqlite3_create_module_v2(db, "vss0", &vssIndexModule, vector_api, nullptr);
+        if (rc != SQLITE_OK) {
+
+            *pzErrMsg = sqlite3_mprintf("%s", sqlite3_errmsg(db));
+            return rc;
+        }
 
         return 0;
     }
