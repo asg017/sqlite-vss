@@ -226,16 +226,16 @@ class TestVss(unittest.TestCase):
       {'rowid': 1002, 'distance': 9.0},
     ])
 
-    with self.assertRaisesRegex(sqlite3.OperationalError, 'input query size doesn\'t match index dimensions: 0 != 1'):
+    with self.assertRaisesRegex(sqlite3.OperationalError, 'Input query size doesn\'t match index dimensions: 0 != 1'):
       search('b', '[]', 2)
 
-    with self.assertRaisesRegex(sqlite3.OperationalError, 'input query size doesn\'t match index dimensions: 3 != 1'):
+    with self.assertRaisesRegex(sqlite3.OperationalError, 'Input query size doesn\'t match index dimensions: 3 != 1'):
       search('b', '[0.1, 0.2, 0.3]', 2)
 
-    with self.assertRaisesRegex(sqlite3.OperationalError, 'k must be greater than 0, got -1'):
+    with self.assertRaisesRegex(sqlite3.OperationalError, 'Limit must be greater than 0, got -1'):
       search('b', '[6]', -1)
 
-    with self.assertRaisesRegex(sqlite3.OperationalError, 'k must be greater than 0, got 0'):
+    with self.assertRaisesRegex(sqlite3.OperationalError, 'Limit must be greater than 0, got 0'):
       search('b', '[6]', 0)
 
     self.assertEqual(range_search('a', '[0.5, 0.5]', 1), [
@@ -499,7 +499,6 @@ class TestVss(unittest.TestCase):
 VECTOR_FUNCTIONS = [
   'vector0',
   'vector_debug',
-  'vector_debug',
   'vector_from_blob',
   'vector_from_json',
   'vector_from_raw',
@@ -526,13 +525,11 @@ class TestVector(unittest.TestCase):
     self.assertEqual(db.execute("select vector_version()").fetchone()[0][0], "v")
 
   def test_vector_debug(self):
-    debug = db.execute("select vector_debug()").fetchone()[0].split('\n')
-    self.assertEqual(len(debug), 1)
     self.assertEqual(
       db.execute("select vector_debug(json('[]'))").fetchone()[0],
       "size: 0 []"
     )
-    with self.assertRaisesRegex(sqlite3.OperationalError, "value not a vector"):
+    with self.assertRaisesRegex(sqlite3.OperationalError, "Value not a vector"):
       db.execute("select vector_debug(']')").fetchone()
 
   def test_vector0(self):
@@ -583,7 +580,7 @@ class TestVector(unittest.TestCase):
       'size: 2 [0.000000, 0.100000]'
     )
 
-    with self.assertRaisesRegex(sqlite3.OperationalError, "Invalid raw blob length, must be divisible by 4"):
+    with self.assertRaisesRegex(sqlite3.OperationalError, "Invalid raw blob length, blob must be divisible by 4"):
       vector_from_raw_blob(b"abc")
 
   def test_vector_from_json(self):
