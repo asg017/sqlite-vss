@@ -580,9 +580,7 @@ struct vss_index_vtab : public sqlite3_vtab {
       : db(db),
         vector_api(vector_api),
         schema(schema),
-        name(name),
-        isTraining(false),
-        isInsertData(false) { }
+        name(name) { }
 
     ~vss_index_vtab() {
 
@@ -608,13 +606,6 @@ struct vss_index_vtab : public sqlite3_vtab {
     // Vector holding all the  faiss Indices the vtab uses, and their state,
     // implying which items are to be deleted and inserted.
     vector<vss_index*> indexes;
-
-    // Whether the current transaction is inserting training data for at least 1
-    // column
-    bool isTraining;
-
-    // Whether the current transaction is inserting data for at least 1 column
-    bool isInsertData;
 };
 
 enum QueryType { search, range_search, fullscan };
@@ -704,7 +695,7 @@ unique_ptr<vector<VssIndexColumn>> parse_constructor(int argc,
         }
         columns->push_back(VssIndexColumn{name, dimensions, factory});
     }
-    // TODO
+
     return columns;
 }
 
@@ -1192,11 +1183,14 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
 
     auto pTable = static_cast<vss_index_vtab *>(pVTab);
 
-    bool needsWriting = false;
-    if (pTable->isTraining) {
+    try {
 
-        for (auto iter = pTable->indexes.begin(); iter != pTable->indexes.end(); ++iter) {
+        bool needsWriting = false;
 
+        auto idxCol = 0;
+        for (auto iter = pTable->indexes.begin(); iter != pTable->indexes.end(); ++iter, idxCol++) {
+
+            // Checking if index needs training.
             if (!(*iter)->trainings.empty()) {
 
                 (*iter)->index->train(
@@ -1205,58 +1199,30 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
 
                 (*iter)->trainings.clear();
                 (*iter)->trainings.shrink_to_fit();
+
+                needsWriting = true;
             }
-        }
-        pTable->isTraining = false;
-    }
 
-    for (auto iter = pTable->indexes.begin(); iter != pTable->indexes.end(); ++iter) {
+            // Checking if we're deleting records from the index.
+            if (!(*iter)->delete_ids.empty()) {
 
-        if (!(*iter)->delete_ids.empty()) {
+                faiss::IDSelectorBatch selector((*iter)->delete_ids.size(),
+                                                (*iter)->delete_ids.data());
 
-            faiss::IDSelectorBatch selector((*iter)->delete_ids.size(),
-                                            (*iter)->delete_ids.data());
+                (*iter)->index->remove_ids(selector);
+                (*iter)->delete_ids.clear();
+                (*iter)->delete_ids.shrink_to_fit();
 
-            size_t numRemoved = (*iter)->index->remove_ids(selector);
-            needsWriting = true;
-            (*iter)->delete_ids.clear();
-            (*iter)->delete_ids.shrink_to_fit();
-        }
-    }
+                needsWriting = true;
+            }
 
-    if (pTable->isInsertData) {
-
-        pTable->isInsertData = false;
-
-        int idxCol = 0;
-        for (auto iter = pTable->indexes.begin(); iter != pTable->indexes.end(); ++iter, idxCol++) {
-
+            // Checking if we're inserting records to the index.
             if (!(*iter)->insert_data.empty()) {
 
-                try {
-
-                    (*iter)->index->add_with_ids(
-                        (*iter)->insert_ids.size(),
-                        (*iter)->insert_data.data(),
-                        (faiss::idx_t *)(*iter)->insert_ids.data());
-
-                } catch (faiss::FaissException &e) {
-
-                    sqlite3_free(pVTab->zErrMsg);
-                    pVTab->zErrMsg =
-                        sqlite3_mprintf("Error adding vector to index at "
-                                        "column index %d. Full error: %s",
-                                        idxCol,
-                                        e.msg.c_str());
-
-                    (*iter)->insert_ids.clear();
-                    (*iter)->insert_ids.shrink_to_fit();
-
-                    (*iter)->insert_data.clear();
-                    (*iter)->insert_data.shrink_to_fit();
-
-                    return SQLITE_ERROR;
-                }
+                (*iter)->index->add_with_ids(
+                    (*iter)->insert_ids.size(),
+                    (*iter)->insert_data.data(),
+                    (faiss::idx_t *)(*iter)->insert_ids.data());
 
                 (*iter)->insert_ids.clear();
                 (*iter)->insert_ids.shrink_to_fit();
@@ -1267,30 +1233,54 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
                 needsWriting = true;
             }
         }
-    }
 
-    if (needsWriting) {
+        if (needsWriting) {
 
-        int i = 0;
-        for (auto iter = pTable->indexes.begin(); iter != pTable->indexes.end(); ++iter, i++) {
+            int i = 0;
+            for (auto iter = pTable->indexes.begin(); iter != pTable->indexes.end(); ++iter, i++) {
 
-            int rc = write_index_insert((*iter)->index,
-                                        pTable->db,
-                                        pTable->schema,
-                                        pTable->name,
-                                        i);
+                int rc = write_index_insert((*iter)->index,
+                                            pTable->db,
+                                            pTable->schema,
+                                            pTable->name,
+                                            i);
 
-            if (rc != SQLITE_OK) {
+                if (rc != SQLITE_OK) {
 
-                sqlite3_free(pVTab->zErrMsg);
-                pVTab->zErrMsg = sqlite3_mprintf("Error saving index (%d): %s",
-                                                 rc, sqlite3_errmsg(pTable->db));
-                return rc;
+                    sqlite3_free(pVTab->zErrMsg);
+                    pVTab->zErrMsg = sqlite3_mprintf("Error saving index (%d): %s",
+                                                    rc, sqlite3_errmsg(pTable->db));
+                    return rc;
+                }
             }
         }
-    }
 
-    return SQLITE_OK;
+        return SQLITE_OK;
+
+    } catch (faiss::FaissException &e) {
+
+        sqlite3_free(pVTab->zErrMsg);
+        pVTab->zErrMsg =
+            sqlite3_mprintf("Error during synchroning index. Full error: %s",
+                            e.msg.c_str());
+
+        for (auto iter = pTable->indexes.begin(); iter != pTable->indexes.end(); ++iter) {
+
+            (*iter)->insert_ids.clear();
+            (*iter)->insert_ids.shrink_to_fit();
+
+            (*iter)->insert_data.clear();
+            (*iter)->insert_data.shrink_to_fit();
+
+            (*iter)->delete_ids.clear();
+            (*iter)->delete_ids.shrink_to_fit();
+
+            (*iter)->trainings.clear();
+            (*iter)->trainings.shrink_to_fit();
+        }
+
+        return SQLITE_ERROR;
+    }
 }
 
 static int vssIndexCommit(sqlite3_vtab *pVTab) { return SQLITE_OK; }
@@ -1328,13 +1318,12 @@ static int vssIndexUpdate(sqlite3_vtab *pVTab,
         // DELETE operation
         sqlite3_int64 rowid_to_delete = sqlite3_value_int64(argv[0]);
 
-        int rc;
-        if ((rc = shadow_data_delete(pTable->db,
+        auto rc = shadow_data_delete(pTable->db,
                                      pTable->schema,
                                      pTable->name,
-                                     rowid_to_delete)) != SQLITE_OK) {
+                                     rowid_to_delete);
+        if (rc != SQLITE_OK)
             return rc;
-        }
 
         for (auto iter = pTable->indexes.begin(); iter != pTable->indexes.end(); ++iter) {
             (*iter)->delete_ids.push_back(rowid_to_delete);
@@ -1360,7 +1349,7 @@ static int vssIndexUpdate(sqlite3_vtab *pVTab,
                 if ((vec = pTable->vector_api->xValueAsVector(
                          argv[2 + VSS_INDEX_COLUMN_VECTORS + i])) != nullptr) {
 
-                    // make sure the index is already trained, if it's needed
+                    // Make sure the index is already trained, if it's needed
                     if (!(*iter)->index->is_trained) {
 
                         sqlite3_free(pVTab->zErrMsg);
@@ -1375,55 +1364,43 @@ static int vssIndexUpdate(sqlite3_vtab *pVTab,
                     if (!inserted_rowid) {
 
                         sqlite_int64 retrowid;
-                        int rc = shadow_data_insert(pTable->db, pTable->schema, pTable->name,
-                                                    &rowid, &retrowid);
+                        auto rc = shadow_data_insert(pTable->db, pTable->schema, pTable->name,
+                                                     &rowid, &retrowid);
                         if (rc != SQLITE_OK)
                             return rc;
 
                         inserted_rowid = true;
                     }
 
-                    (*iter)->insert_data.reserve(
-                        vec->size() + distance(vec->begin(), vec->end())); // TODO: Doesn't this grow by twice as much as needed?
-
+                    (*iter)->insert_data.reserve((*iter)->insert_data.size() + vec->size());
                     (*iter)->insert_data.insert(
-                        (*iter)->insert_data.end(), vec->begin(),
+                        (*iter)->insert_data.end(),
+                        vec->begin(),
                         vec->end());
 
                     (*iter)->insert_ids.push_back(rowid);
 
-                    pTable->isInsertData = true;
                     *pRowid = rowid;
                 }
             }
 
         } else {
 
-            // TODO: Won't this this leak the char *?
-            string operation((char *)sqlite3_value_text(
-                argv[2 + VSS_INDEX_COLUMN_OPERATION]));
+            string operation((char *)sqlite3_value_text(argv[2 + VSS_INDEX_COLUMN_OPERATION]));
 
             if (operation.compare("training") == 0) {
 
                 auto i = 0;
                 for (auto iter = pTable->indexes.begin(); iter != pTable->indexes.end(); ++iter, i++) {
 
-                    vec_ptr vec;
-                    if ((vec = pTable->vector_api->xValueAsVector(
-                             argv[2 + VSS_INDEX_COLUMN_VECTORS + i])) != nullptr) {
+                    vec_ptr vec = pTable->vector_api->xValueAsVector(argv[2 + VSS_INDEX_COLUMN_VECTORS + i]);
+                    if (vec != nullptr) {
 
-                        (*iter)->trainings.reserve(
-                            vec->size() +
-                            distance(vec->begin(),
-                                     vec->end())); // TODO: Isn't the + distance
-                                                   // reserving twice as much
-                                                   // capacity as we need?
-
+                        (*iter)->trainings.reserve((*iter)->trainings.size() + vec->size());
                         (*iter)->trainings.insert(
-                            (*iter)->trainings.end(), vec->begin(),
+                            (*iter)->trainings.end(),
+                            vec->begin(),
                             vec->end());
-
-                        pTable->isTraining = true;
                     }
                 }
 
@@ -1439,7 +1416,7 @@ static int vssIndexUpdate(sqlite3_vtab *pVTab,
         sqlite3_free(pVTab->zErrMsg);
 
         pVTab->zErrMsg =
-            sqlite3_mprintf("UPDATE on vss0 virtual tables not supported yet.");
+            sqlite3_mprintf("update on vss0 virtual tables not supported yet.");
 
         return SQLITE_ERROR;
     }
