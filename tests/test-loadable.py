@@ -51,6 +51,7 @@ VSS_FUNCTIONS = [
   'vss_fvec_add',
   'vss_fvec_sub',
   'vss_inner_product',
+  'vss_memory_usage',
   'vss_range_search',
   'vss_range_search_params',
   'vss_search',
@@ -112,6 +113,9 @@ class TestVss(unittest.TestCase):
     self.skipTest("TODO")
 
   def test_vss_search_params(self):
+    self.skipTest("TODO")
+
+  def test_vss_memory_usage(self):
     self.skipTest("TODO")
 
   def test_vss_range_search(self):
@@ -247,8 +251,6 @@ class TestVss(unittest.TestCase):
       {'rowid': 1002, 'distance': 0.25},
     ])
 
-    #import pdb;pdb.set_trace()
-
     self.assertEqual(execute_all(cur, 'select rowid, vector_debug(a) as a, vector_debug(b) as b, distance from x'), [
       {'rowid': 1000, "a": "size: 2 [0.000000, 1.000000]",  "b": "size: 1 [1.000000]", "distance": None},
       {'rowid': 1001, "a": "size: 2 [0.000000, -1.000000]", "b": "size: 1 [2.000000]", "distance": None},
@@ -256,7 +258,7 @@ class TestVss(unittest.TestCase):
       {'rowid': 1003, "a": "size: 2 [-1.000000, 0.000000]", "b": "size: 1 [4.000000]", "distance": None},
     ])
 
-    with self.assertRaisesRegex(sqlite3.OperationalError, "UPDATE on vss0 virtual tables not supported yet."):
+    with self.assertRaisesRegex(sqlite3.OperationalError, "UPDATE statements on vss0 virtual tables not supported yet."):
       execute_all(cur, 'update x set b = json(?) where rowid = ?', ['[444]', 1003])
     if sqlite3.sqlite_version_info[1] >= 41:
       self.assertEqual(
@@ -543,7 +545,7 @@ class TestVector(unittest.TestCase):
     def raises_small_blob_header(input):
       with self.assertRaisesRegex(sqlite3.OperationalError, "Vector blob size less than header length"):
         db.execute("select vector_from_blob(?)", [input]).fetchall()
-    #import pdb;pdb.set_trace()
+
     raises_small_blob_header(b"")
     raises_small_blob_header(b"v")
 
