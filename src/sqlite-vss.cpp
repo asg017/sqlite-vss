@@ -324,9 +324,19 @@ struct SqlStatement {
         return sqlite3_bind_blob64(stmt, colNo, data, size, SQLITE_STATIC);
     }
 
+    int bind_null(int colNo) {
+
+        return sqlite3_bind_null(stmt, colNo);
+    }
+
     int step() {
 
         return sqlite3_step(stmt);
+    }
+
+    int last_insert_rowid() {
+
+        return sqlite3_last_insert_rowid(db);
     }
 
     void finalize() {
@@ -436,50 +446,52 @@ static int shadow_data_insert(sqlite3 *db,
                               sqlite3_int64 *rowid,
                               sqlite3_int64 *retRowid) {
 
-    sqlite3_stmt *stmt;
-
     if (rowid == nullptr) {
 
-        auto sql = sqlite3_mprintf(
-            "insert into \"%w\".\"%w_data\"(x) values (?)", schema, name);
+        SqlStatement insert(db, 
+                            sqlite3_mprintf("insert into \"%w\".\"%w_data\"(x) values (?)",
+                                            schema,
+                                            name));
 
-        int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
-        sqlite3_free(sql);
-
-        if (rc != SQLITE_OK || stmt == nullptr) {
+        int rc = insert.prepare();
+        if (rc != SQLITE_OK)
             return SQLITE_ERROR;
-        }
 
-        sqlite3_bind_null(stmt, 1);
-        if (sqlite3_step(stmt) != SQLITE_DONE) {
-            sqlite3_finalize(stmt);
+        rc = insert.bind_null(1);
+        if (rc != SQLITE_OK)
             return SQLITE_ERROR;
-        }
+
+        rc = insert.step();
+        if (rc != SQLITE_DONE)
+            return SQLITE_ERROR;
 
     } else {
 
-        auto sql = sqlite3_mprintf(
-            "insert into \"%w\".\"%w_data\"(rowid, x) values (?, ?);", schema,
-            name);
+        SqlStatement insert(db,
+                            sqlite3_mprintf("insert into \"%w\".\"%w_data\"(rowid, x) values (?, ?);",
+                                            schema,
+                                            name));
 
-        int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
-        sqlite3_free(sql);
-
-        if (rc != SQLITE_OK || stmt == nullptr)
+        int rc = insert.prepare();
+        if (rc != SQLITE_OK)
             return SQLITE_ERROR;
 
-        sqlite3_bind_int64(stmt, 1, *rowid);
-        sqlite3_bind_null(stmt, 2);
-        if (sqlite3_step(stmt) != SQLITE_DONE) {
-            sqlite3_finalize(stmt);
+        rc = insert.bind_int64(1, *rowid);
+        if (rc != SQLITE_OK)
             return SQLITE_ERROR;
-        }
+
+        rc = insert.bind_null(2);
+        if (rc != SQLITE_OK)
+            return SQLITE_ERROR;
+
+        rc = insert.step();
+        if (rc != SQLITE_DONE)
+            return SQLITE_ERROR;
 
         if (retRowid != nullptr)
-            *retRowid = sqlite3_last_insert_rowid(db);
+            *retRowid = insert.last_insert_rowid();
     }
 
-    sqlite3_finalize(stmt);
     return SQLITE_OK;
 }
 
