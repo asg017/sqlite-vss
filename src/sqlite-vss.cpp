@@ -324,6 +324,16 @@ struct SqlStatement {
         return sqlite3_bind_blob64(stmt, colNo, data, size, SQLITE_STATIC);
     }
 
+    const void * column_blob(int colNo) {
+
+        return sqlite3_column_blob(stmt, colNo);
+    }
+
+    int column_bytes(int colNo) {
+
+        return sqlite3_column_bytes(stmt, colNo);
+    }
+
     int bind_null(int colNo) {
 
         return sqlite3_bind_null(stmt, colNo);
@@ -332,6 +342,11 @@ struct SqlStatement {
     int step() {
 
         return sqlite3_step(stmt);
+    }
+
+    int exec() {
+
+        return sqlite3_exec(db, sql, nullptr, nullptr, nullptr);
     }
 
     int last_insert_rowid() {
@@ -366,20 +381,16 @@ static int write_index_insert(faiss::VectorIOWriter &writer,
                                         schema,
                                         name));
 
-    auto rc = insert.prepare();
-    if (rc != SQLITE_OK)
+    if (insert.prepare() != SQLITE_OK)
         return SQLITE_ERROR;
 
-    rc = insert.bind_int64(1, rowId);
-    if (rc != SQLITE_OK)
+    if (insert.bind_int64(1, rowId) != SQLITE_OK)
         return SQLITE_ERROR;
 
-    rc = insert.bind_blob64(2, writer.data.data(), writer.data.size());
-    if (rc != SQLITE_OK)
+    if (insert.bind_blob64(2, writer.data.data(), writer.data.size()) != SQLITE_OK)
         return SQLITE_ERROR;
 
-    rc = insert.step();
-
+    auto rc = insert.step();
     if (rc == SQLITE_DONE)
         return SQLITE_OK; // Index did not exist, and we successfully inserted it.
 
@@ -398,20 +409,16 @@ static int write_index_update(faiss::VectorIOWriter &writer,
                                         schema,
                                         name));
 
-    auto rc = update.prepare();
-    if (rc != SQLITE_OK)
+    if (update.prepare() != SQLITE_OK)
         return SQLITE_ERROR;
 
-    rc = update.bind_blob64(1, writer.data.data(), writer.data.size());
-    if (rc != SQLITE_OK)
+    if (update.bind_blob64(1, writer.data.data(), writer.data.size()) != SQLITE_OK)
         return SQLITE_ERROR;
 
-    rc = update.bind_int64(2, rowId);
-    if (rc != SQLITE_OK)
+    if (update.bind_int64(2, rowId) != SQLITE_OK)
         return SQLITE_ERROR;
 
-    rc = update.step();
-
+    auto rc = update.step();
     if (rc == SQLITE_DONE)
         return SQLITE_OK;
 
@@ -429,8 +436,7 @@ static int write_index(faiss::Index *index,
     faiss::write_index(index, &writer);
 
     // First trying to insert index, if that fails with ROW constraing error, we try to update existing index.
-    auto rc = write_index_insert(writer, db, schema, name, rowId);
-    if (rc == SQLITE_OK)
+    if (write_index_insert(writer, db, schema, name, rowId) == SQLITE_OK)
         return SQLITE_OK;
 
     if (sqlite3_extended_errcode(db) != SQLITE_CONSTRAINT_ROWID)
@@ -453,16 +459,13 @@ static int shadow_data_insert(sqlite3 *db,
                                             schema,
                                             name));
 
-        int rc = insert.prepare();
-        if (rc != SQLITE_OK)
+        if (insert.prepare() != SQLITE_OK)
             return SQLITE_ERROR;
 
-        rc = insert.bind_null(1);
-        if (rc != SQLITE_OK)
+        if (insert.bind_null(1) != SQLITE_OK)
             return SQLITE_ERROR;
 
-        rc = insert.step();
-        if (rc != SQLITE_DONE)
+        if (insert.step() != SQLITE_DONE)
             return SQLITE_ERROR;
 
     } else {
@@ -472,20 +475,16 @@ static int shadow_data_insert(sqlite3 *db,
                                             schema,
                                             name));
 
-        int rc = insert.prepare();
-        if (rc != SQLITE_OK)
+        if (insert.prepare() != SQLITE_OK)
             return SQLITE_ERROR;
 
-        rc = insert.bind_int64(1, *rowid);
-        if (rc != SQLITE_OK)
+        if (insert.bind_int64(1, *rowid) != SQLITE_OK)
             return SQLITE_ERROR;
 
-        rc = insert.bind_null(2);
-        if (rc != SQLITE_OK)
+        if (insert.bind_null(2) != SQLITE_OK)
             return SQLITE_ERROR;
 
-        rc = insert.step();
-        if (rc != SQLITE_DONE)
+        if (insert.step() != SQLITE_DONE)
             return SQLITE_ERROR;
 
         if (retRowid != nullptr)
@@ -501,19 +500,17 @@ static int shadow_data_delete(sqlite3 *db,
                               sqlite3_int64 rowid) {
 
     SqlStatement del(db,
-                        sqlite3_mprintf("delete from \"%w\".\"%w_data\" where rowid = ?",
-                                        schema,
-                                        name));
-    auto rc = del.prepare();
-    if (rc != SQLITE_OK)
+                     sqlite3_mprintf("delete from \"%w\".\"%w_data\" where rowid = ?",
+                                     schema,
+                                     name));
+
+    if (del.prepare() != SQLITE_OK)
         return SQLITE_ERROR;
 
-    rc = del.bind_int64(1, rowid);
-    if (rc != SQLITE_OK)
+    if (del.bind_int64(1, rowid) != SQLITE_OK)
         return SQLITE_ERROR;
 
-    rc = del.step();
-    if (rc != SQLITE_DONE)
+    if (del.step() != SQLITE_DONE)
         return SQLITE_ERROR;
 
     return SQLITE_OK;
@@ -521,33 +518,26 @@ static int shadow_data_delete(sqlite3 *db,
 
 static faiss::Index *read_index_select(sqlite3 *db, const char *name, int indexId) {
 
-    sqlite3_stmt *stmt;
-    auto sql = sqlite3_mprintf("select idx from \"%w_index\" where rowid = ?", name);
+    SqlStatement select(db,
+                        sqlite3_mprintf("select idx from \"%w_index\" where rowid = ?",
+                                        name));
 
-    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK || stmt == nullptr) {
-        sqlite3_finalize(stmt);
-        sqlite3_free(sql);
+    if (select.prepare() != SQLITE_OK)
         return nullptr;
-    }
 
-    sqlite3_bind_int64(stmt, 1, indexId);
-    if (sqlite3_step(stmt) != SQLITE_ROW) {
-        sqlite3_finalize(stmt);
-        sqlite3_free(sql);
+    if (select.bind_int64(1, indexId) != SQLITE_OK)
         return nullptr;
-    }
 
-    auto index_data = sqlite3_column_blob(stmt, 0);
-    int64_t size = sqlite3_column_bytes(stmt, 0);
+    if (select.step() != SQLITE_ROW)
+        return nullptr;
+
+    auto index_data = select.column_blob(0);
+    auto size = select.column_bytes(0);
 
     faiss::VectorIOReader reader;
     copy((const uint8_t *)index_data,
          ((const uint8_t *)index_data) + size,
          back_inserter(reader.data));
-
-    sqlite3_free(sql);
-    sqlite3_finalize(stmt);
 
     return faiss::read_index(&reader);
 }
@@ -557,21 +547,27 @@ static int create_shadow_tables(sqlite3 *db,
                                 const char *name,
                                 int n) {
 
-    auto sql = sqlite3_mprintf("create table \"%w\".\"%w_index\"(idx)",
-                                schema,
-                                name);
+    SqlStatement create1(db,
+                         sqlite3_mprintf("create table \"%w\".\"%w_index\"(idx)",
+                                         schema,
+                                         name));
 
-    auto rc = sqlite3_exec(db, sql, 0, 0, 0);
-    sqlite3_free(sql);
+    auto rc = create1.exec();
     if (rc != SQLITE_OK)
         return rc;
 
-    sql = sqlite3_mprintf("create table \"%w\".\"%w_data\"(x);",
-                          schema,
-                          name);
+    /*
+     * Notice, we'll need to explicitly finalize this object since we can only
+     * have one open statement at the same time to the same connetion.
+     */
+    create1.finalize();
 
-    rc = sqlite3_exec(db, sql, nullptr, nullptr, nullptr);
-    sqlite3_free(sql);
+    SqlStatement create2(db,
+                         sqlite3_mprintf("create table \"%w\".\"%w_data\"(x);",
+                                         schema,
+                                         name));
+
+    rc = create2.exec();
     return rc;
 }
 
@@ -582,29 +578,15 @@ static int drop_shadow_tables(sqlite3 *db, char *name) {
 
     for (int i = 0; i < 2; i++) {
 
-        auto curSql = drops[i];
+        SqlStatement cur(db,
+                         sqlite3_mprintf(drops[i],
+                                         name));
 
-        sqlite3_stmt *stmt;
-
-        // TODO: Use of one construct to create SQL statements.
-        sqlite3_str *query = sqlite3_str_new(0);
-        sqlite3_str_appendf(query, curSql, name);
-        char *sql = sqlite3_str_finish(query);
-
-        int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
-        if (rc != SQLITE_OK || stmt == nullptr) {
-            sqlite3_free(sql);
+        if (cur.prepare() != SQLITE_OK)
             return SQLITE_ERROR;
-        }
 
-        if (sqlite3_step(stmt) != SQLITE_DONE) {
-            sqlite3_free(sql);
-            sqlite3_finalize(stmt);
+        if (cur.step() != SQLITE_DONE)
             return SQLITE_ERROR;
-        }
-
-        sqlite3_free(sql);
-        sqlite3_finalize(stmt);
     }
     return SQLITE_OK;
 }
