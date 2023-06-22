@@ -354,6 +354,11 @@ struct SqlStatement {
         return sqlite3_last_insert_rowid(db);
     }
 
+    int declare_vtab() {
+
+        return sqlite3_declare_vtab(db, sql);
+    }
+
     void finalize() {
 
         if (stmt != nullptr)
@@ -654,11 +659,14 @@ struct vss_index_cursor : public sqlite3_vtab_cursor {
     explicit vss_index_cursor(vss_index_vtab *table)
       : table(table),
         sqlite3_vtab_cursor({0}),
-        stmt(nullptr) { }
+        stmt(nullptr),
+        sql(nullptr) { }
 
     ~vss_index_cursor() {
         if (stmt != nullptr)
             sqlite3_finalize(stmt);
+        if (sql != nullptr)
+            sqlite3_free((void *)sql);
     }
 
     vss_index_vtab *table;
@@ -678,6 +686,7 @@ struct vss_index_cursor : public sqlite3_vtab_cursor {
 
     // For query_type == QueryType::fullscan
     sqlite3_stmt *stmt;
+    const char *sql;
     int step_result;
 };
 
@@ -735,6 +744,10 @@ unique_ptr<vector<VssIndexColumn>> parse_constructor(int argc,
     return columns;
 }
 
+#define VSS_INDEX_COLUMN_DISTANCE 0
+#define VSS_INDEX_COLUMN_OPERATION 1
+#define VSS_INDEX_COLUMN_VECTORS 2
+
 static int init(sqlite3 *db,
                 void *pAux,
                 int argc,
@@ -744,31 +757,23 @@ static int init(sqlite3 *db,
                 bool isCreate) {
 
     sqlite3_vtab_config(db, SQLITE_VTAB_CONSTRAINT_SUPPORT, 1);
-    int rc;
-
-    sqlite3_str *str = sqlite3_str_new(nullptr);
-    sqlite3_str_appendall(str,
-                          "create table x(distance hidden, operation hidden");
 
     auto columns = parse_constructor(argc, argv);
-
     if (columns == nullptr) {
-        *pzErr = sqlite3_mprintf("Error parsing constructor");
-        return rc;
+        *pzErr = sqlite3_mprintf("Error parsing VSS index factory constructor");
+        return SQLITE_ERROR;
     }
 
-    for (auto column = columns->begin(); column != columns->end(); ++column) {
-        sqlite3_str_appendf(str, ", \"%w\"", column->name.c_str());
+    string sql = "create table x(distance hidden, operation hidden";
+    for (auto colIter = columns->begin(); colIter != columns->end(); ++colIter) {
+        sql += ", \"" + colIter->name + "\"";
     }
+    sql += ")";
 
-    sqlite3_str_appendall(str, ")");
-    auto sql = sqlite3_str_finish(str);
-    rc = sqlite3_declare_vtab(db, sql);
-    sqlite3_free(sql);
+    SqlStatement create(db,
+                        sqlite3_mprintf(sql.c_str()));
 
-#define VSS_INDEX_COLUMN_DISTANCE 0
-#define VSS_INDEX_COLUMN_OPERATION 1
-#define VSS_INDEX_COLUMN_VECTORS 2
+    auto rc = create.declare_vtab();
 
     if (rc != SQLITE_OK)
         return rc;
@@ -777,6 +782,7 @@ static int init(sqlite3 *db,
                                      (vector0_api *)pAux,
                                      sqlite3_mprintf("%s", argv[1]),
                                      sqlite3_mprintf("%s", argv[2]));
+
     *ppVtab = pTable;
 
     if (isCreate) {
@@ -790,7 +796,7 @@ static int init(sqlite3 *db,
 
             } catch (faiss::FaissException &e) {
 
-                *pzErr = sqlite3_mprintf("Error building index factory for %s: %s",
+                *pzErr = sqlite3_mprintf("Error building index factory for %s, exception was: %s",
                                          iter->name.c_str(),
                                          e.msg.c_str());
 
@@ -1015,9 +1021,6 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
 
         if (query_vector->size() != index->d) {
 
-            // TODO: To support index that transforms vectors
-            // (to conserve spage, eg?), we should probably
-            // have some logic in place that transforms the vectors here?
             sqlite3_free(pVtabCursor->pVtab->zErrMsg);
             pVtabCursor->pVtab->zErrMsg = sqlite3_mprintf(
                 "Input query size doesn't match index dimensions: %ld != %ld",
@@ -1067,18 +1070,28 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
 
     } else if (strcmp(idxStr, "fullscan") == 0) {
 
+        // TODO: Do we really need to keep the statement open during traversal?
+        // Even with 500,000 records, we're talking about 2MB of RAM, and iterating rapidly
+        // and storing all results in a vector the way we do with range search and search would
+        // probably be good enough, or ...?
+        // SUGGESTION; We iterate over all records inline here, and keep results as a vector on vss_index_cursor?
+        // This would make for cleaner code, keep the statement open over a shorter period, and create less moving parts.
         pCursor->query_type = QueryType::fullscan;
         sqlite3_stmt *stmt;
+        pCursor->sql = sqlite3_mprintf("select rowid from \"%w_data\"", pCursor->table->name);
 
         int res = sqlite3_prepare_v2(
             pCursor->table->db,
-            sqlite3_mprintf("select rowid from \"%w_data\"", pCursor->table->name),
-            -1, &pCursor->stmt,
+            pCursor->sql,
+            -1,
+            &pCursor->stmt,
             nullptr);
 
         if (res != SQLITE_OK)
             return res;
 
+        // TODO: Are you sure this should be here?
+        // Wouldn't the vssIndexNext invocation be invoked before trying toretrieve value?
         pCursor->step_result = sqlite3_step(pCursor->stmt);
 
     } else {
