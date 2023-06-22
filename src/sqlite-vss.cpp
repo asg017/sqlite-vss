@@ -499,29 +499,23 @@ static int shadow_data_delete(sqlite3 *db,
                               char *schema,
                               char *name,
                               sqlite3_int64 rowid) {
-    sqlite3_stmt *stmt;
 
-    // TODO: We should strive to use only one concept and idea while creating
-    // SQL statements.
-    auto query = sqlite3_str_new(0);
-
-    sqlite3_str_appendf(query, "delete from \"%w\".\"%w_data\" where rowid = ?",
-                        schema, name);
-
-    auto sql = sqlite3_str_finish(query);
-
-    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
-    if (rc != SQLITE_OK || stmt == nullptr)
+    SqlStatement del(db,
+                        sqlite3_mprintf("delete from \"%w\".\"%w_data\" where rowid = ?",
+                                        schema,
+                                        name));
+    auto rc = del.prepare();
+    if (rc != SQLITE_OK)
         return SQLITE_ERROR;
 
-    sqlite3_bind_int64(stmt, 1, rowid);
-    if (sqlite3_step(stmt) != SQLITE_DONE) {
-        sqlite3_finalize(stmt);
+    rc = del.bind_int64(1, rowid);
+    if (rc != SQLITE_OK)
         return SQLITE_ERROR;
-    }
 
-    sqlite3_free(sql);
-    sqlite3_finalize(stmt);
+    rc = del.step();
+    if (rc != SQLITE_DONE)
+        return SQLITE_ERROR;
+
     return SQLITE_OK;
 }
 
