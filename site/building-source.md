@@ -26,28 +26,50 @@ cd vendor/sqlite
 ./configure && make
 ```
 
-Now that all dependencies are downloaded and configured, you can build the `sqlite-vss` extension! Run either `make loadable` or `make loadable-release` to build a loadable SQLite extension.
+Now that all dependencies are downloaded and configured, you can build the `sqlite-vss` extension! Run either `make loadable` to build a loadable SQLite extension.
 
 ```bash
 # Build a debug version of `sqlite-vss`.
 # Faster to compile, slower at runtime
 make loadable
+```
+
+After it finishes, you'll find debug version of `vector0` and `vss0` inside `dist/debug`, with file extensions `.dylib`, `.so`, or `.dll`, depending on your operating system.
+
+To compile static library files of `sqlite-vss` and `sqlite-vector`, run `make static`.
+
+```bash
+# Build a debug static archive files of `sqlite-vss`, ".a" and ".h" files
+make static
+```
+
+After it completes, you'll find `.a` and `.h` files inside `dist/debug`, which can be used to statically link `sqlite-vss` into other projects. The [Rust bindings](./rust) and [Go bindings](./go) uses this approach.
+
+```
+-I./dist/debug -lsqlite_vector0 -lsqlite_vss0 -llfaiss_avx2
+```
+
+For better runtime performance and smaller binaries, consider instead `make loadable-release` and `make static-release`.
+
+```bash
 
 # Build a release version of `sqlite-vss`.
 # Slower to compile, but faster at runtime
 make loadable-release
+
+make static-release
 ```
 
-If you ran `make loadable`, then under `dist/debug` you'll find debug version of `vector0` and `vss0`, with file extensions `.dylib`, `.so`, or `.dll`, depending on your operating system. If you ran `make loadable-release`, you'll find optimized version of `vector0` and `vss0` under `dist/release`.
+You'll file the optimized loadable and static files under `dist/release`.
 
 ## Platform-specific compiling tips
 
 ### MacOS (x86_64)
 
-On Macs, you may need to install and use `llvm` for compilation. It can be install with brew:
+On Macs, you may need to install and use `llvm` and `libomp` for compilation. It can be install with brew:
 
 ```bash
-brew install llvm
+brew install llvm libomp
 ```
 
 Additionally, if you see other cryptic compiling errors, you may need to explicitly state to use the `llvm` compilers, with flags like so:
@@ -63,7 +85,22 @@ If you come across any problems, please file an issue!
 
 ### MacOS (M1/M2 ARM)
 
-I haven't tried compiling `sqlite-vss` on a M1 Mac yet, but others have reported success. See the above instructions if you have problems, or file an issue.
+For Mac M1/M2 computers, you'll need `llvm` and `libomp`:
+
+```bash
+brew install llvm libomp
+```
+
+You will also likely need the following compiler flags:
+
+```bash
+export CC="/opt/homebrew/opt/llvm/bin/clang"
+export CXX="/opt/homebrew/opt/llvm/bin/clang++"
+export LDFLAGS="-L/opt/homebrew/opt/libomp/lib"
+export CPPFLAGS="-I/opt/homebrew/opt/libomp/include"
+```
+
+Note that these are _slightly_ different than the ones above, as `LDFLAGS`/`CPPFLAGS` are referencing libomp instead.
 
 ### Linux (x86_64)
 
@@ -71,11 +108,12 @@ You most likely will need to install the following libraries before compiling:
 
 ```bash
 sudo apt-get update
-sudo apt-get install libgomp1 libatlas-base-dev liblapack-dev
+sudo apt-get install libgomp1 libatlas-base-dev liblapack-dev libsqlite3-dev
 ```
 
 Explainations for these packages:
 
 - `libgomp1`: OpenMP implementation, for multi-threading. Required by Faiss
-- `libatlas-base-dev`:
-- `liblapack-dev`:
+- `libatlas-base-dev`: Provides a BLAS implementation. Required by Faiss
+- `liblapack-dev`: Provides an LAPACK implementation. Required by Faiss
+- `libsqlite3-dev`: Provides SQLite headers/static files for dev purposes.

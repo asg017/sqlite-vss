@@ -1003,7 +1003,7 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
 
         index->search(nq,
                       query_vector->data(),
-                      pCursor->limit,
+                      searchMax,
                       pCursor->search_distances.data(),
                       pCursor->search_ids.data());
 
@@ -1102,7 +1102,8 @@ static int vssIndexEof(sqlite3_vtab_cursor *cur) {
 
       case QueryType::search:
           return pCursor->iCurrent >= pCursor->limit ||
-                pCursor->iCurrent >= pCursor->search_ids.size();
+                pCursor->iCurrent >= pCursor->search_ids.size()
+                || (pCursor->search_ids.at(pCursor->iCurrent) == -1);
 
       case QueryType::range_search:
           return pCursor->iCurrent >= pCursor->range_search_result->lims[1];
@@ -1408,7 +1409,7 @@ static int vssIndexUpdate(sqlite3_vtab *pVTab,
         sqlite3_free(pVTab->zErrMsg);
 
         pVTab->zErrMsg =
-            sqlite3_mprintf("update on vss0 virtual tables not supported yet.");
+            sqlite3_mprintf("UPDATE statements on vss0 virtual tables not supported yet.");
 
         return SQLITE_ERROR;
     }
