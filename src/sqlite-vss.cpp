@@ -288,95 +288,146 @@ static void vssRangeSearchParamsFunc(sqlite3_context *context, int argc,
     sqlite3_result_pointer(context, params, "vss0_rangesearchparams", delVssRangeSearchParams);
 }
 
-static int write_index_insert(faiss::Index *index,
+struct SqlStatement {
+
+    SqlStatement(sqlite3 *db, const char * sql) : db(db), sql(sql), stmt(nullptr) {
+
+        this->sql = sql;
+    }
+
+    ~SqlStatement() {
+
+        if (stmt != nullptr)
+            sqlite3_finalize(stmt);
+        if (sql != nullptr)
+            sqlite3_free((void *)sql);
+    }
+
+    int prepare() {
+
+        auto res = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
+        if (res != SQLITE_OK) {
+
+            stmt = nullptr;
+            return SQLITE_ERROR;
+        }
+        return res;
+    }
+
+    int bind_int64(int colNo, sqlite3_int64 value) {
+
+        return sqlite3_bind_int64(stmt, colNo, value);
+    }
+
+    int bind_blob64(int colNo, const void * data, int size) {
+
+        return sqlite3_bind_blob64(stmt, colNo, data, size, SQLITE_STATIC);
+    }
+
+    int step() {
+
+        return sqlite3_step(stmt);
+    }
+
+    void finalize() {
+
+        if (stmt != nullptr)
+            sqlite3_finalize(stmt);
+        stmt = nullptr;
+        if (sql != nullptr)
+            sqlite3_free((void *)sql);
+        sql = nullptr;
+    }
+
+    sqlite3 *db;
+    sqlite3_stmt *stmt;
+    const char * sql;
+};
+
+static int write_index_insert(faiss::VectorIOWriter &writer,
                               sqlite3 *db,
                               char *schema,
                               char *name,
                               int rowId) {
 
+    // If inserts fails it means index already exists.
+    SqlStatement insert(db,
+                        sqlite3_mprintf("insert into \"%w\".\"%w_index\"(rowid, idx) values (?, ?)",
+                                        schema,
+                                        name));
+
+    auto rc = insert.prepare();
+    if (rc != SQLITE_OK)
+        return SQLITE_ERROR;
+
+    rc = insert.bind_int64(1, rowId);
+    if (rc != SQLITE_OK)
+        return SQLITE_ERROR;
+
+    rc = insert.bind_blob64(2, writer.data.data(), writer.data.size());
+    if (rc != SQLITE_OK)
+        return SQLITE_ERROR;
+
+    rc = insert.step();
+
+    if (rc == SQLITE_DONE)
+        return SQLITE_OK; // Index did not exist, and we successfully inserted it.
+
+    return rc;
+}
+
+static int write_index_update(faiss::VectorIOWriter &writer,
+                              sqlite3 *db,
+                              char *schema,
+                              char *name,
+                              int rowId) {
+
+    // Updating existing index.
+    SqlStatement update(db,
+                        sqlite3_mprintf("update \"%w\".\"%w_index\" set idx = ? where rowid = ?",
+                                        schema,
+                                        name));
+
+    auto rc = update.prepare();
+    if (rc != SQLITE_OK)
+        return SQLITE_ERROR;
+
+    rc = update.bind_blob64(1, writer.data.data(), writer.data.size());
+    if (rc != SQLITE_OK)
+        return SQLITE_ERROR;
+
+    rc = update.bind_int64(2, rowId);
+    if (rc != SQLITE_OK)
+        return SQLITE_ERROR;
+
+    rc = update.step();
+
+    if (rc == SQLITE_DONE)
+        return SQLITE_OK;
+
+    return rc;
+}
+
+static int write_index(faiss::Index *index,
+                       sqlite3 *db,
+                       char *schema,
+                       char *name,
+                       int rowId) {
+
+    // Writing our index
     faiss::VectorIOWriter writer;
     faiss::write_index(index, &writer);
-    sqlite3_int64 indexSize = writer.data.size();
 
-    // First try to insert into xyz_index. If that fails with a rowid constraint
-    // error, that means the index is already on disk, we just have to UPDATE
-    // instead.
-
-    sqlite3_stmt *stmt;
-    char *sql = sqlite3_mprintf(
-        "insert into \"%w\".\"%w_index\"(rowid, idx) values (?, ?)",
-        schema,
-        name);
-
-    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
-    if (rc != SQLITE_OK || stmt == nullptr) {
-        sqlite3_free(sql);
-        return SQLITE_ERROR;
-    }
-
-    rc = sqlite3_bind_int64(stmt, 1, rowId);
-    if (rc != SQLITE_OK) {
-        sqlite3_finalize(stmt);
-        sqlite3_free(sql);
-        return SQLITE_ERROR;
-    }
-
-    rc = sqlite3_bind_blob64(stmt, 2, writer.data.data(), indexSize, SQLITE_TRANSIENT);
-    if (rc != SQLITE_OK) {
-        sqlite3_finalize(stmt);
-        sqlite3_free(sql);
-        return SQLITE_ERROR;
-    }
-
-    int result = sqlite3_step(stmt);
-    sqlite3_finalize(stmt);
-    sqlite3_free(sql);
-
-    if (result == SQLITE_DONE) {
-
-        // INSERT was success, index wasn't written yet, all good to exit
+    // First trying to insert index, if that fails with ROW constraing error, we try to update existing index.
+    auto rc = write_index_insert(writer, db, schema, name, rowId);
+    if (rc == SQLITE_OK)
         return SQLITE_OK;
 
-    } else if (sqlite3_extended_errcode(db) != SQLITE_CONSTRAINT_ROWID) {
+    if (sqlite3_extended_errcode(db) != SQLITE_CONSTRAINT_ROWID)
+        return SQLITE_ERROR; // Insert failed for unknown error
 
-        // INSERT failed for another unknown reason, bad, return error
-        return SQLITE_ERROR;
-    }
-
-    // INSERT failed because index already is on disk, so we do an UPDATE instead
-
-    sql = sqlite3_mprintf(
-        "update \"%w\".\"%w_index\" set idx = ? where rowid = ?", schema, name);
-
-    rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
-    if (rc != SQLITE_OK || stmt == nullptr) {
-        sqlite3_free(sql);
-        return SQLITE_ERROR;
-    }
-
-    rc = sqlite3_bind_blob64(stmt, 1, writer.data.data(), indexSize, SQLITE_TRANSIENT);
-    if (rc != SQLITE_OK) {
-        sqlite3_finalize(stmt);
-        sqlite3_free(sql);
-        return SQLITE_ERROR;
-    }
-
-    rc = sqlite3_bind_int64(stmt, 2, rowId);
-    if (rc != SQLITE_OK) {
-        sqlite3_finalize(stmt);
-        sqlite3_free(sql);
-        return SQLITE_ERROR;
-    }
-
-    result = sqlite3_step(stmt);
-    sqlite3_finalize(stmt);
-    sqlite3_free(sql);
-
-    if (result == SQLITE_DONE) {
-        return SQLITE_OK;
-    }
-
-    return result;
+    // Insert failed because index already existed, updating existing index.
+    return write_index_update(writer, db, schema, name, rowId);
 }
 
 static int shadow_data_insert(sqlite3 *db,
@@ -392,7 +443,7 @@ static int shadow_data_insert(sqlite3 *db,
         auto sql = sqlite3_mprintf(
             "insert into \"%w\".\"%w_data\"(x) values (?)", schema, name);
 
-        int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
+        int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
         sqlite3_free(sql);
 
         if (rc != SQLITE_OK || stmt == nullptr) {
@@ -534,7 +585,7 @@ static int drop_shadow_tables(sqlite3 *db, char *name) {
         sqlite3_str_appendf(query, curSql, name);
         char *sql = sqlite3_str_finish(query);
 
-        int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
+        int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
         if (rc != SQLITE_OK || stmt == nullptr) {
             sqlite3_free(sql);
             return SQLITE_ERROR;
@@ -771,7 +822,7 @@ static int init(sqlite3 *db,
 
             try {
 
-                int rc = write_index_insert((*iter)->index,
+                int rc = write_index((*iter)->index,
                                             pTable->db,
                                             pTable->schema,
                                             pTable->name,
@@ -1034,7 +1085,8 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
         int res = sqlite3_prepare_v2(
             pCursor->table->db,
             sqlite3_mprintf("select rowid from \"%w_data\"", pCursor->table->name),
-            -1, &pCursor->stmt, nullptr);
+            -1, &pCursor->stmt,
+            nullptr);
 
         if (res != SQLITE_OK)
             return res;
@@ -1232,7 +1284,7 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
             int i = 0;
             for (auto iter = pTable->indexes.begin(); iter != pTable->indexes.end(); ++iter, i++) {
 
-                int rc = write_index_insert((*iter)->index,
+                int rc = write_index((*iter)->index,
                                             pTable->db,
                                             pTable->schema,
                                             pTable->name,
@@ -1499,7 +1551,7 @@ vector0_api *vector0_api_from_db(sqlite3 *db) {
     vector0_api *pRet = nullptr;
     sqlite3_stmt *pStmt = nullptr;
 
-    auto rc = sqlite3_prepare(db, "select vector0(?1)", -1, &pStmt, nullptr);
+    auto rc = sqlite3_prepare_v2(db, "select vector0(?1)", -1, &pStmt, nullptr);
     if (rc != SQLITE_OK)
         return nullptr;
 
