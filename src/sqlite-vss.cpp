@@ -1045,6 +1045,10 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
         pCursor->search_distances = vector<float>(searchMax, 0);
         pCursor->search_ids = vector<faiss::idx_t>(searchMax, 0);
 
+        // Faiss will fail if we search an empty index.
+        if (index->ntotal == 0)
+            return SQLITE_OK;
+
         index->search(nq,
                       query_vector->data(),
                       searchMax,
