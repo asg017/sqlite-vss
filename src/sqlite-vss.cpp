@@ -1572,104 +1572,49 @@ __declspec(dllexport)
             return SQLITE_ERROR;
         }
 
-        // TODO: This should preferably be done the same way it's done in sqlite-vector.cpp by using an array.
-        sqlite3_create_function_v2(db,
-                                   "vss_version",
-                                   0,
-                                   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
-                                   0,
-                                   vss_version,
-                                   0, 0, 0);
+        static const struct {
 
-        sqlite3_create_function_v2(db,
-                                   "vss_debug",
-                                   0,
-                                   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
-                                   0,
-                                   vss_debug,
-                                   0, 0, 0);
+            char *zFName;
+            int nArg;
+            void *pAux;
+            void (*xFunc)(sqlite3_context *, int, sqlite3_value **);
+            int flags;
 
-        sqlite3_create_function_v2(db,
-                                   "vss_distance_l1",
-                                   2,
-                                   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
-                                   vector_api,
-                                   vss_distance_l1,
-                                   0, 0, 0);
+        } aFunc[] = {
 
-        sqlite3_create_function_v2(db, "vss_distance_l2",
-                                   2,
-                                   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
-                                   vector_api,
-                                   vss_distance_l2,
-                                   0, 0, 0);
+            { (char *)"vss_version",                0, nullptr,     vss_version,                SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
+            { (char *)"vss_debug",                  0, nullptr,     vss_debug,                  SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
+            { (char *)"vss_distance_l1",            2, vector_api,  vss_distance_l1,            SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
+            { (char *)"vss_distance_l2",            2, vector_api,  vss_distance_l2,            SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
+            { (char *)"vss_distance_linf",          2, vector_api,  vss_distance_linf,          SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
+            { (char *)"vss_inner_product",          2, vector_api,  vss_inner_product,          SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
+            { (char *)"vss_fvec_add",               2, vector_api,  vss_fvec_add,               SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
+            { (char *)"vss_fvec_sub",               2, vector_api,  vss_fvec_sub,               SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
+            { (char *)"vss_search",                 2, vector_api,  vssSearchFunc,              SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
+            { (char *)"vss_search_params",          2, vector_api,  vssSearchParamsFunc,        SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
+            { (char *)"vss_range_search",           2, vector_api,  vssRangeSearchFunc,         SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
+            { (char *)"vss_range_search_params",    2, vector_api,  vssRangeSearchParamsFunc,   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
+            { (char *)"vss_memory_usage",           0, vector_api,  faissMemoryUsageFunc,       SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
+        };
 
-        sqlite3_create_function_v2(db, "vss_distance_linf",
-                                   2,
-                                   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
-                                   vector_api,
-                                   vss_distance_linf,
-                                   0, 0, 0);
+        for (int i = 0; i < sizeof(aFunc) / sizeof(aFunc[0]); i++) {
 
-        sqlite3_create_function_v2(db, "vss_inner_product",
-                                   2,
-                                   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
-                                   vector_api,
-                                   vss_inner_product,
-                                   0, 0, 0);
+            auto rc = sqlite3_create_function_v2(db,
+                                                 aFunc[i].zFName,
+                                                 aFunc[i].nArg,
+                                                 aFunc[i].flags,
+                                                 aFunc[i].pAux,
+                                                 aFunc[i].xFunc,
+                                                 nullptr,
+                                                 nullptr,
+                                                 nullptr);
 
-        sqlite3_create_function_v2(db, "vss_fvec_add",
-                                   2,
-                                   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
-                                   vector_api,
-                                   vss_fvec_add,
-                                   0, 0, 0);
+            if (rc != SQLITE_OK) {
 
-        sqlite3_create_function_v2(db, "vss_fvec_sub",
-                                   2,
-                                   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
-                                   vector_api,
-                                   vss_fvec_sub,
-                                   0, 0, 0);
-
-        sqlite3_create_function_v2(db, "vss_search",
-                                   2,
-                                   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
-                                   vector_api,
-                                   vssSearchFunc,
-                                   0, 0, 0);
-
-        sqlite3_create_function_v2(db,
-                                   "vss_search_params",
-                                   2,
-                                   0,
-                                   vector_api,
-                                   vssSearchParamsFunc,
-                                   0, 0, 0);
-
-        sqlite3_create_function_v2(db,
-                                   "vss_range_search",
-                                   2,
-                                   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
-                                   vector_api,
-                                   vssRangeSearchFunc,
-                                   0, 0, 0);
-
-        sqlite3_create_function_v2(db,
-                                   "vss_range_search_params",
-                                   2,
-                                   0,
-                                   vector_api,
-                                   vssRangeSearchParamsFunc,
-                                   0, 0, 0);
-
-        sqlite3_create_function_v2(db,
-                                   "vss_memory_usage",
-                                   0,
-                                   0,
-                                   nullptr,
-                                   faissMemoryUsageFunc,
-                                   0, 0, 0);
+                *pzErrMsg = sqlite3_mprintf("%s: %s", aFunc[i].zFName, sqlite3_errmsg(db));
+                return rc;
+            }
+        }
 
         auto rc = sqlite3_create_module_v2(db, "vss0", &vssIndexModule, vector_api, nullptr);
         if (rc != SQLITE_OK) {
