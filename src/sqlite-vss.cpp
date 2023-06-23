@@ -663,7 +663,10 @@ struct vss_index_cursor : public sqlite3_vtab_cursor {
 
     explicit vss_index_cursor(vss_index_vtab *table)
       : table(table),
-        sqlite3_vtab_cursor({0}) { }
+        sqlite3_vtab_cursor({0}),
+        iCurrent(0),
+        iRowid(-1),
+        limit(0) { }
 
     vss_index_vtab *table;
 
