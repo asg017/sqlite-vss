@@ -576,7 +576,7 @@ static sqlite3_module fvecsEachModule = {
     /* xConnect    */ fvecsEachConnect,
     /* xBestIndex  */ fvecsEachBestIndex,
     /* xDisconnect */ fvecsEachDisconnect,
-    /* xDestroy    */ 0,
+    /* xDestroy    */ fvecsEachDisconnect, // TODO: Shouldn't this be the same function as disconnect? Otherwise we're not deleting the virtual table reference?
     /* xOpen       */ fvecsEachOpen,
     /* xClose      */ fvecsEachClose,
     /* xFilter     */ fvecsEachFilter,
@@ -584,17 +584,18 @@ static sqlite3_module fvecsEachModule = {
     /* xEof        */ fvecsEachEof,
     /* xColumn     */ fvecsEachColumn,
     /* xRowid      */ fvecsEachRowid,
-    /* xUpdate     */ 0,
-    /* xBegin      */ 0,
-    /* xSync       */ 0,
-    /* xCommit     */ 0,
-    /* xRollback   */ 0,
-    /* xFindMethod */ 0,
-    /* xRename     */ 0,
-    /* xSavepoint  */ 0,
-    /* xRelease    */ 0,
-    /* xRollbackTo */ 0,
-    /* xShadowName */ 0};
+    /* xUpdate     */ nullptr,
+    /* xBegin      */ nullptr,
+    /* xSync       */ nullptr,
+    /* xCommit     */ nullptr,
+    /* xRollback   */ nullptr,
+    /* xFindMethod */ nullptr,
+    /* xRename     */ nullptr,
+    /* xSavepoint  */ nullptr,
+    /* xRelease    */ nullptr,
+    /* xRollbackTo */ nullptr,
+    /* xShadowName */ nullptr
+};
 
 #pragma endregion
 
@@ -675,9 +676,9 @@ __declspec(dllexport)
                                             aFunc[i].flags,
                                             aFunc[i].pAux,
                                             aFunc[i].xFunc,
-                                            0,
-                                            0,
-                                            0);
+                                            nullptr,
+                                            nullptr,
+                                            nullptr);
 
             if (rc != SQLITE_OK) {
 
