@@ -668,7 +668,6 @@ __declspec(dllexport)
             if (rc != SQLITE_OK) {
 
                 *pzErrMsg = sqlite3_mprintf("%s: %s", aFunc[i].zFName, sqlite3_errmsg(db));
-                printf("\t%s\n", *pzErrMsg);
                 return rc;
             }
         }
@@ -677,7 +676,6 @@ __declspec(dllexport)
         if (rc != SQLITE_OK) {
 
             *pzErrMsg = sqlite3_mprintf("%s", sqlite3_errmsg(db));
-            printf("\t%s\n", *pzErrMsg);
             return rc;
         }
 
