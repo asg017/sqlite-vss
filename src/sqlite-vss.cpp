@@ -329,6 +329,11 @@ struct SqlStatement {
         return sqlite3_bind_null(stmt, colNo);
     }
 
+    int bind_pointer(int paramNo, void *ptr, const char * name) {
+
+        return sqlite3_bind_pointer(stmt, paramNo, ptr, name, nullptr);
+    }
+
     int step() {
 
         return sqlite3_step(stmt);
@@ -1136,8 +1141,8 @@ static int vssIndexEof(sqlite3_vtab_cursor *cur) {
 
       case QueryType::search:
           return pCursor->iCurrent >= pCursor->limit ||
-                pCursor->iCurrent >= pCursor->search_ids.size()
-                || (pCursor->search_ids.at(pCursor->iCurrent) == -1);
+                pCursor->iCurrent >= pCursor->search_ids.size() ||
+                pCursor->search_ids.at(pCursor->iCurrent) == -1; // TODO: Isn't this last condition redundant?
 
       case QueryType::range_search:
           return pCursor->iCurrent >= pCursor->range_search_result->lims[1];
@@ -1530,28 +1535,17 @@ static sqlite3_module vssIndexModule = {
 
 vector0_api *vector0_api_from_db(sqlite3 *db) {
 
+    SqlStatement select(db, sqlite3_mprintf("select vector0(?1)"));
+    if (select.prepare() != SQLITE_OK)
+        return nullptr;
+
     vector0_api *pRet = nullptr;
-    sqlite3_stmt *pStmt = nullptr;
-
-    auto rc = sqlite3_prepare_v2(db, "select vector0(?1)", -1, &pStmt, nullptr);
-    if (rc != SQLITE_OK)
+    if (select.bind_pointer(1, (void *)&pRet, "vector0_api_ptr") != SQLITE_OK)
         return nullptr;
 
-    rc = sqlite3_bind_pointer(pStmt, 1, (void *)&pRet, "vector0_api_ptr", nullptr);
-    if (rc != SQLITE_OK) {
-
-        sqlite3_finalize(pStmt);
+    if (select.step() != SQLITE_ROW)
         return nullptr;
-    }
 
-    rc = sqlite3_step(pStmt);
-    if (rc != SQLITE_ROW) {
-
-        sqlite3_finalize(pStmt);
-        return nullptr;
-    }
-
-    sqlite3_finalize(pStmt);
     return pRet;
 }
 
