@@ -324,16 +324,6 @@ struct SqlStatement {
         return sqlite3_bind_blob64(stmt, colNo, data, size, SQLITE_STATIC);
     }
 
-    const void * column_blob(int colNo) {
-
-        return sqlite3_column_blob(stmt, colNo);
-    }
-
-    int column_bytes(int colNo) {
-
-        return sqlite3_column_bytes(stmt, colNo);
-    }
-
     int bind_null(int colNo) {
 
         return sqlite3_bind_null(stmt, colNo);
@@ -349,14 +339,29 @@ struct SqlStatement {
         return sqlite3_exec(db, sql, nullptr, nullptr, nullptr);
     }
 
-    int last_insert_rowid() {
-
-        return sqlite3_last_insert_rowid(db);
-    }
-
     int declare_vtab() {
 
         return sqlite3_declare_vtab(db, sql);
+    }
+
+    const void * column_blob(int colNo) {
+
+        return sqlite3_column_blob(stmt, colNo);
+    }
+
+    int column_bytes(int colNo) {
+
+        return sqlite3_column_bytes(stmt, colNo);
+    }
+
+    int column_int64(int colNo) {
+
+        return sqlite3_column_int64(stmt, colNo);
+    }
+
+    int last_insert_rowid() {
+
+        return sqlite3_last_insert_rowid(db);
     }
 
     void finalize() {
@@ -658,16 +663,7 @@ struct vss_index_cursor : public sqlite3_vtab_cursor {
 
     explicit vss_index_cursor(vss_index_vtab *table)
       : table(table),
-        sqlite3_vtab_cursor({0}),
-        stmt(nullptr),
-        sql(nullptr) { }
-
-    ~vss_index_cursor() {
-        if (stmt != nullptr)
-            sqlite3_finalize(stmt);
-        if (sql != nullptr)
-            sqlite3_free((void *)sql);
-    }
+        sqlite3_vtab_cursor({0}) { }
 
     vss_index_vtab *table;
 
@@ -685,9 +681,7 @@ struct vss_index_cursor : public sqlite3_vtab_cursor {
     unique_ptr<faiss::RangeSearchResult> range_search_result;
 
     // For query_type == QueryType::fullscan
-    sqlite3_stmt *stmt;
-    const char *sql;
-    int step_result;
+    vector<int> step_results;
 };
 
 struct VssIndexColumn {
@@ -1070,29 +1064,23 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
 
     } else if (strcmp(idxStr, "fullscan") == 0) {
 
-        // TODO: Do we really need to keep the statement open during traversal?
-        // Even with 500,000 records, we're talking about 2MB of RAM, and iterating rapidly
-        // and storing all results in a vector the way we do with range search and search would
-        // probably be good enough, or ...?
-        // SUGGESTION; We iterate over all records inline here, and keep results as a vector on vss_index_cursor?
-        // This would make for cleaner code, keep the statement open over a shorter period, and create less moving parts.
         pCursor->query_type = QueryType::fullscan;
-        sqlite3_stmt *stmt;
-        pCursor->sql = sqlite3_mprintf("select rowid from \"%w_data\"", pCursor->table->name);
+        SqlStatement select(pCursor->table->db,
+                            sqlite3_mprintf("select rowid from \"%w_data\"",
+                                            pCursor->table->name));
 
-        int res = sqlite3_prepare_v2(
-            pCursor->table->db,
-            pCursor->sql,
-            -1,
-            &pCursor->stmt,
-            nullptr);
+        auto rc = select.prepare();
+        if (rc != SQLITE_OK)
+            return rc;
 
-        if (res != SQLITE_OK)
-            return res;
+        rc = select.step();
+        while (rc == SQLITE_ROW) {
+            pCursor->step_results.push_back(select.column_int64(0));
+            rc = select.step();
+        }
 
-        // TODO: Are you sure this should be here?
-        // Wouldn't the vssIndexNext invocation be invoked before trying toretrieve value?
-        pCursor->step_result = sqlite3_step(pCursor->stmt);
+        if (rc != SQLITE_DONE)
+            return rc;
 
     } else {
 
@@ -1111,17 +1099,7 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
 static int vssIndexNext(sqlite3_vtab_cursor *cur) {
 
     auto pCursor = static_cast<vss_index_cursor *>(cur);
-
-    switch (pCursor->query_type) {
-
-      case QueryType::search:
-      case QueryType::range_search:
-          pCursor->iCurrent++;
-          break;
-
-      case QueryType::fullscan:
-          pCursor->step_result = sqlite3_step(pCursor->stmt);
-    }
+    pCursor->iCurrent++;
 
     return SQLITE_OK;
 }
@@ -1141,7 +1119,7 @@ static int vssIndexRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid) {
             break;
 
         case QueryType::fullscan:
-            *pRowid = sqlite3_column_int64(pCursor->stmt, 0);
+            *pRowid = pCursor->step_results.at(pCursor->iCurrent);
             break;
     }
     return SQLITE_OK;
@@ -1162,7 +1140,7 @@ static int vssIndexEof(sqlite3_vtab_cursor *cur) {
           return pCursor->iCurrent >= pCursor->range_search_result->lims[1];
 
       case QueryType::fullscan:
-          return pCursor->step_result != SQLITE_ROW;
+          return pCursor->iCurrent >= pCursor->step_results.size();
     }
     return 1;
 }
