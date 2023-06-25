@@ -576,7 +576,7 @@ static sqlite3_module fvecsEachModule = {
     /* xConnect    */ fvecsEachConnect,
     /* xBestIndex  */ fvecsEachBestIndex,
     /* xDisconnect */ fvecsEachDisconnect,
-    /* xDestroy    */ fvecsEachDisconnect, // TODO: Shouldn't this be the same function as disconnect? Otherwise we're not deleting the virtual table reference?
+    /* xDestroy    */ nullptr,
     /* xOpen       */ fvecsEachOpen,
     /* xClose      */ fvecsEachClose,
     /* xFilter     */ fvecsEachFilter,
