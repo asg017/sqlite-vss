@@ -306,7 +306,7 @@ struct SqlStatement {
     int prepare() {
 
         auto res = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
-        if (res != SQLITE_OK) {
+        if (res != SQLITE_OK || stmt == nullptr) {
 
             stmt = nullptr;
             return SQLITE_ERROR;
@@ -321,7 +321,7 @@ struct SqlStatement {
 
     int bind_blob64(int colNo, const void * data, int size) {
 
-        return sqlite3_bind_blob64(stmt, colNo, data, size, SQLITE_STATIC);
+        return sqlite3_bind_blob64(stmt, colNo, data, size, SQLITE_TRANSIENT);
     }
 
     int bind_null(int colNo) {
