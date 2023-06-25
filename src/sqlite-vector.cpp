@@ -576,7 +576,7 @@ static sqlite3_module fvecsEachModule = {
     /* xConnect    */ fvecsEachConnect,
     /* xBestIndex  */ fvecsEachBestIndex,
     /* xDisconnect */ fvecsEachDisconnect,
-    /* xDestroy    */ 0,
+    /* xDestroy    */ nullptr,
     /* xOpen       */ fvecsEachOpen,
     /* xClose      */ fvecsEachClose,
     /* xFilter     */ fvecsEachFilter,
@@ -584,17 +584,18 @@ static sqlite3_module fvecsEachModule = {
     /* xEof        */ fvecsEachEof,
     /* xColumn     */ fvecsEachColumn,
     /* xRowid      */ fvecsEachRowid,
-    /* xUpdate     */ 0,
-    /* xBegin      */ 0,
-    /* xSync       */ 0,
-    /* xCommit     */ 0,
-    /* xRollback   */ 0,
-    /* xFindMethod */ 0,
-    /* xRename     */ 0,
-    /* xSavepoint  */ 0,
-    /* xRelease    */ 0,
-    /* xRollbackTo */ 0,
-    /* xShadowName */ 0};
+    /* xUpdate     */ nullptr,
+    /* xBegin      */ nullptr,
+    /* xSync       */ nullptr,
+    /* xCommit     */ nullptr,
+    /* xRollback   */ nullptr,
+    /* xFindMethod */ nullptr,
+    /* xRename     */ nullptr,
+    /* xSavepoint  */ nullptr,
+    /* xRelease    */ nullptr,
+    /* xRollbackTo */ nullptr,
+    /* xShadowName */ nullptr
+};
 
 #pragma endregion
 
@@ -621,7 +622,6 @@ __declspec(dllexport)
 
     int sqlite3_vector_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi) {
 
-        int rc = SQLITE_OK;
         SQLITE_EXTENSION_INIT2(pApi);
 
         auto api = new vector0_api();
@@ -629,55 +629,41 @@ __declspec(dllexport)
         api->xValueAsVector = valueAsVector;
         api->xResultVector = resultVector;
 
-        rc = sqlite3_create_function_v2(db,
-                                        "vector0",
-                                        1,
-                                        SQLITE_UTF8,
-                                        api,
-                                        vector0,
-                                        0,
-                                        0,
-                                        delete_api);
-
-        if (rc != SQLITE_OK) {
-
-            *pzErrMsg = sqlite3_mprintf("%s: %s", "vector0", sqlite3_errmsg(db));
-            return rc;
-        }
-
         static const struct {
 
             char *zFName;
             int nArg;
             void *pAux;
+            void (*xDestroy)(void*);
             void (*xFunc)(sqlite3_context *, int, sqlite3_value **);
             int flags;
 
         } aFunc[] = {
 
-            { (char *)"vector_version",    0, nullptr, vector_version,   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
-            { (char *)"vector_debug",      1, nullptr, vector_debug,     SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
-            { (char *)"vector_length",     1, nullptr, vector_length,    SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
-            { (char *)"vector_value_at",   2, nullptr, vector_value_at,  SQLITE_UTF8 | SQLITE_INNOCUOUS },
-            { (char *)"vector_from_json",  1, nullptr, vector_from_json, SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
-            { (char *)"vector_to_json",    1, nullptr, vector_to_json,   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
-            { (char *)"vector_from_blob",  1, nullptr, vector_from_blob, SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
-            { (char *)"vector_to_blob",    1, nullptr, vector_to_blob,   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
-            { (char *)"vector_from_raw",   1, nullptr, vector_from_raw,  SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
-            { (char *)"vector_to_raw",     1, nullptr, vector_to_raw,    SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
+            { (char *)"vector0",           1, api,      delete_api,   vector0,            SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
+            { (char *)"vector_version",    0, nullptr,  nullptr,      vector_version,     SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
+            { (char *)"vector_debug",      1, nullptr,  nullptr,      vector_debug,       SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
+            { (char *)"vector_length",     1, nullptr,  nullptr,      vector_length,      SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
+            { (char *)"vector_value_at",   2, nullptr,  nullptr,      vector_value_at,    SQLITE_UTF8 | SQLITE_INNOCUOUS },
+            { (char *)"vector_from_json",  1, nullptr,  nullptr,      vector_from_json,   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
+            { (char *)"vector_to_json",    1, nullptr,  nullptr,      vector_to_json,     SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
+            { (char *)"vector_from_blob",  1, nullptr,  nullptr,      vector_from_blob,   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
+            { (char *)"vector_to_blob",    1, nullptr,  nullptr,      vector_to_blob,     SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
+            { (char *)"vector_from_raw",   1, nullptr,  nullptr,      vector_from_raw,    SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
+            { (char *)"vector_to_raw",     1, nullptr,  nullptr,      vector_to_raw,      SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS },
         };
 
-        for (int i = 0; i < sizeof(aFunc) / sizeof(aFunc[0]) && rc == SQLITE_OK; i++) {
+        for (int i = 0; i < sizeof(aFunc) / sizeof(aFunc[0]); i++) {
 
-            rc = sqlite3_create_function_v2(db,
-                                            aFunc[i].zFName,
-                                            aFunc[i].nArg,
-                                            aFunc[i].flags,
-                                            aFunc[i].pAux,
-                                            aFunc[i].xFunc,
-                                            0,
-                                            0,
-                                            0);
+            auto rc = sqlite3_create_function_v2(db,
+                                                 aFunc[i].zFName,
+                                                 aFunc[i].nArg,
+                                                 aFunc[i].flags,
+                                                 aFunc[i].pAux,
+                                                 aFunc[i].xFunc,
+                                                 nullptr,
+                                                 nullptr,
+                                                 aFunc[i].xDestroy);
 
             if (rc != SQLITE_OK) {
 
@@ -686,7 +672,7 @@ __declspec(dllexport)
             }
         }
 
-        rc = sqlite3_create_module_v2(db, "vector_fvecs_each", &fvecsEachModule, nullptr, nullptr);
+        auto rc = sqlite3_create_module_v2(db, "vector_fvecs_each", &fvecsEachModule, nullptr, nullptr);
         if (rc != SQLITE_OK) {
 
             *pzErrMsg = sqlite3_mprintf("%s", sqlite3_errmsg(db));
