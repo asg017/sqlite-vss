@@ -67,6 +67,31 @@ jobs:
         with:
           name: ${{ env.ARTIFACT-MACOS-X86_64-EXTENSION }}
           path: dist/release/*
+  upload-deno:
+    needs:
+      [
+        build-macos-x86_64-extension,
+        build-linux-x86_64-extension,
+      ]
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    outputs:
+      deno-checksums: ${{ steps.deno-assets.outputs.result }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/download-artifact@v2
+      - id: deno-assets
+        uses: actions/github-script@v6
+        env:
+          ARTIFACT-LINUX-X86_64-EXTENSION: ${{ env.ARTIFACT-LINUX-X86_64-EXTENSION }}
+          ARTIFACT-MACOS-X86_64-EXTENSION: ${{ env.ARTIFACT-MACOS-X86_64-EXTENSION }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          result-encoding: string
+          script: |
+            const script = require('.github/workflows/upload-deno-assets.js')
+            return await script({github, context})
   upload-extensions:
     needs:
       [
@@ -90,7 +115,7 @@ jobs:
             macos-x86_64:     ${{ env.ARTIFACT-MACOS-X86_64-EXTENSION }}/*
             linux-x86_64:     ${{ env.ARTIFACT-LINUX-X86_64-EXTENSION }}/*
   upload-checksums:
-    needs: [upload-extensions]
+    needs: [upload-extensions, upload-deno]
     runs-on: ubuntu-latest
     permissions:
       contents: write
