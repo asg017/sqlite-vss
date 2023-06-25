@@ -1527,7 +1527,7 @@ static sqlite3_module vssIndexModule = {
     /* xCommit     */ vssIndexCommit,
     /* xRollback   */ vssIndexRollback,
     /* xFindMethod */ vssIndexFindFunction,
-    /* xRename     */ 0,
+    /* xRename     */ nullptr,
     /* xSavepoint  */ 0,
     /* xRelease    */ 0,
     /* xRollbackTo */ 0,
