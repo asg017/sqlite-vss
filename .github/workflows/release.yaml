@@ -90,7 +90,7 @@ jobs:
             macos-x86_64:     ${{ env.ARTIFACT-MACOS-X86_64-EXTENSION }}/*
             linux-x86_64:     ${{ env.ARTIFACT-LINUX-X86_64-EXTENSION }}/*
   upload-checksums:
-    needs: [upload-extensions, upload-deno]
+    needs: [upload-extensions]
     runs-on: ubuntu-latest
     permissions:
       contents: write
