@@ -69,8 +69,10 @@ public:
     bool synchronize() {
 
         auto result = tryTrain();
-        result = tryDelete() || result;
-        result = tryInsert() || result;
+        if (tryDelete())
+            result = true;
+        if (tryInsert())
+            result = true;
 
         return result;
     }
@@ -101,6 +103,7 @@ private:
             return false;
 
         index->train(trainings.size() / index->d, trainings.data());
+
         trainings.clear();
         trainings.shrink_to_fit();
 
@@ -135,6 +138,7 @@ private:
                                         delete_ids.data());
 
         index->remove_ids(selector);
+
         delete_ids.clear();
         delete_ids.shrink_to_fit();
 
