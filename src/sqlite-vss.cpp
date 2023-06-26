@@ -566,13 +566,13 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
 
     if (strcmp(idxStr, "search") == 0) {
 
-        pCursor->query_type = QueryType::search;
+        pCursor->setQuery_type(QueryType::search);
         vec_ptr query_vector;
 
         auto params = static_cast<VssSearchParams *>(sqlite3_value_pointer(argv[0], "vss0_searchparams"));
         if (params != nullptr) {
 
-            pCursor->limit = params->k;
+            pCursor->setLimit(params->k);
             query_vector = vec_ptr(new vector<float>(*params->vector));
 
         } else if (sqlite3_libversion_number() < 3041000) {
@@ -585,12 +585,12 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
                     "2nd parameter for SQLite versions below 3.41.0"));
             return SQLITE_ERROR;
 
-        } else if ((query_vector = pCursor->table->getVector0_api()->xValueAsVector(
+        } else if ((query_vector = pCursor->getTable()->getVector0_api()->xValueAsVector(
                         argv[0])) != nullptr) {
 
             if (argc > 1) {
 
-                pCursor->limit = sqlite3_value_int(argv[1]);
+                pCursor->setLimit(sqlite3_value_int(argv[1]));
             } else {
 
                 auto ptrVtab = static_cast<vss_index_vtab *>(pCursor->pVtab);
@@ -608,7 +608,7 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
         }
 
         int nq = 1;
-        auto index = pCursor->table->getIndexes().at(idxNum)->getIndex();
+        auto index = pCursor->getTable()->getIndexes().at(idxNum)->getIndex();
 
         if (query_vector->size() != index->d) {
 
@@ -621,31 +621,30 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
             return SQLITE_ERROR;
         }
 
-        if (pCursor->limit <= 0) {
+        if (pCursor->getLimit() <= 0) {
 
             auto ptrVtab = static_cast<vss_index_vtab *>(pCursor->pVtab);
             ptrVtab->setError(sqlite3_mprintf(
                 "Limit must be greater than 0, got %ld",
-                pCursor->limit));
+                pCursor->getLimit()));
 
             return SQLITE_ERROR;
         }
 
         // To avoid trying to select more records than number of records in index.
-        auto searchMax = min(static_cast<faiss::idx_t>(pCursor->limit) * nq, index->ntotal * nq);
+        auto searchMax = min(static_cast<faiss::idx_t>(pCursor->getLimit()) * nq, index->ntotal * nq);
 
-        pCursor->search_distances = vector<float>(searchMax, 0);
-        pCursor->search_ids = vector<faiss::idx_t>(searchMax, 0);
+        pCursor->resetSearch(searchMax);
 
         index->search(nq,
                       query_vector->data(),
                       searchMax,
-                      pCursor->search_distances.data(),
-                      pCursor->search_ids.data());
+                      pCursor->getSearch_distances().data(),
+                      pCursor->getSearch_ids().data());
 
     } else if (strcmp(idxStr, "range_search") == 0) {
 
-        pCursor->query_type = QueryType::range_search;
+        pCursor->setQuery_type(QueryType::range_search);
 
         auto params = static_cast<VssRangeSearchParams *>(
             sqlite3_value_pointer(argv[0], "vss0_rangesearchparams"));
@@ -653,22 +652,22 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
         int nq = 1;
 
         vector<faiss::idx_t> nns(params->distance * nq);
-        pCursor->range_search_result = unique_ptr<faiss::RangeSearchResult>(new faiss::RangeSearchResult(nq, true));
+        pCursor->getRange_search_result() = unique_ptr<faiss::RangeSearchResult>(new faiss::RangeSearchResult(nq, true));
 
-        auto index = pCursor->table->getIndexes().at(idxNum)->getIndex();
+        auto index = pCursor->getTable()->getIndexes().at(idxNum)->getIndex();
 
         index->range_search(nq,
                             params->vector->data(),
                             params->distance,
-                            pCursor->range_search_result.get());
+                            pCursor->getRange_search_result().get());
 
     } else if (strcmp(idxStr, "fullscan") == 0) {
 
-        pCursor->query_type = QueryType::fullscan;
-        pCursor->sql = sqlite3_mprintf("select rowid from \"%w_data\"", pCursor->table->getName());
+        pCursor->setQuery_type(QueryType::fullscan);
+        pCursor->setSql(sqlite3_mprintf("select rowid from \"%w_data\"", pCursor->getTable()->getName()));
 
-        int res = sqlite3_prepare_v2(pCursor->table->getDb(),
-                                     pCursor->sql,
+        int res = sqlite3_prepare_v2(pCursor->getTable()->getDb(),
+                                     pCursor->getSql(),
                                      -1,
                                      &pCursor->stmt,
                                      nullptr);
@@ -676,7 +675,7 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
         if (res != SQLITE_OK)
             return res;
 
-        pCursor->step_result = sqlite3_step(pCursor->stmt);
+        pCursor->setStep_result(sqlite3_step(pCursor->getStmt()));
 
     } else {
 
@@ -687,7 +686,7 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
         return SQLITE_ERROR;
     }
 
-    pCursor->iCurrent = 0;
+    pCursor->setICurrent(0);
     return SQLITE_OK;
 }
 
@@ -695,15 +694,15 @@ static int vssIndexNext(sqlite3_vtab_cursor *cur) {
 
     auto pCursor = static_cast<vss_index_cursor *>(cur);
 
-    switch (pCursor->query_type) {
+    switch (pCursor->getQuery_type()) {
 
       case QueryType::search:
       case QueryType::range_search:
-          pCursor->iCurrent++;
+          pCursor->incrementICurrent();
           break;
 
       case QueryType::fullscan:
-          pCursor->step_result = sqlite3_step(pCursor->stmt);
+          pCursor->setStep_result(sqlite3_step(pCursor->getStmt()));
     }
 
     return SQLITE_OK;
@@ -713,18 +712,18 @@ static int vssIndexRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid) {
 
     auto pCursor = static_cast<vss_index_cursor *>(cur);
 
-    switch (pCursor->query_type) {
+    switch (pCursor->getQuery_type()) {
 
         case QueryType::search:
-            *pRowid = pCursor->search_ids.at(pCursor->iCurrent);
+            *pRowid = pCursor->getSearch_ids().at(pCursor->getICurrent());
             break;
 
         case QueryType::range_search:
-            *pRowid = pCursor->range_search_result->labels[pCursor->iCurrent];
+            *pRowid = pCursor->getRange_search_result()->labels[pCursor->getICurrent()];
             break;
 
         case QueryType::fullscan:
-            *pRowid = sqlite3_column_int64(pCursor->stmt, 0);
+            *pRowid = sqlite3_column_int64(pCursor->getStmt(), 0);
             break;
     }
     return SQLITE_OK;
@@ -734,18 +733,18 @@ static int vssIndexEof(sqlite3_vtab_cursor *cur) {
 
     auto pCursor = static_cast<vss_index_cursor *>(cur);
 
-    switch (pCursor->query_type) {
+    switch (pCursor->getQuery_type()) {
 
       case QueryType::search:
-          return pCursor->iCurrent >= pCursor->limit ||
-                pCursor->iCurrent >= pCursor->search_ids.size()
-                || (pCursor->search_ids.at(pCursor->iCurrent) == -1);
+          return pCursor->getICurrent() >= pCursor->getLimit() ||
+                pCursor->getICurrent() >= pCursor->getSearch_ids().size()
+                || (pCursor->getSearch_ids().at(pCursor->getICurrent()) == -1);
 
       case QueryType::range_search:
-          return pCursor->iCurrent >= pCursor->range_search_result->lims[1];
+          return pCursor->getICurrent() >= pCursor->getRange_search_result()->lims[1];
 
       case QueryType::fullscan:
-          return pCursor->step_result != SQLITE_ROW;
+          return pCursor->getStep_result() != SQLITE_ROW;
     }
     return 1;
 }
@@ -758,16 +757,16 @@ static int vssIndexColumn(sqlite3_vtab_cursor *cur,
 
     if (i == VSS_INDEX_COLUMN_DISTANCE) {
 
-        switch (pCursor->query_type) {
+        switch (pCursor->getQuery_type()) {
 
           case QueryType::search:
               sqlite3_result_double(ctx,
-                                    pCursor->search_distances.at(pCursor->iCurrent));
+                                    pCursor->getSearch_distances().at(pCursor->getICurrent()));
               break;
 
           case QueryType::range_search:
               sqlite3_result_double(ctx,
-                                    pCursor->range_search_result->distances[pCursor->iCurrent]);
+                                    pCursor->getRange_search_result()->distances[pCursor->getICurrent()]);
               break;
 
           case QueryType::fullscan:
@@ -777,7 +776,7 @@ static int vssIndexColumn(sqlite3_vtab_cursor *cur,
     } else if (i >= VSS_INDEX_COLUMN_VECTORS) {
 
         auto index =
-            pCursor->table->getIndexes().at(i - VSS_INDEX_COLUMN_VECTORS)->getIndex();
+            pCursor->getTable()->getIndexes().at(i - VSS_INDEX_COLUMN_VECTORS)->getIndex();
 
         vector<float> vec(index->d);
         sqlite3_int64 rowId;
@@ -798,7 +797,7 @@ static int vssIndexColumn(sqlite3_vtab_cursor *cur,
             sqlite3_free(errmsg);
             return SQLITE_ERROR;
         }
-        pCursor->table->getVector0_api()->xResultVector(ctx, &vec);
+        pCursor->getTable()->getVector0_api()->xResultVector(ctx, &vec);
     }
     return SQLITE_OK;
 }
