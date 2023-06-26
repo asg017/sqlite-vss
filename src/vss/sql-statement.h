@@ -2,7 +2,7 @@
 #ifndef SQL_STATEMENT_H
 #define SQL_STATEMENT_H
 
-#include "sqlite-vss.h"
+#include "inclusions.h"
 
 /*
  * Helper class encapsulating an SQL statement towards SQLite, with automatic and deterministic destruction
@@ -109,4 +109,3 @@ private:
 };
 
 #endif // SQL_STATEMENT_H
-

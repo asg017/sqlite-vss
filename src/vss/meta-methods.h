@@ -2,10 +2,7 @@
 #ifndef META_METHODS_H
 #define META_METHODS_H
 
-#include "sqlite-vss.h"
-#include <faiss/index_io.h>
-#include <faiss/utils/utils.h>
-
+#include "inclusions.h"
 
 static void vss_version(sqlite3_context *context,
                         int argc,
@@ -32,4 +29,3 @@ static void vss_debug(sqlite3_context *context,
 
 
 #endif // META_METHODS_H
-

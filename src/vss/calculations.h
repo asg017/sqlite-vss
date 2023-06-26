@@ -2,13 +2,7 @@
 #ifndef VSS_CALCULATIONS_H
 #define VSS_CALCULATIONS_H
 
-#include "sqlite-vss.h"
-#include <faiss/index_io.h>
-#include <faiss/utils/utils.h>
-
-using namespace std;
-
-typedef unique_ptr<vector<float>> vec_ptr;
+#include "inclusions.h"
 
 static void vss_distance_l1(sqlite3_context *context,
                             int argc,

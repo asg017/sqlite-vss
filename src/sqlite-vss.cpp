@@ -1,33 +1,14 @@
+
 #include "sqlite-vss.h"
-#include <cstdio>
-#include <cstdlib>
-
-#include "sqlite3ext.h"
-SQLITE_EXTENSION_INIT1
-
-#include <cmath>
-#include <cstdio>
-#include <cstdlib>
-#include <random>
-
-#include <faiss/IndexFlat.h>
-#include <faiss/IndexIVFPQ.h>
-#include <faiss/impl/AuxIndexStructures.h>
-#include <faiss/impl/IDSelector.h>
-#include <faiss/impl/io.h>
-#include <faiss/index_factory.h>
-#include <faiss/index_io.h>
-#include <faiss/utils/distances.h>
-#include <faiss/utils/utils.h>
-
-using namespace std;
-
-typedef unique_ptr<vector<float>> vec_ptr;
+#include "vss/inclusions.h"
 
 #include "sqlite-vector.h"
 #include "vss/sql-statement.h"
 #include "vss/meta-methods.h"
 #include "vss/calculations.h"
+#include "vss/vss-index.h"
+#include "vss/vss-index-vtab.h"
+#include "vss/vss-index-cursor.h"
 
 #pragma region Structs and cleanup functions
 
@@ -78,7 +59,8 @@ static void vssSearchParamsFunc(sqlite3_context *context,
     sqlite3_result_pointer(context, params, "vss0_searchparams", delVssSearchParams);
 }
 
-static void vssRangeSearchParamsFunc(sqlite3_context *context, int argc,
+static void vssRangeSearchParamsFunc(sqlite3_context *context,
+                                     int argc,
                                      sqlite3_value **argv) {
 
     auto vector_api = (vector0_api *)sqlite3_user_data(context);
@@ -221,7 +203,9 @@ static int shadow_data_delete(sqlite3 *db,
     return SQLITE_OK;
 }
 
-static faiss::Index *read_index_select(sqlite3 *db, const char *name, int indexId) {
+static faiss::Index *read_index_select(sqlite3 *db,
+                                       const char *name,
+                                       int indexId) {
 
     SqlStatement select(db,
                         sqlite3_mprintf("select idx from \"%w_index\" where rowid = ?",
@@ -295,170 +279,6 @@ static int drop_shadow_tables(sqlite3 *db, char *name) {
     }
     return SQLITE_OK;
 }
-
-#define VSS_SEARCH_FUNCTION SQLITE_INDEX_CONSTRAINT_FUNCTION
-#define VSS_RANGE_SEARCH_FUNCTION SQLITE_INDEX_CONSTRAINT_FUNCTION + 1
-
-// Wrapper around a single faiss index, with training data, insert records, and
-// delete records.
-class vss_index {
-
-public:
-
-    explicit vss_index(faiss::Index *index) : index(index) {}
-
-    ~vss_index() {
-        if (index != nullptr) {
-            delete index;
-        }
-    }
-
-    faiss::Index * getIndex() {
-
-        return index;
-    }
-
-    vector<float> & getTrainings() {
-
-        return trainings;
-    }
-
-    vector<float> & getInsert_data() {
-
-        return insert_data;
-    }
-
-    vector<faiss::idx_t> & getInsert_ids() {
-
-        return insert_ids;
-    }
-
-    vector<faiss::idx_t> & getDelete_ids() {
-
-        return delete_ids;
-    }
-
-private:
-
-    faiss::Index *index;
-    vector<float> trainings;
-    vector<float> insert_data;
-    vector<faiss::idx_t> insert_ids;
-    vector<faiss::idx_t> delete_ids;
-};
-
-class vss_index_vtab : public sqlite3_vtab {
-
-public:
-
-    vss_index_vtab(sqlite3 *db, vector0_api *vector_api, char *schema, char *name)
-      : db(db),
-        vector_api(vector_api),
-        schema(schema),
-        name(name) {
-
-        this->zErrMsg = nullptr;
-    }
-
-    ~vss_index_vtab() {
-
-        if (name)
-            sqlite3_free(name);
-        if (schema)
-            sqlite3_free(schema);
-        if (this->zErrMsg != nullptr)
-            delete this->zErrMsg;
-        for (auto iter = indexes.begin(); iter != indexes.end(); ++iter) {
-            delete (*iter);
-        }
-    }
-
-    void setError(char *error) {
-        if (this->zErrMsg != nullptr) {
-            delete this->zErrMsg;
-        }
-        this->zErrMsg = error;
-    }
-
-    sqlite3 * getDb() {
-
-        return db;
-    }
-
-    vector0_api * getVector0_api() {
-
-        return vector_api;
-    }
-
-    vector<vss_index*> & getIndexes() {
-
-        return indexes;
-    }
-
-    char * getName() {
-
-        return name;
-    }
-
-    char * getSchema() {
-
-        return schema;
-    }
-
-private:
-
-    sqlite3 *db;
-    vector0_api *vector_api;
-
-    // Name of the virtual table. Must be freed during disconnect
-    char *name;
-
-    // Name of the schema the virtual table exists in. Must be freed during
-    // disconnect
-    char *schema;
-
-    // Vector holding all the  faiss Indices the vtab uses, and their state,
-    // implying which items are to be deleted and inserted.
-    vector<vss_index*> indexes;
-};
-
-enum QueryType { search, range_search, fullscan };
-
-struct vss_index_cursor : public sqlite3_vtab_cursor {
-
-    explicit vss_index_cursor(vss_index_vtab *table)
-      : table(table),
-        sqlite3_vtab_cursor({0}),
-        stmt(nullptr),
-        sql(nullptr) { }
-
-    ~vss_index_cursor() {
-        if (stmt != nullptr)
-            sqlite3_finalize(stmt);
-        if (sql != nullptr)
-            sqlite3_free(sql);
-    }
-
-    vss_index_vtab *table;
-
-    sqlite3_int64 iCurrent;
-    sqlite3_int64 iRowid;
-
-    QueryType query_type;
-
-    // For query_type == QueryType::search
-    sqlite3_int64 limit;
-    vector<faiss::idx_t> search_ids;
-    vector<float> search_distances;
-
-    // For query_type == QueryType::range_search
-    unique_ptr<faiss::RangeSearchResult> range_search_result;
-
-    // For query_type == QueryType::fullscan
-    sqlite3_stmt *stmt;
-    char *sql;
-    int step_result;
-};
 
 struct VssIndexColumn {
 
