@@ -86,83 +86,6 @@ static void vssRangeSearchParamsFunc(sqlite3_context *context,
     sqlite3_result_pointer(context, params, "vss0_rangesearchparams", delVssRangeSearchParams);
 }
 
-static int write_index_insert(faiss::VectorIOWriter &writer,
-                              sqlite3 *db,
-                              char *schema,
-                              char *name,
-                              int rowId) {
-
-    // If inserts fails it means index already exists.
-    SqlStatement insert(db,
-                        sqlite3_mprintf("insert into \"%w\".\"%w_index\"(rowid, idx) values (?, ?)",
-                                        schema,
-                                        name));
-
-    if (insert.prepare() != SQLITE_OK)
-        return SQLITE_ERROR;
-
-    if (insert.bind_int64(1, rowId) != SQLITE_OK)
-        return SQLITE_ERROR;
-
-    if (insert.bind_blob64(2, writer.data.data(), writer.data.size()) != SQLITE_OK)
-        return SQLITE_ERROR;
-
-    auto rc = insert.step();
-    if (rc == SQLITE_DONE)
-        return SQLITE_OK; // Index did not exist, and we successfully inserted it.
-
-    return rc;
-}
-
-static int write_index_update(faiss::VectorIOWriter &writer,
-                              sqlite3 *db,
-                              char *schema,
-                              char *name,
-                              int rowId) {
-
-    // Updating existing index.
-    SqlStatement update(db,
-                        sqlite3_mprintf("update \"%w\".\"%w_index\" set idx = ? where rowid = ?",
-                                        schema,
-                                        name));
-
-    if (update.prepare() != SQLITE_OK)
-        return SQLITE_ERROR;
-
-    if (update.bind_blob64(1, writer.data.data(), writer.data.size()) != SQLITE_OK)
-        return SQLITE_ERROR;
-
-    if (update.bind_int64(2, rowId) != SQLITE_OK)
-        return SQLITE_ERROR;
-
-    auto rc = update.step();
-    if (rc == SQLITE_DONE)
-        return SQLITE_OK; // We successfully updated existing index.
-
-    return rc;
-}
-
-static int write_index(faiss::Index *index,
-                       sqlite3 *db,
-                       char *schema,
-                       char *name,
-                       int rowId) {
-
-    // Writing our index
-    faiss::VectorIOWriter writer;
-    faiss::write_index(index, &writer);
-
-    // First trying to insert index, if that fails with ROW constraing error, we try to update existing index.
-    if (write_index_insert(writer, db, schema, name, rowId) == SQLITE_OK)
-        return SQLITE_OK;
-
-    if (sqlite3_extended_errcode(db) != SQLITE_CONSTRAINT_ROWID)
-        return SQLITE_ERROR; // Insert failed for unknown error
-
-    // Insert failed because index already existed, updating existing index.
-    return write_index_update(writer, db, schema, name, rowId);
-}
-
 static int shadow_data_insert(sqlite3 *db,
                               char *schema,
                               char *name,
@@ -407,11 +330,10 @@ static int init(sqlite3 *db,
 
             try {
 
-                int rc = write_index((*iter)->getIndex(),
-                                            pTable->getDb(),
-                                            pTable->getSchema(),
-                                            pTable->getName(),
-                                            i);
+                int rc = (*iter)->write_index(pTable->getDb(),
+                                              pTable->getSchema(),
+                                              pTable->getName(),
+                                              i);
 
                 if (rc != SQLITE_OK)
                     return rc;
@@ -827,11 +749,10 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
                  * If the above invocation returned true, we've got updates to currently iterated index,
                  * hence writing to db.
                  */
-                int rc = write_index((*iter)->getIndex(),
-                                     pTable->getDb(),
-                                     pTable->getSchema(),
-                                     pTable->getName(),
-                                     i);
+                int rc = (*iter)->write_index(pTable->getDb(),
+                                              pTable->getSchema(),
+                                              pTable->getName(),
+                                              i);
 
                 if (rc != SQLITE_OK) {
 
