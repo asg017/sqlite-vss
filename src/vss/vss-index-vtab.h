@@ -25,6 +25,11 @@ public:
             sqlite3_free(schema);
         if (this->zErrMsg != nullptr)
             delete this->zErrMsg;
+
+        // Resetting all indexes since we cannot delete them since they're reused and cached.
+        for (auto iter = indexes.begin(); iter != indexes.end(); ++iter) {
+            (*iter)->reset();
+        }
     }
 
     void setError(char *error) {

@@ -178,8 +178,11 @@ public:
         key += indexId;
 
         auto cached = _instances.find(key);
-        if (cached != _instances.end())
+        if (cached != _instances.end()) {
+
+            cached->second->reset();
             return cached->second;
+        }
 
         // Creating a new index and storing in cache.
         auto newIndex = new vss_index(faiss::index_factory(dimensions, factoryArgs->c_str()));
@@ -219,8 +222,11 @@ public:
         key += indexId;
 
         auto cached = _instances.find(key);
-        if (cached != _instances.end())
+        if (cached != _instances.end()) {
+
+            cached->second->reset();
             return cached->second;
+        }
 
         // Reading index from db.
         auto newIndex = new vss_index(read_index_select(db, name, indexId));
