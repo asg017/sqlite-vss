@@ -18,17 +18,24 @@ struct VssSearchParams {
     sqlite3_int64 k;
 };
 
-void delVssSearchParams(void *p) {
-
-    VssSearchParams *self = (VssSearchParams *)p;
-    delete self;
-}
-
 struct VssRangeSearchParams {
 
     vec_ptr vector;
     float distance;
 };
+
+struct VssIndexColumn {
+
+    string name;
+    sqlite3_int64 dimensions;
+    string factory;
+};
+
+void delVssSearchParams(void *p) {
+
+    VssSearchParams *self = (VssSearchParams *)p;
+    delete self;
+}
 
 void delVssRangeSearchParams(void *p) {
 
@@ -38,7 +45,7 @@ void delVssRangeSearchParams(void *p) {
 
 #pragma endregion
 
-#pragma region Vtab
+#pragma region Virtual table implementation
 
 static void vssSearchParamsFunc(sqlite3_context *context,
                                 int argc,
@@ -203,9 +210,9 @@ static int shadow_data_delete(sqlite3 *db,
     return SQLITE_OK;
 }
 
-static faiss::Index *read_index_select(sqlite3 *db,
-                                       const char *name,
-                                       int indexId) {
+static faiss::Index * read_index_select(sqlite3 *db,
+                                        const char *name,
+                                        int indexId) {
 
     SqlStatement select(db,
                         sqlite3_mprintf("select idx from \"%w_index\" where rowid = ?",
@@ -262,6 +269,7 @@ static int create_shadow_tables(sqlite3 *db,
 
 static int drop_shadow_tables(sqlite3 *db, char *name) {
 
+    // Dropping both x_index and x_data shadow tables.
     const char *drops[2] = {"drop table \"%w_index\";",
                             "drop table \"%w_data\";"};
 
@@ -279,13 +287,6 @@ static int drop_shadow_tables(sqlite3 *db, char *name) {
     }
     return SQLITE_OK;
 }
-
-struct VssIndexColumn {
-
-    string name;
-    sqlite3_int64 dimensions;
-    string factory;
-};
 
 unique_ptr<vector<VssIndexColumn>> parse_constructor(int argc,
                                                      const char *const *argv) {
@@ -914,7 +915,9 @@ static int vssIndexUpdate(sqlite3_vtab *pVTab,
             vec_ptr vec;
             sqlite3_int64 rowid = sqlite3_value_int64(argv[1]);
 
+            // Needed to make sure we insert null record into x_data table.
             bool inserted_rowid = false;
+
             auto i = 0;
             for (auto iter = pTable->getIndexes().begin(); iter != pTable->getIndexes().end(); ++iter, i++) {
 
