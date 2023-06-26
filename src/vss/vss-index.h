@@ -3,6 +3,7 @@
 #define VSS_INDEX_H
 
 #include "inclusions.h"
+#include <shared_mutex>
 
 /*
  * Wrapper around a single faiss index, with training data, insert records, and
@@ -15,18 +16,13 @@ class vss_index {
 
 public:
 
-    explicit vss_index(faiss::Index *index) : index(index) {}
+    explicit vss_index(faiss::Index *index) : index(index) { }
 
     ~vss_index() {
 
         if (index != nullptr) {
             delete index;
         }
-    }
-
-    faiss::Index * getIndex() {
-
-        return index;
     }
 
     // Returns false if index requires training before inserting items to it.
@@ -265,6 +261,7 @@ private:
         return true;
     }
 
+    std::shared_mutex lock;
     faiss::Index * index;
     vector<float> trainings;
     vector<float> insert_data;

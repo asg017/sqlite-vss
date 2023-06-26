@@ -12,7 +12,6 @@ SQLITE_EXTENSION_INIT1
 #include <cstdio>
 #include <cstdlib>
 #include <random>
-#include <shared_mutex>
 
 #include <faiss/IndexFlat.h>
 #include <faiss/IndexIVFPQ.h>
