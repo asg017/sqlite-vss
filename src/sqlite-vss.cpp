@@ -1115,11 +1115,12 @@ static sqlite3_module vssIndexModule = {
     /* xCommit     */ vssIndexCommit,
     /* xRollback   */ vssIndexRollback,
     /* xFindMethod */ vssIndexFindFunction,
-    /* xRename     */ 0,
-    /* xSavepoint  */ 0,
-    /* xRelease    */ 0,
-    /* xRollbackTo */ 0,
-    /* xShadowName */ vssIndexShadowName};
+    /* xRename     */ nullptr,
+    /* xSavepoint  */ nullptr,
+    /* xRelease    */ nullptr,
+    /* xRollbackTo */ nullptr,
+    /* xShadowName */ vssIndexShadowName
+};
 
 #pragma endregion
 
