@@ -4,7 +4,7 @@
 
 #include "inclusions.h"
 #include <shared_mutex>
-
+#include <map>
 /*
  * Wrapper around a single faiss index, with training data, insert records, and
  * delete records.
@@ -15,13 +15,6 @@
 class vss_index {
 
 public:
-
-    ~vss_index() {
-
-        if (index != nullptr) {
-            delete index;
-        }
-    }
 
     // Returns false if index requires training before inserting items to it.
     bool isTrained() {
@@ -184,8 +177,12 @@ public:
         string key = name;
         key += indexId;
 
+        auto cached = _instances.find(key);
+        if (cached != _instances.end())
+            return cached->second;
+
         // Creating a new index and storing in cache.
-        unique_ptr<vss_index> newIndex(new vss_index(faiss::index_factory(dimensions, factoryArgs->c_str())));
+        auto newIndex = new vss_index(faiss::index_factory(dimensions, factoryArgs->c_str()));
 
         // Checking if this is our first index for table, at which point we create our shadow tables.
         if (indexId == 0) {
@@ -201,8 +198,11 @@ public:
                                        name,
                                        indexId);
 
+        // Caching index.
+        _instances[key] = newIndex;
+
         // Returning index to caller.
-        return newIndex.release();
+        return newIndex;
     }
 
     /*
@@ -218,11 +218,40 @@ public:
         string key = name;
         key += indexId;
 
+        auto cached = _instances.find(key);
+        if (cached != _instances.end())
+            return cached->second;
+
         // Reading index from db.
-        unique_ptr<vss_index> newIndex(new vss_index(read_index_select(db, name, indexId)));
+        auto newIndex = new vss_index(read_index_select(db, name, indexId));
+
+        // Caching index.
+        _instances[key] = newIndex;
 
         // Returning index to caller.
-        return newIndex.release();
+        return newIndex;
+    }
+
+    // Deletes all indexes associated with the specified schema and table.
+    static void destroy(const char * schema, const char * name) {
+
+        // Synchronising access.
+        unique_lock<shared_mutex> lock(_globalLock);
+
+        string filter = schema;
+        filter += name;
+        for (auto iter = _instances.begin(); iter != _instances.end();) {
+
+            if (iter->first.compare(filter) == 0) {
+
+                delete iter->second;
+                _instances.erase(iter++);
+
+            } else {
+
+                ++iter;
+            }
+        }
     }
 
     static shared_mutex * getGlobalLock() {
@@ -231,6 +260,15 @@ public:
     }
 
 private:
+
+    explicit vss_index(faiss::Index *index) : index(index) { }
+
+    ~vss_index() {
+
+        if (index != nullptr) {
+            delete index;
+        }
+    }
 
     static int create_shadow_tables(sqlite3 *db,
                                     const char *schema,
@@ -259,8 +297,6 @@ private:
         rc = create2.exec();
         return rc;
     }
-
-    explicit vss_index(faiss::Index *index) : index(index) { }
 
     static faiss::Index * read_index_select(sqlite3 *db,
                                             const char *name,
@@ -394,6 +430,7 @@ private:
         return true;
     }
 
+    static map<string, vss_index *> _instances;
     static shared_mutex _globalLock;
     shared_mutex _lock;
     faiss::Index * index;

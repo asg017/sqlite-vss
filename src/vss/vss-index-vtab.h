@@ -25,9 +25,6 @@ public:
             sqlite3_free(schema);
         if (this->zErrMsg != nullptr)
             delete this->zErrMsg;
-        for (auto iter = indexes.begin(); iter != indexes.end(); ++iter) {
-            delete (*iter);
-        }
     }
 
     void setError(char *error) {

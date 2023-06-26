@@ -205,7 +205,9 @@ unique_ptr<vector<VssIndexColumn>> parse_constructor(int argc,
 #define VSS_INDEX_COLUMN_OPERATION 1
 #define VSS_INDEX_COLUMN_VECTORS 2
 
+// Declaration of static objects required to do caching.
 shared_mutex vss_index::_globalLock;
+map<string, vss_index *> vss_index::_instances;
 
 static int init(sqlite3 *db,
                 void *pAux,
@@ -316,6 +318,10 @@ static int vssIndexDestroy(sqlite3_vtab *pVtab) {
 
     auto pTable = static_cast<vss_index_vtab *>(pVtab);
     drop_shadow_tables(pTable->getDb(), pTable->getName());
+
+    // Removing from cache.
+    vss_index::destroy(pTable->getSchema(), pTable->getName());
+
     vssIndexDisconnect(pVtab);
     return SQLITE_OK;
 }
