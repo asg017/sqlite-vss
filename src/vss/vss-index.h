@@ -93,6 +93,8 @@ public:
         delete_ids.shrink_to_fit();
     }
 
+private:
+
     bool tryTrain() {
 
         if (trainings.empty())
