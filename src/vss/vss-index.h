@@ -72,9 +72,6 @@ public:
         result = tryDelete() || result;
         result = tryInsert() || result;
 
-        // Now that we've updated our faiss::index we delete all temporary data.
-        reset();
-
         return result;
     }
 
@@ -86,11 +83,11 @@ public:
         trainings.clear();
         trainings.shrink_to_fit();
 
-        insert_ids.clear();
-        insert_ids.shrink_to_fit();
-
         insert_data.clear();
         insert_data.shrink_to_fit();
+
+        insert_ids.clear();
+        insert_ids.shrink_to_fit();
 
         delete_ids.clear();
         delete_ids.shrink_to_fit();
@@ -110,6 +107,25 @@ private:
         return true;
     }
 
+    bool tryInsert() {
+
+        if (insert_ids.empty())
+            return false;
+
+        index->add_with_ids(
+            insert_ids.size(),
+            insert_data.data(),
+            insert_ids.data());
+
+        insert_ids.clear();
+        insert_ids.shrink_to_fit();
+
+        insert_data.clear();
+        insert_data.shrink_to_fit();
+
+        return true;
+    }
+
     bool tryDelete() {
 
         if (delete_ids.empty())
@@ -121,25 +137,6 @@ private:
         index->remove_ids(selector);
         delete_ids.clear();
         delete_ids.shrink_to_fit();
-
-        return true;
-    }
-
-    bool tryInsert() {
-
-        if (insert_ids.empty())
-            return false;
-
-        index->add_with_ids(
-            insert_ids.size(),
-            insert_data.data(),
-            (faiss::idx_t *)insert_ids.data());
-
-        insert_ids.clear();
-        insert_ids.shrink_to_fit();
-
-        insert_data.clear();
-        insert_data.shrink_to_fit();
 
         return true;
     }

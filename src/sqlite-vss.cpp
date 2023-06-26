@@ -830,10 +830,10 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
             for (auto iter = pTable->getIndexes().begin(); iter != pTable->getIndexes().end(); ++iter, i++) {
 
                 int rc = write_index((*iter)->getIndex(),
-                                            pTable->getDb(),
-                                            pTable->getSchema(),
-                                            pTable->getName(),
-                                            i);
+                                     pTable->getDb(),
+                                     pTable->getSchema(),
+                                     pTable->getName(),
+                                     i);
 
                 if (rc != SQLITE_OK) {
 
@@ -928,9 +928,9 @@ static int vssIndexUpdate(sqlite3_vtab *pVTab,
                     }
 
                     auto rc = shadow_data_insert(pTable->getDb(),
-                                                pTable->getSchema(),
-                                                pTable->getName(),
-                                                rowid);
+                                                 pTable->getSchema(),
+                                                 pTable->getName(),
+                                                 rowid);
                     if (rc != SQLITE_OK)
                         return rc;
 
