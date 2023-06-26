@@ -914,6 +914,7 @@ static int vssIndexUpdate(sqlite3_vtab *pVTab,
             vec_ptr vec;
             sqlite3_int64 rowid = sqlite3_value_int64(argv[1]);
 
+            bool inserted_rowid = false;
             auto i = 0;
             for (auto iter = pTable->getIndexes().begin(); iter != pTable->getIndexes().end(); ++iter, i++) {
 
@@ -930,12 +931,18 @@ static int vssIndexUpdate(sqlite3_vtab *pVTab,
                         return SQLITE_ERROR;
                     }
 
-                    auto rc = shadow_data_insert(pTable->getDb(),
-                                                 pTable->getSchema(),
-                                                 pTable->getName(),
-                                                 rowid);
-                    if (rc != SQLITE_OK)
-                        return rc;
+                    if (!inserted_rowid) {
+
+                        auto rc = shadow_data_insert(pTable->getDb(),
+                                                     pTable->getSchema(),
+                                                     pTable->getName(),
+                                                     rowid);
+
+                        if (rc != SQLITE_OK)
+                            return rc;
+
+                        inserted_rowid = true;
+                    }
 
                     (*iter)->addInsertData(rowid, vec);
                     *pRowid = rowid;
