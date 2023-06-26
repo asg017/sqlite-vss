@@ -816,33 +816,71 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
 
     try {
 
-        auto i = 0;
-        for (auto iter = pTable->getIndexes().begin(); iter != pTable->getIndexes().end(); ++iter, i++) {
+        bool needsWriting = false;
 
-            // Synchronizing index, implying deleting, training, and inserting records according to needs.
-            if ((*iter)->synchronize()) {
+        auto idxCol = 0;
+        for (auto iter = pTable->getIndexes().begin(); iter != pTable->getIndexes().end(); ++iter, idxCol++) {
 
-                /*
-                 * If the above invocation returned true, we've got updates to currently iterated index,
-                 * hence writing to db.
-                 */
+            // Checking if index needs training.
+            if (!(*iter)->trainings.empty()) {
+
+                (*iter)->getIndex()->train(
+                    (*iter)->trainings.size() / (*iter)->getIndex()->d,
+                    (*iter)->trainings.data());
+
+                (*iter)->trainings.clear();
+                (*iter)->trainings.shrink_to_fit();
+
+                needsWriting = true;
+            }
+
+            // Checking if we're deleting records from the index.
+            if (!(*iter)->delete_ids.empty()) {
+
+                faiss::IDSelectorBatch selector((*iter)->delete_ids.size(),
+                                                (*iter)->delete_ids.data());
+
+                (*iter)->getIndex()->remove_ids(selector);
+                (*iter)->delete_ids.clear();
+                (*iter)->delete_ids.shrink_to_fit();
+
+                needsWriting = true;
+            }
+
+            // Checking if we're inserting records to the index.
+            if (!(*iter)->insert_data.empty()) {
+
+                (*iter)->getIndex()->add_with_ids(
+                    (*iter)->insert_ids.size(),
+                    (*iter)->insert_data.data(),
+                    (faiss::idx_t *)(*iter)->insert_ids.data());
+
+                (*iter)->insert_ids.clear();
+                (*iter)->insert_ids.shrink_to_fit();
+
+                (*iter)->insert_data.clear();
+                (*iter)->insert_data.shrink_to_fit();
+
+                needsWriting = true;
+            }
+        }
+
+        if (needsWriting) {
+
+            int i = 0;
+            for (auto iter = pTable->getIndexes().begin(); iter != pTable->getIndexes().end(); ++iter, i++) {
+
                 int rc = write_index((*iter)->getIndex(),
-                                     pTable->getDb(),
-                                     pTable->getSchema(),
-                                     pTable->getName(),
-                                     i);
+                                            pTable->getDb(),
+                                            pTable->getSchema(),
+                                            pTable->getName(),
+                                            i);
 
                 if (rc != SQLITE_OK) {
 
                     pTable->setError(sqlite3_mprintf("Error saving index (%d): %s",
-                                                     rc,
-                                                     sqlite3_errmsg(pTable->getDb())));
-
-                    // Clearing all indexes to cleanup after ourselves.
-                    for (auto iter2 = pTable->getIndexes().begin(); iter2 != pTable->getIndexes().end(); ++iter2) {
-
-                        (*iter2)->reset();
-                    }
+                                                      rc,
+                                                      sqlite3_errmsg(pTable->getDb())));
                     return rc;
                 }
             }
@@ -857,8 +895,17 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
 
         for (auto iter = pTable->getIndexes().begin(); iter != pTable->getIndexes().end(); ++iter) {
 
-            // Cleanups in case we've got hanging data.
-            (*iter)->reset();
+            (*iter)->insert_ids.clear();
+            (*iter)->insert_ids.shrink_to_fit();
+
+            (*iter)->insert_data.clear();
+            (*iter)->insert_data.shrink_to_fit();
+
+            (*iter)->delete_ids.clear();
+            (*iter)->delete_ids.shrink_to_fit();
+
+            (*iter)->trainings.clear();
+            (*iter)->trainings.shrink_to_fit();
         }
 
         return SQLITE_ERROR;
