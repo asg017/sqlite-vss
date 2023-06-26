@@ -29,12 +29,22 @@ public:
         return index;
     }
 
+    /*
+     * Adds the specified vector to the index' training material.
+     *
+     * Notice, needs to invoke synchronize() later to actually perform training of index.
+     */
     void addTrainings(vec_ptr & vec) {
 
         trainings.reserve(trainings.size() + vec->size());
         trainings.insert(trainings.end(), vec->begin(), vec->end());
     }
 
+    /*
+     * Adds the specified vector to the index' temporary insert data.
+     *
+     * Notice, needs to invoke synchronize() later to actually add data to index.
+     */
     void addInsertData(faiss::idx_t rowId, vec_ptr & vec) {
 
         insert_data.reserve(insert_data.size() + vec->size());
@@ -43,11 +53,19 @@ public:
         insert_ids.push_back(rowId);
     }
 
+    /*
+     * Adds the specified rowid to the index' temporary delete data.
+     *
+     * Notice, needs to invoke synchronize() later to actually delete data from index.
+     */
     void addDelete(faiss::idx_t rowid) {
 
         delete_ids.push_back(rowid);
     }
 
+    /*
+     * Synchronizes index by updating index according to trainings, inserts and deletes.
+     */
     bool synchronize() {
 
         auto result = tryTrain();
@@ -60,6 +78,9 @@ public:
         return result;
     }
 
+    /*
+     * Resets all temporary training data to free memory.
+     */
     void reset() {
 
         trainings.clear();
