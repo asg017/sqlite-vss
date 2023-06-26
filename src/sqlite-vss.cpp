@@ -816,18 +816,11 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
 
     try {
 
-        bool needsWriting = false;
-
-        for (auto iter = pTable->getIndexes().begin(); iter != pTable->getIndexes().end(); ++iter) {
+        auto i = 0;
+        for (auto iter = pTable->getIndexes().begin(); iter != pTable->getIndexes().end(); ++iter, i++) {
 
             // Synchronizing index, implying deleting, training, and inserting records according to needs.
-            needsWriting = (*iter)->synchronize() || needsWriting;
-        }
-
-        if (needsWriting) {
-
-            int i = 0;
-            for (auto iter = pTable->getIndexes().begin(); iter != pTable->getIndexes().end(); ++iter, i++) {
+            if ((*iter)->synchronize()) {
 
                 int rc = write_index((*iter)->getIndex(),
                                      pTable->getDb(),
@@ -838,8 +831,14 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
                 if (rc != SQLITE_OK) {
 
                     pTable->setError(sqlite3_mprintf("Error saving index (%d): %s",
-                                                      rc,
-                                                      sqlite3_errmsg(pTable->getDb())));
+                                                     rc,
+                                                     sqlite3_errmsg(pTable->getDb())));
+
+                    // Clearing all indexes to cleanup after ourselves.
+                    for (auto iter2 = pTable->getIndexes().begin(); iter2 != pTable->getIndexes().end(); ++iter2) {
+
+                        (*iter2)->reset();
+                    }
                     return rc;
                 }
             }
