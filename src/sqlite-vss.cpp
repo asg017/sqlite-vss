@@ -201,6 +201,34 @@ unique_ptr<vector<VssIndexColumn>> parse_constructor(int argc,
     return columns;
 }
 
+static int create_shadow_tables(sqlite3 *db,
+                                const char *schema,
+                                const char *name) {
+
+    SqlStatement create1(db,
+                         sqlite3_mprintf("create table \"%w\".\"%w_index\"(idx)",
+                                         schema,
+                                         name));
+
+    auto rc = create1.exec();
+    if (rc != SQLITE_OK)
+        return rc;
+
+    /*
+     * Notice, we'll need to explicitly finalize this object since we can only
+     * have one open statement at the same time to the same connetion.
+     */
+    create1.finalize();
+
+    SqlStatement create2(db,
+                         sqlite3_mprintf("create table \"%w\".\"%w_data\"(x);",
+                                         schema,
+                                         name));
+
+    rc = create2.exec();
+    return rc;
+}
+
 #define VSS_INDEX_COLUMN_DISTANCE 0
 #define VSS_INDEX_COLUMN_OPERATION 1
 #define VSS_INDEX_COLUMN_VECTORS 2
@@ -255,10 +283,13 @@ static int init(sqlite3 *db,
                                        argv[2],
                                        i,
                                        &iter->factory,
-                                       iter->dimensions,
-                                       columns->size()));
+                                       iter->dimensions));
 
             }
+
+            rc = create_shadow_tables(db, argv[1], argv[2]);
+            if (rc != SQLITE_OK)
+                return rc;
 
             // Shadow tables were successully created.
             // After shadow tables are created, write the initial index state to
@@ -285,7 +316,6 @@ static int init(sqlite3 *db,
                                        argv[2],
                                        i,
                                        nullptr,
-                                       -1,
                                        -1));
             }
         }

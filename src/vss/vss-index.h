@@ -148,8 +148,8 @@ public:
     }
 
     int write_index(sqlite3 *db,
-                    char *schema,
-                    char *name,
+                    const char *schema,
+                    const char *name,
                     int rowId) {
 
         unique_lock<shared_mutex> lock(_lock);
@@ -175,58 +175,32 @@ public:
                                const char *name,
                                int indexId,
                                string * factoryArgs,
-                               int dimensions,
-                               int colSize) {
+                               int dimensions) {
 
         string key = name;
         key += indexId;
         if (factoryArgs == nullptr) {
 
             unique_ptr<vss_index> tmp(new vss_index(vss_index::read_index_select(db, name, indexId)));
+
+            int rc = tmp->write_index(db,
+                                      schema,
+                                      name,
+                                      indexId);
+
+            if (rc != SQLITE_OK)
+                throw domain_error("Couldn't write initial state of index");
+
             return tmp.release();
 
         } else {
 
             unique_ptr<vss_index> tmp(new vss_index(faiss::index_factory(dimensions, factoryArgs->c_str())));
-
-            auto rc = create_shadow_tables(db, schema, name, colSize);
-            if (rc != SQLITE_OK)
-                throw domain_error("Couldn't create shadow tables");
-
             return tmp.release();
         }
     }
 
 private:
-
-    static int create_shadow_tables(sqlite3 *db,
-                                    const char *schema,
-                                    const char *name,
-                                    int n) {
-
-        SqlStatement create1(db,
-                            sqlite3_mprintf("create table \"%w\".\"%w_index\"(idx)",
-                                            schema,
-                                            name));
-
-        auto rc = create1.exec();
-        if (rc != SQLITE_OK)
-            return rc;
-
-        /*
-         * Notice, we'll need to explicitly finalize this object since we can only
-         * have one open statement at the same time to the same connetion.
-         */
-        create1.finalize();
-
-        SqlStatement create2(db,
-                             sqlite3_mprintf("create table \"%w\".\"%w_data\"(x);",
-                                             schema,
-                                             name));
-
-        rc = create2.exec();
-        return rc;
-    }
 
     explicit vss_index(faiss::Index *index) : index(index) { }
 
@@ -260,8 +234,8 @@ private:
 
     int write_index_insert(faiss::VectorIOWriter &writer,
                            sqlite3 *db,
-                           char *schema,
-                           char *name,
+                           const char *schema,
+                           const char *name,
                            int rowId) {
 
         // If inserts fails it means index already exists.
@@ -288,8 +262,8 @@ private:
 
     int write_index_update(faiss::VectorIOWriter &writer,
                            sqlite3 *db,
-                           char *schema,
-                           char *name,
+                           const char *schema,
+                           const char *name,
                            int rowId) {
 
         // Updating existing index.
