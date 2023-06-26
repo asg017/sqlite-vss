@@ -1588,42 +1588,42 @@ __declspec(dllexport)
                                    SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
                                    vector_api,
                                    vss_distance_l2,
-                                   0, 0, 0);
+                                   nullptr, nullptr, nullptr);
 
         sqlite3_create_function_v2(db, "vss_distance_linf",
                                    2,
                                    SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
                                    vector_api,
                                    vss_distance_linf,
-                                   0, 0, 0);
+                                   nullptr, nullptr, nullptr);
 
         sqlite3_create_function_v2(db, "vss_inner_product",
                                    2,
                                    SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
                                    vector_api,
                                    vss_inner_product,
-                                   0, 0, 0);
+                                   nullptr, nullptr, nullptr);
 
         sqlite3_create_function_v2(db, "vss_fvec_add",
                                    2,
                                    SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
                                    vector_api,
                                    vss_fvec_add,
-                                   0, 0, 0);
+                                   nullptr, nullptr, nullptr);
 
         sqlite3_create_function_v2(db, "vss_fvec_sub",
                                    2,
                                    SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
                                    vector_api,
                                    vss_fvec_sub,
-                                   0, 0, 0);
+                                   nullptr, nullptr, nullptr);
 
         sqlite3_create_function_v2(db, "vss_search",
                                    2,
                                    SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
                                    vector_api,
                                    vssSearchFunc,
-                                   0, 0, 0);
+                                   nullptr, nullptr, nullptr);
 
         sqlite3_create_function_v2(db,
                                    "vss_search_params",
@@ -1631,7 +1631,7 @@ __declspec(dllexport)
                                    0,
                                    vector_api,
                                    vssSearchParamsFunc,
-                                   0, 0, 0);
+                                   nullptr, nullptr, nullptr);
 
         sqlite3_create_function_v2(db,
                                    "vss_range_search",
@@ -1639,7 +1639,7 @@ __declspec(dllexport)
                                    SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
                                    vector_api,
                                    vssRangeSearchFunc,
-                                   0, 0, 0);
+                                   nullptr, nullptr, nullptr);
 
         sqlite3_create_function_v2(db,
                                    "vss_range_search_params",
@@ -1647,7 +1647,7 @@ __declspec(dllexport)
                                    0,
                                    vector_api,
                                    vssRangeSearchParamsFunc,
-                                   0, 0, 0);
+                                   nullptr, nullptr, nullptr);
 
         sqlite3_create_function_v2(db,
                                    "vss_memory_usage",
@@ -1655,7 +1655,7 @@ __declspec(dllexport)
                                    0,
                                    nullptr,
                                    faissMemoryUsageFunc,
-                                   0, 0, 0);
+                                   nullptr, nullptr, nullptr);
 
         auto rc = sqlite3_create_module_v2(db, "vss0", &vssIndexModule, vector_api, nullptr);
         if (rc != SQLITE_OK) {

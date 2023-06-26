@@ -675,9 +675,9 @@ __declspec(dllexport)
                                             aFunc[i].flags,
                                             aFunc[i].pAux,
                                             aFunc[i].xFunc,
-                                            0,
-                                            0,
-                                            0);
+                                            nullptr,
+                                            nullptr,
+                                            nullptr);
 
             if (rc != SQLITE_OK) {
 
