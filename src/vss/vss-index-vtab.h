@@ -21,8 +21,10 @@ public:
 
         if (name)
             sqlite3_free(name);
+
         if (schema)
             sqlite3_free(schema);
+
         if (this->zErrMsg != nullptr)
             delete this->zErrMsg;
 
@@ -33,9 +35,11 @@ public:
     }
 
     void setError(char *error) {
+
         if (this->zErrMsg != nullptr) {
             delete this->zErrMsg;
         }
+
         this->zErrMsg = error;
     }
 
