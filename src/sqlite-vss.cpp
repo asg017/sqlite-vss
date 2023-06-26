@@ -464,47 +464,24 @@ static int write_index(faiss::Index *index,
 static int shadow_data_insert(sqlite3 *db,
                               char *schema,
                               char *name,
-                              sqlite3_int64 *rowid,
-                              sqlite3_int64 *retRowid) {
+                              sqlite3_int64 rowid) {
 
-    if (rowid == nullptr) {
+    SqlStatement insert(db,
+                        sqlite3_mprintf("insert into \"%w\".\"%w_data\"(rowid, x) values (?, ?);",
+                                        schema,
+                                        name));
 
-        SqlStatement insert(db, 
-                            sqlite3_mprintf("insert into \"%w\".\"%w_data\"(x) values (?)",
-                                            schema,
-                                            name));
+    if (insert.prepare() != SQLITE_OK)
+        return SQLITE_ERROR;
 
-        if (insert.prepare() != SQLITE_OK)
-            return SQLITE_ERROR;
+    if (insert.bind_int64(1, rowid) != SQLITE_OK)
+        return SQLITE_ERROR;
 
-        if (insert.bind_null(1) != SQLITE_OK)
-            return SQLITE_ERROR;
+    if (insert.bind_null(2) != SQLITE_OK)
+        return SQLITE_ERROR;
 
-        if (insert.step() != SQLITE_DONE)
-            return SQLITE_ERROR;
-
-    } else {
-
-        SqlStatement insert(db,
-                            sqlite3_mprintf("insert into \"%w\".\"%w_data\"(rowid, x) values (?, ?);",
-                                            schema,
-                                            name));
-
-        if (insert.prepare() != SQLITE_OK)
-            return SQLITE_ERROR;
-
-        if (insert.bind_int64(1, *rowid) != SQLITE_OK)
-            return SQLITE_ERROR;
-
-        if (insert.bind_null(2) != SQLITE_OK)
-            return SQLITE_ERROR;
-
-        if (insert.step() != SQLITE_DONE)
-            return SQLITE_ERROR;
-
-        if (retRowid != nullptr)
-            *retRowid = insert.last_insert_rowid();
-    }
+    if (insert.step() != SQLITE_DONE)
+        return SQLITE_ERROR;
 
     return SQLITE_OK;
 }
@@ -1407,12 +1384,10 @@ static int vssIndexUpdate(sqlite3_vtab *pVTab,
 
                     if (!inserted_rowid) {
 
-                        sqlite_int64 retrowid;
                         auto rc = shadow_data_insert(pTable->db,
                                                      pTable->schema,
                                                      pTable->name,
-                                                     &rowid,
-                                                     &retrowid);
+                                                     rowid);
                         if (rc != SQLITE_OK)
                             return rc;
 
