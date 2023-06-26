@@ -50,11 +50,15 @@ public:
                 vector<float> & distances,
                 vector<faiss::idx_t> & ids) {
 
+        shared_lock<shared_mutex> lock(_lock);
+
         index->search(nq, vec->data(), max, distances.data(), ids.data());
     }
 
     // Queries the index for a range of items.
     void range_search(int nq, vec_ptr & vec, float distance, unique_ptr<faiss::RangeSearchResult> & result) {
+
+        shared_lock<shared_mutex> lock(_lock);
 
         index->range_search(nq, vec->data(), distance, result.get());
     }
@@ -78,6 +82,8 @@ public:
      */
     void addTrainings(vec_ptr & vec) {
 
+        unique_lock<shared_mutex> lock(_lock);
+
         trainings.reserve(trainings.size() + vec->size());
         trainings.insert(trainings.end(), vec->begin(), vec->end());
     }
@@ -88,6 +94,8 @@ public:
      * Notice, needs to invoke synchronize() later to actually add data to index.
      */
     void addInsertData(faiss::idx_t rowId, vec_ptr & vec) {
+
+        unique_lock<shared_mutex> lock(_lock);
 
         insert_data.reserve(insert_data.size() + vec->size());
         insert_data.insert(insert_data.end(), vec->begin(), vec->end());
@@ -102,6 +110,8 @@ public:
      */
     void addDelete(faiss::idx_t rowid) {
 
+        unique_lock<shared_mutex> lock(_lock);
+
         delete_ids.push_back(rowid);
     }
 
@@ -109,6 +119,8 @@ public:
      * Synchronizes index by updating index according to trainings, inserts and deletes.
      */
     bool synchronize() {
+
+        unique_lock<shared_mutex> lock(_lock);
 
         auto result = tryTrain();
         result = tryDelete() || result;
@@ -121,6 +133,8 @@ public:
      * Resets all temporary training data to free memory.
      */
     void reset() {
+
+        unique_lock<shared_mutex> lock(_lock);
 
         trainings.clear();
         trainings.shrink_to_fit();
@@ -139,6 +153,8 @@ public:
                     char *schema,
                     char *name,
                     int rowId) {
+
+        unique_lock<shared_mutex> lock(_lock);
 
         // Writing our index
         faiss::VectorIOWriter writer;
@@ -261,7 +277,7 @@ private:
         return true;
     }
 
-    std::shared_mutex lock;
+    std::shared_mutex _lock;
     faiss::Index * index;
     vector<float> trainings;
     vector<float> insert_data;
