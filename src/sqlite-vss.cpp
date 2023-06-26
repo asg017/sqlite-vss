@@ -205,6 +205,8 @@ unique_ptr<vector<VssIndexColumn>> parse_constructor(int argc,
 #define VSS_INDEX_COLUMN_OPERATION 1
 #define VSS_INDEX_COLUMN_VECTORS 2
 
+shared_mutex vss_index::_globalLock;
+
 static int init(sqlite3 *db,
                 void *pAux,
                 int argc,
@@ -243,6 +245,9 @@ static int init(sqlite3 *db,
     *ppVtab = pTable;
 
     try {
+
+        // To avoid race conditions towards cache we lock creation of indexes.
+        unique_lock<shared_mutex> globalLock(*vss_index::getGlobalLock());
 
         if (isCreate) {
 

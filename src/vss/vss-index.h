@@ -225,6 +225,11 @@ public:
         return newIndex.release();
     }
 
+    static shared_mutex * getGlobalLock() {
+
+        return &_globalLock;
+    }
+
 private:
 
     static int create_shadow_tables(sqlite3 *db,
@@ -389,7 +394,8 @@ private:
         return true;
     }
 
-    std::shared_mutex _lock;
+    static shared_mutex _globalLock;
+    shared_mutex _lock;
     faiss::Index * index;
     vector<float> trainings;
     vector<float> insert_data;
