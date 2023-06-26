@@ -820,14 +820,8 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
 
         for (auto iter = pTable->getIndexes().begin(); iter != pTable->getIndexes().end(); ++iter) {
 
-            // Training index, notice no-op unless we've got training data.
-            needsWriting = (*iter)->tryTrain() || needsWriting;
-
-            // Deleting data from index, notice no-op unless there's something to actually delete.
-            needsWriting = (*iter)->tryDelete() || needsWriting;
-
-            // Inserting data to index, notice no-op unless there's something to actually insert.
-            needsWriting = (*iter)->tryInsert() || needsWriting;
+            // Synchronizing index, implying deleting, training, and inserting records according to needs.
+            needsWriting = (*iter)->synchronize();
         }
 
         if (needsWriting) {
@@ -876,17 +870,7 @@ static int vssIndexRollback(sqlite3_vtab *pVTab) {
 
     for (auto iter = pTable->getIndexes().begin(); iter != pTable->getIndexes().end(); ++iter) {
 
-        (*iter)->getTrainings().clear();
-        (*iter)->getTrainings().shrink_to_fit();
-
-        (*iter)->getInsert_data().clear();
-        (*iter)->getInsert_data().shrink_to_fit();
-
-        (*iter)->getInsert_ids().clear();
-        (*iter)->getInsert_ids().shrink_to_fit();
-
-        (*iter)->getDelete_ids().clear();
-        (*iter)->getDelete_ids().shrink_to_fit();
+        (*iter)->reset();
     }
     return SQLITE_OK;
 }
@@ -911,7 +895,7 @@ static int vssIndexUpdate(sqlite3_vtab *pVTab,
             return rc;
 
         for (auto iter = pTable->getIndexes().begin(); iter != pTable->getIndexes().end(); ++iter) {
-            (*iter)->getDelete_ids().push_back(rowid_to_delete);
+            (*iter)->addDelete(rowid_to_delete);
         }
 
     } else if (argc > 1 && sqlite3_value_type(argv[0]) == SQLITE_NULL) {
@@ -926,7 +910,6 @@ static int vssIndexUpdate(sqlite3_vtab *pVTab,
 
             vec_ptr vec;
             sqlite3_int64 rowid = sqlite3_value_int64(argv[1]);
-            bool inserted_rowid = false;
 
             auto i = 0;
             for (auto iter = pTable->getIndexes().begin(); iter != pTable->getIndexes().end(); ++iter, i++) {
@@ -938,32 +921,20 @@ static int vssIndexUpdate(sqlite3_vtab *pVTab,
                     if (!(*iter)->getIndex()->is_trained) {
 
                         pTable->setError(sqlite3_mprintf("Index at i=%d requires training "
-                                            "before inserting data.",
-                                            i));
+                                                         "before inserting data.",
+                                                         i));
 
                         return SQLITE_ERROR;
                     }
 
-                    if (!inserted_rowid) {
+                    auto rc = shadow_data_insert(pTable->getDb(),
+                                                pTable->getSchema(),
+                                                pTable->getName(),
+                                                rowid);
+                    if (rc != SQLITE_OK)
+                        return rc;
 
-                        auto rc = shadow_data_insert(pTable->getDb(),
-                                                     pTable->getSchema(),
-                                                     pTable->getName(),
-                                                     rowid);
-                        if (rc != SQLITE_OK)
-                            return rc;
-
-                        inserted_rowid = true;
-                    }
-
-                    (*iter)->getInsert_data().reserve((*iter)->getInsert_data().size() + vec->size());
-                    (*iter)->getInsert_data().insert(
-                        (*iter)->getInsert_data().end(),
-                        vec->begin(),
-                        vec->end());
-
-                    (*iter)->getInsert_ids().push_back(rowid);
-
+                    (*iter)->addInsertData(rowid, vec);
                     *pRowid = rowid;
                 }
             }
@@ -978,14 +949,8 @@ static int vssIndexUpdate(sqlite3_vtab *pVTab,
                 for (auto iter = pTable->getIndexes().begin(); iter != pTable->getIndexes().end(); ++iter, i++) {
 
                     vec_ptr vec = pTable->getVector0_api()->xValueAsVector(argv[2 + VSS_INDEX_COLUMN_VECTORS + i]);
-                    if (vec != nullptr) {
-
-                        (*iter)->getTrainings().reserve((*iter)->getTrainings().size() + vec->size());
-                        (*iter)->getTrainings().insert(
-                            (*iter)->getTrainings().end(),
-                            vec->begin(),
-                            vec->end());
-                    }
+                    if (vec != nullptr)
+                        (*iter)->addTrainings(vec);
                 }
 
             } else {

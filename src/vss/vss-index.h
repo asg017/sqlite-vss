@@ -4,8 +4,13 @@
 
 #include "inclusions.h"
 
-// Wrapper around a single faiss index, with training data, insert records, and
-// delete records.
+/*
+ * Wrapper around a single faiss index, with training data, insert records, and
+ * delete records.
+ * 
+ * An attempt at encapsulating everything related to faiss::Index instances, such as
+ * training, inserting, deleting, etc.
+ */
 class vss_index {
 
 public:
@@ -13,6 +18,7 @@ public:
     explicit vss_index(faiss::Index *index) : index(index) {}
 
     ~vss_index() {
+
         if (index != nullptr) {
             delete index;
         }
@@ -23,25 +29,53 @@ public:
         return index;
     }
 
-    vector<float> & getTrainings() {
+    void addTrainings(vec_ptr & vec) {
 
-        return trainings;
+        trainings.reserve(trainings.size() + vec->size());
+        trainings.insert(trainings.end(), vec->begin(), vec->end());
     }
 
-    vector<float> & getInsert_data() {
+    void addInsertData(faiss::idx_t rowId, vec_ptr & vec) {
 
-        return insert_data;
+        insert_data.reserve(insert_data.size() + vec->size());
+        insert_data.insert(insert_data.end(), vec->begin(), vec->end());
+
+        insert_ids.push_back(rowId);
     }
 
-    vector<faiss::idx_t> & getInsert_ids() {
+    void addDelete(faiss::idx_t rowid) {
 
-        return insert_ids;
+        delete_ids.push_back(rowid);
     }
 
-    vector<faiss::idx_t> & getDelete_ids() {
+    bool synchronize() {
 
-        return delete_ids;
+        auto result = tryTrain();
+        result = tryDelete() || result;
+        result = tryInsert() || result;
+
+        // Now that we've updated our faiss::index we delete all temporary data.
+        reset();
+
+        return result;
     }
+
+    void reset() {
+
+        trainings.clear();
+        trainings.shrink_to_fit();
+
+        insert_ids.clear();
+        insert_ids.shrink_to_fit();
+
+        insert_data.clear();
+        insert_data.shrink_to_fit();
+
+        delete_ids.clear();
+        delete_ids.shrink_to_fit();
+    }
+
+private:
 
     bool tryTrain() {
 
@@ -88,24 +122,6 @@ public:
 
         return true;
     }
-
-    void reset() {
-
-        trainings.clear();
-        trainings.shrink_to_fit();
-
-        insert_data.clear();
-        insert_data.shrink_to_fit();
-
-        insert_ids.clear();
-        insert_ids.shrink_to_fit();
-
-        delete_ids.clear();
-
-        delete_ids.shrink_to_fit();
-    }
-
-private:
 
     faiss::Index *index;
     vector<float> trainings;
