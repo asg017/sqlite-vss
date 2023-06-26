@@ -187,18 +187,19 @@ public:
         // Creating a new index and storing in cache.
         unique_ptr<vss_index> newIndex(new vss_index(faiss::index_factory(dimensions, factoryArgs->c_str())));
 
-        int rc = newIndex->write_index(db,
-                                       schema,
-                                       name,
-                                       indexId);
-
-        // Checking if this is our first index, at which point we create our shadow tables.
+        // Checking if this is our first index for table, at which point we create our shadow tables.
         if (indexId == 0) {
 
             auto rc = create_shadow_tables(db, schema, name);
             if (rc != SQLITE_OK)
                 throw domain_error("Couldn't create shadow tables");
         }
+
+        // Writing its initial (empty) state.
+        int rc = newIndex->write_index(db,
+                                       schema,
+                                       name,
+                                       indexId);
 
         // Returning index to caller.
         return newIndex.release();
