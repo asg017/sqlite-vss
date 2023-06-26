@@ -646,11 +646,14 @@ struct vss_index_cursor : public sqlite3_vtab_cursor {
     explicit vss_index_cursor(vss_index_vtab *table)
       : table(table),
         sqlite3_vtab_cursor({0}),
-        stmt(nullptr) { }
+        stmt(nullptr),
+        sql(nullptr) { }
 
     ~vss_index_cursor() {
         if (stmt != nullptr)
             sqlite3_finalize(stmt);
+        if (sql != nullptr)
+            sqlite3_free(sql);
     }
 
     vss_index_vtab *table;
@@ -670,6 +673,7 @@ struct vss_index_cursor : public sqlite3_vtab_cursor {
 
     // For query_type == QueryType::fullscan
     sqlite3_stmt *stmt;
+    char *sql;
     int step_result;
 };
 
@@ -1057,12 +1061,13 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
     } else if (strcmp(idxStr, "fullscan") == 0) {
 
         pCursor->query_type = QueryType::fullscan;
-        sqlite3_stmt *stmt;
+        pCursor->sql = sqlite3_mprintf("select rowid from \"%w_data\"", pCursor->table->name);
 
-        int res = sqlite3_prepare_v2(
-            pCursor->table->db,
-            sqlite3_mprintf("select rowid from \"%w_data\"", pCursor->table->name),
-            -1, &pCursor->stmt, nullptr);
+        int res = sqlite3_prepare_v2(pCursor->table->db,
+                                     pCursor->sql,
+                                     -1,
+                                     &pCursor->stmt,
+                                     nullptr);
 
         if (res != SQLITE_OK)
             return res;
