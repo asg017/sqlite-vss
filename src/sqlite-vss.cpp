@@ -133,35 +133,6 @@ static int shadow_data_delete(sqlite3 *db,
     return SQLITE_OK;
 }
 
-static int create_shadow_tables(sqlite3 *db,
-                                const char *schema,
-                                const char *name,
-                                int n) {
-
-    SqlStatement create1(db,
-                         sqlite3_mprintf("create table \"%w\".\"%w_index\"(idx)",
-                                         schema,
-                                         name));
-
-    auto rc = create1.exec();
-    if (rc != SQLITE_OK)
-        return rc;
-
-    /*
-     * Notice, we'll need to explicitly finalize this object since we can only
-     * have one open statement at the same time to the same connetion.
-     */
-    create1.finalize();
-
-    SqlStatement create2(db,
-                         sqlite3_mprintf("create table \"%w\".\"%w_data\"(x);",
-                                         schema,
-                                         name));
-
-    rc = create2.exec();
-    return rc;
-}
-
 static int drop_shadow_tables(sqlite3 *db, char *name) {
 
     // Dropping both x_index and x_data shadow tables.
@@ -280,16 +251,14 @@ static int init(sqlite3 *db,
 
                 pTable->getIndexes().push_back(
                     vss_index::factory(db,
-                                        argv[2],
-                                        i,
-                                        &iter->factory,
-                                        iter->dimensions));
+                                       argv[1],
+                                       argv[2],
+                                       i,
+                                       &iter->factory,
+                                       iter->dimensions,
+                                       columns->size()));
 
             }
-
-            rc = create_shadow_tables(db, argv[1], argv[2], columns->size());
-            if (rc != SQLITE_OK)
-                return rc;
 
             // Shadow tables were successully created.
             // After shadow tables are created, write the initial index state to
@@ -310,14 +279,21 @@ static int init(sqlite3 *db,
 
             for (int i = 0; i < columns->size(); i++) {
 
-                pTable->getIndexes().push_back(vss_index::factory(db, argv[2], i, nullptr, -1));
+                pTable->getIndexes().push_back(
+                    vss_index::factory(db,
+                                       argv[1],
+                                       argv[2],
+                                       i,
+                                       nullptr,
+                                       -1,
+                                       -1));
             }
         }
 
-    } catch (faiss::FaissException &e) {
+    } catch (exception & e) {
 
         *pzErr = sqlite3_mprintf("Error building index factory, exception was: %s",
-                                 e.msg.c_str());
+                                 e.what());
 
         return SQLITE_ERROR;
     }
