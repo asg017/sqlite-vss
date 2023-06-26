@@ -170,8 +170,8 @@ public:
     }
 
     /*
-     * Creates a new vss_index as a virtual table is being
-     * created using the VSS module.
+     * Creates a new vss_index as a virtual table and stores
+     * its initial (empty) state.
      */
     static vss_index * factory(sqlite3 *db,
                                const char *schema,
@@ -192,12 +192,20 @@ public:
                                        name,
                                        indexId);
 
+        // Checking if this is our first index, at which point we create our shadow tables.
+        if (indexId == 0) {
+
+            auto rc = create_shadow_tables(db, schema, name);
+            if (rc != SQLITE_OK)
+                throw domain_error("Couldn't create shadow tables");
+        }
+
         // Returning index to caller.
         return newIndex.release();
     }
 
     /*
-     * Creates a new vss_index by reading existing data fromdb,
+     * Creates a new vss_index by reading existing data from db,
      * or returns a cached index to caller.
      */
     static vss_index * factory(sqlite3 *db,
@@ -210,13 +218,41 @@ public:
         key += indexId;
 
         // Reading index from db.
-        unique_ptr<vss_index> tmp(new vss_index(read_index_select(db, name, indexId)));
+        unique_ptr<vss_index> newIndex(new vss_index(read_index_select(db, name, indexId)));
 
         // Returning index to caller.
-        return tmp.release();
+        return newIndex.release();
     }
 
 private:
+
+    static int create_shadow_tables(sqlite3 *db,
+                                    const char *schema,
+                                    const char *name) {
+
+        SqlStatement create1(db,
+                             sqlite3_mprintf("create table \"%w\".\"%w_index\"(idx)",
+                                             schema,
+                                             name));
+
+        auto rc = create1.exec();
+        if (rc != SQLITE_OK)
+            return rc;
+
+        /*
+         * Notice, we'll need to explicitly finalize this object since we can only
+         * have one open statement at the same time to the same connetion.
+         */
+        create1.finalize();
+
+        SqlStatement create2(db,
+                             sqlite3_mprintf("create table \"%w\".\"%w_data\"(x);",
+                                             schema,
+                                             name));
+
+        rc = create2.exec();
+        return rc;
+    }
 
     explicit vss_index(faiss::Index *index) : index(index) { }
 
