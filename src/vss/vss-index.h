@@ -69,10 +69,8 @@ public:
     bool synchronize() {
 
         auto result = tryTrain();
-        if (tryDelete())
-            result = true;
-        if (tryInsert())
-            result = true;
+        result = tryDelete() || result;
+        result = tryInsert() || result;
 
         return result;
     }

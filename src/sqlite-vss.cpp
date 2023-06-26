@@ -821,7 +821,7 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
         for (auto iter = pTable->getIndexes().begin(); iter != pTable->getIndexes().end(); ++iter) {
 
             // Synchronizing index, implying deleting, training, and inserting records according to needs.
-            needsWriting = (*iter)->synchronize();
+            needsWriting = (*iter)->synchronize() || needsWriting;
         }
 
         if (needsWriting) {
