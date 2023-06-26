@@ -531,15 +531,15 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
         }
 
         int nq = 1;
-        auto index = pCursor->getTable()->getIndexes().at(idxNum)->getIndex();
+        auto index = pCursor->getTable()->getIndexes().at(idxNum);
 
-        if (query_vector->size() != index->d) {
+        if (!index->canQuery(query_vector)) {
 
             auto ptrVtab = static_cast<vss_index_vtab *>(pCursor->pVtab);
             ptrVtab->setError(sqlite3_mprintf(
                 "Input query size doesn't match index dimensions: %ld != %ld",
                 query_vector->size(),
-                index->d));
+                index->dimensions()));
 
             return SQLITE_ERROR;
         }
@@ -555,15 +555,15 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
         }
 
         // To avoid trying to select more records than number of records in index.
-        auto searchMax = min(static_cast<faiss::idx_t>(pCursor->getLimit()) * nq, index->ntotal * nq);
+        auto searchMax = min(static_cast<faiss::idx_t>(pCursor->getLimit()) * nq, index->size() * nq);
 
         pCursor->resetSearch(searchMax);
 
         index->search(nq,
-                      query_vector->data(),
+                      query_vector,
                       searchMax,
-                      pCursor->getSearch_distances().data(),
-                      pCursor->getSearch_ids().data());
+                      pCursor->getSearch_distances(),
+                      pCursor->getSearch_ids());
 
     } else if (strcmp(idxStr, "range_search") == 0) {
 
@@ -577,12 +577,12 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
         vector<faiss::idx_t> nns(params->distance * nq);
         pCursor->getRange_search_result() = unique_ptr<faiss::RangeSearchResult>(new faiss::RangeSearchResult(nq, true));
 
-        auto index = pCursor->getTable()->getIndexes().at(idxNum)->getIndex();
+        auto index = pCursor->getTable()->getIndexes().at(idxNum);
 
         index->range_search(nq,
-                            params->vector->data(),
+                            params->vector,
                             params->distance,
-                            pCursor->getRange_search_result().get());
+                            pCursor->getRange_search_result());
 
     } else if (strcmp(idxStr, "fullscan") == 0) {
 
@@ -701,15 +701,15 @@ static int vssIndexColumn(sqlite3_vtab_cursor *cur,
     } else if (i >= VSS_INDEX_COLUMN_VECTORS) {
 
         auto index =
-            pCursor->getTable()->getIndexes().at(i - VSS_INDEX_COLUMN_VECTORS)->getIndex();
+            pCursor->getTable()->getIndexes().at(i - VSS_INDEX_COLUMN_VECTORS);
 
-        vector<float> vec(index->d);
+        vector<float> vec(index->dimensions());
         sqlite3_int64 rowId;
         vssIndexRowid(cur, &rowId);
 
         try {
 
-            index->reconstruct(rowId, vec.data());
+            index->reconstruct(rowId, vec);
 
         } catch (faiss::FaissException &e) {
 
@@ -846,7 +846,7 @@ static int vssIndexUpdate(sqlite3_vtab *pVTab,
                          argv[2 + VSS_INDEX_COLUMN_VECTORS + i])) != nullptr) {
 
                     // Make sure the index is already trained, if it's needed
-                    if (!(*iter)->getIndex()->is_trained) {
+                    if (!(*iter)->isTrained()) {
 
                         pTable->setError(sqlite3_mprintf("Index at i=%d requires training "
                                                          "before inserting data.",

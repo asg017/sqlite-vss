@@ -29,6 +29,52 @@ public:
         return index;
     }
 
+    // Returns false if index requires training before inserting items to it.
+    bool isTrained() {
+
+        return index->is_trained;
+    }
+
+    // Reconstructs the original vector, requires IDMap2 string in index factory to work.
+    void reconstruct(sqlite3_int64 rowid, vector<float> & vector) {
+
+        index->reconstruct(rowid, vector.data());
+    }
+
+    // Returns true if specified vector is allowed to query index.
+    bool canQuery(vec_ptr & vec) {
+
+        return vec->size() == index->d;
+    }
+
+    // Queries the index for matches matching the specified vector
+    void search(int nq,
+                vec_ptr & vec,
+                faiss::idx_t max,
+                vector<float> & distances,
+                vector<faiss::idx_t> & ids) {
+
+        index->search(nq, vec->data(), max, distances.data(), ids.data());
+    }
+
+    // Queries the index for a range of items.
+    void range_search(int nq, vec_ptr & vec, float distance, unique_ptr<faiss::RangeSearchResult> & result) {
+
+        index->range_search(nq, vec->data(), distance, result.get());
+    }
+
+    // Returns dimensions of index.
+    faiss::idx_t dimensions() {
+
+        return index->d;
+    }
+
+    // Returns the size of index.
+    faiss::idx_t size() {
+
+        return index->ntotal;
+    }
+
     /*
      * Adds the specified vector to the index' training material.
      *
@@ -219,7 +265,7 @@ private:
         return true;
     }
 
-    faiss::Index *index;
+    faiss::Index * index;
     vector<float> trainings;
     vector<float> insert_data;
     vector<faiss::idx_t> insert_ids;
