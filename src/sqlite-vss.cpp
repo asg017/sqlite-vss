@@ -818,51 +818,16 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
 
         bool needsWriting = false;
 
-        auto idxCol = 0;
-        for (auto iter = pTable->getIndexes().begin(); iter != pTable->getIndexes().end(); ++iter, idxCol++) {
+        for (auto iter = pTable->getIndexes().begin(); iter != pTable->getIndexes().end(); ++iter) {
 
-            // Checking if index needs training.
-            if (!(*iter)->getTrainings().empty()) {
+            // Training index, notice no-op unless we've got training data.
+            needsWriting = (*iter)->tryTrain() || needsWriting;
 
-                (*iter)->getIndex()->train(
-                    (*iter)->getTrainings().size() / (*iter)->getIndex()->d,
-                    (*iter)->getTrainings().data());
+            // Deleting data from index, notice no-op unless there's something to actually delete.
+            needsWriting = (*iter)->tryDelete() || needsWriting;
 
-                (*iter)->getTrainings().clear();
-                (*iter)->getTrainings().shrink_to_fit();
-
-                needsWriting = true;
-            }
-
-            // Checking if we're deleting records from the index.
-            if (!(*iter)->getDelete_ids().empty()) {
-
-                faiss::IDSelectorBatch selector((*iter)->getDelete_ids().size(),
-                                                (*iter)->getDelete_ids().data());
-
-                (*iter)->getIndex()->remove_ids(selector);
-                (*iter)->getDelete_ids().clear();
-                (*iter)->getDelete_ids().shrink_to_fit();
-
-                needsWriting = true;
-            }
-
-            // Checking if we're inserting records to the index.
-            if (!(*iter)->getInsert_data().empty()) {
-
-                (*iter)->getIndex()->add_with_ids(
-                    (*iter)->getInsert_ids().size(),
-                    (*iter)->getInsert_data().data(),
-                    (faiss::idx_t *)(*iter)->getInsert_ids().data());
-
-                (*iter)->getInsert_ids().clear();
-                (*iter)->getInsert_ids().shrink_to_fit();
-
-                (*iter)->getInsert_data().clear();
-                (*iter)->getInsert_data().shrink_to_fit();
-
-                needsWriting = true;
-            }
+            // Inserting data to index, notice no-op unless there's something to actually insert.
+            needsWriting = (*iter)->tryInsert() || needsWriting;
         }
 
         if (needsWriting) {
@@ -895,17 +860,8 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
 
         for (auto iter = pTable->getIndexes().begin(); iter != pTable->getIndexes().end(); ++iter) {
 
-            (*iter)->getInsert_ids().clear();
-            (*iter)->getInsert_ids().shrink_to_fit();
-
-            (*iter)->getInsert_data().clear();
-            (*iter)->getInsert_data().shrink_to_fit();
-
-            (*iter)->getDelete_ids().clear();
-            (*iter)->getDelete_ids().shrink_to_fit();
-
-            (*iter)->getTrainings().clear();
-            (*iter)->getTrainings().shrink_to_fit();
+            // Cleanups in case we've got hanging data.
+            (*iter)->reset();
         }
 
         return SQLITE_ERROR;

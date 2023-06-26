@@ -43,6 +43,68 @@ public:
         return delete_ids;
     }
 
+    bool tryTrain() {
+
+        if (trainings.empty())
+            return false;
+
+        index->train(trainings.size() / index->d, trainings.data());
+        trainings.clear();
+        trainings.shrink_to_fit();
+
+        return true;
+    }
+
+    bool tryDelete() {
+
+        if (delete_ids.empty())
+            return false;
+
+        faiss::IDSelectorBatch selector(delete_ids.size(),
+                                        delete_ids.data());
+
+        index->remove_ids(selector);
+        delete_ids.clear();
+        delete_ids.shrink_to_fit();
+
+        return true;
+    }
+
+    bool tryInsert() {
+
+        if (insert_ids.empty())
+            return false;
+
+        index->add_with_ids(
+            insert_ids.size(),
+            insert_data.data(),
+            (faiss::idx_t *)insert_ids.data());
+
+        insert_ids.clear();
+        insert_ids.shrink_to_fit();
+
+        insert_data.clear();
+        insert_data.shrink_to_fit();
+
+        return true;
+    }
+
+    void reset() {
+
+        trainings.clear();
+        trainings.shrink_to_fit();
+
+        insert_data.clear();
+        insert_data.shrink_to_fit();
+
+        insert_ids.clear();
+        insert_ids.shrink_to_fit();
+
+        delete_ids.clear();
+
+        delete_ids.shrink_to_fit();
+    }
+
 private:
 
     faiss::Index *index;
