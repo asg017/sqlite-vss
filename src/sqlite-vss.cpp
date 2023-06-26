@@ -822,6 +822,10 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
             // Synchronizing index, implying deleting, training, and inserting records according to needs.
             if ((*iter)->synchronize()) {
 
+                /*
+                 * If the above invocation returned true, we've got updates to currently iterated index,
+                 * hence writing to db.
+                 */
                 int rc = write_index((*iter)->getIndex(),
                                      pTable->getDb(),
                                      pTable->getSchema(),
