@@ -611,7 +611,10 @@ struct vss_index_vtab : public sqlite3_vtab {
       : db(db),
         vector_api(vector_api),
         schema(schema),
-        name(name) { }
+        name(name) {
+
+        this->zErrMsg = nullptr;
+    }
 
     ~vss_index_vtab() {
 
@@ -619,9 +622,18 @@ struct vss_index_vtab : public sqlite3_vtab {
             sqlite3_free(name);
         if (schema)
             sqlite3_free(schema);
+        if (this->zErrMsg != nullptr)
+            delete this->zErrMsg;
         for (auto iter = indexes.begin(); iter != indexes.end(); ++iter) {
             delete (*iter);
         }
+    }
+
+    void setError(char *error) {
+        if (this->zErrMsg != nullptr) {
+            delete this->zErrMsg;
+        }
+        this->zErrMsg = error;
     }
 
     sqlite3 *db;
@@ -975,31 +987,32 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
         } else if (sqlite3_libversion_number() < 3041000) {
 
             // https://sqlite.org/forum/info/6b32f818ba1d97ef
-            sqlite3_free(pVtabCursor->pVtab->zErrMsg);
-            pVtabCursor->pVtab->zErrMsg = sqlite3_mprintf(
-                "vss_search() only support vss_search_params() as a "
-                "2nd parameter for SQLite versions below 3.41.0");
+            auto ptrVtab = static_cast<vss_index_vtab *>(pCursor->pVtab);
+            ptrVtab->setError(
+                sqlite3_mprintf(
+                    "vss_search() only support vss_search_params() as a "
+                    "2nd parameter for SQLite versions below 3.41.0"));
             return SQLITE_ERROR;
 
         } else if ((query_vector = pCursor->table->vector_api->xValueAsVector(
                         argv[0])) != nullptr) {
 
             if (argc > 1) {
+
                 pCursor->limit = sqlite3_value_int(argv[1]);
             } else {
-                sqlite3_free(pVtabCursor->pVtab->zErrMsg);
-                pVtabCursor->pVtab->zErrMsg =
-                    sqlite3_mprintf("LIMIT required on vss_search() queries");
+
+                auto ptrVtab = static_cast<vss_index_vtab *>(pCursor->pVtab);
+                ptrVtab->setError(sqlite3_mprintf("LIMIT required on vss_search() queries"));
+
                 return SQLITE_ERROR;
             }
 
         } else {
 
-            if (pVtabCursor->pVtab->zErrMsg != nullptr)
-                sqlite3_free(pVtabCursor->pVtab->zErrMsg);
+            auto ptrVtab = static_cast<vss_index_vtab *>(pCursor->pVtab);
+            ptrVtab->setError(sqlite3_mprintf("2nd argument to vss_search() must be a vector"));
 
-            pVtabCursor->pVtab->zErrMsg = sqlite3_mprintf(
-                "2nd argument to vss_search() must be a vector");
             return SQLITE_ERROR;
         }
 
@@ -1008,22 +1021,22 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
 
         if (query_vector->size() != index->d) {
 
-            // TODO: To support index that transforms vectors
-            // (to conserve spage, eg?), we should probably
-            // have some logic in place that transforms the vectors here?
-            sqlite3_free(pVtabCursor->pVtab->zErrMsg);
-            pVtabCursor->pVtab->zErrMsg = sqlite3_mprintf(
+            auto ptrVtab = static_cast<vss_index_vtab *>(pCursor->pVtab);
+            ptrVtab->setError(sqlite3_mprintf(
                 "Input query size doesn't match index dimensions: %ld != %ld",
                 query_vector->size(),
-                index->d);
+                index->d));
+
             return SQLITE_ERROR;
         }
 
         if (pCursor->limit <= 0) {
 
-            sqlite3_free(pVtabCursor->pVtab->zErrMsg);
-            pVtabCursor->pVtab->zErrMsg = sqlite3_mprintf(
-                "Limit must be greater than 0, got %ld", pCursor->limit);
+            auto ptrVtab = static_cast<vss_index_vtab *>(pCursor->pVtab);
+            ptrVtab->setError(sqlite3_mprintf(
+                "Limit must be greater than 0, got %ld",
+                pCursor->limit));
+
             return SQLITE_ERROR;
         }
 
@@ -1076,11 +1089,10 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
 
     } else {
 
-        if (pVtabCursor->pVtab->zErrMsg != 0)
-            sqlite3_free(pVtabCursor->pVtab->zErrMsg);
+        auto ptrVtab = static_cast<vss_index_vtab *>(pCursor->pVtab);
+        ptrVtab->setError(sqlite3_mprintf(
+            "%s %s", "vssIndexFilter error: unhandled idxStr", idxStr));
 
-        pVtabCursor->pVtab->zErrMsg = sqlite3_mprintf(
-            "%s %s", "vssIndexFilter error: unhandled idxStr", idxStr);
         return SQLITE_ERROR;
     }
 
@@ -1273,9 +1285,9 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
 
                 if (rc != SQLITE_OK) {
 
-                    sqlite3_free(pVTab->zErrMsg);
-                    pVTab->zErrMsg = sqlite3_mprintf("Error saving index (%d): %s",
-                                                    rc, sqlite3_errmsg(pTable->db));
+                    pTable->setError(sqlite3_mprintf("Error saving index (%d): %s",
+                                                      rc,
+                                                      sqlite3_errmsg(pTable->db)));
                     return rc;
                 }
             }
@@ -1285,10 +1297,8 @@ static int vssIndexSync(sqlite3_vtab *pVTab) {
 
     } catch (faiss::FaissException &e) {
 
-        sqlite3_free(pVTab->zErrMsg);
-        pVTab->zErrMsg =
-            sqlite3_mprintf("Error during synchroning index. Full error: %s",
-                            e.msg.c_str());
+        pTable->setError(sqlite3_mprintf("Error during synchroning index. Full error: %s",
+                                         e.msg.c_str()));
 
         for (auto iter = pTable->indexes.begin(); iter != pTable->indexes.end(); ++iter) {
 
@@ -1378,11 +1388,9 @@ static int vssIndexUpdate(sqlite3_vtab *pVTab,
                     // Make sure the index is already trained, if it's needed
                     if (!(*iter)->index->is_trained) {
 
-                        sqlite3_free(pVTab->zErrMsg);
-                        pVTab->zErrMsg =
-                            sqlite3_mprintf("Index at i=%d requires training "
+                        pTable->setError(sqlite3_mprintf("Index at i=%d requires training "
                                             "before inserting data.",
-                                            i);
+                                            i));
 
                         return SQLITE_ERROR;
                     }
@@ -1440,11 +1448,7 @@ static int vssIndexUpdate(sqlite3_vtab *pVTab,
     } else {
 
         // TODO: Implement - UPDATE operation
-        sqlite3_free(pVTab->zErrMsg);
-
-        pVTab->zErrMsg =
-            sqlite3_mprintf("UPDATE statements on vss0 virtual tables not supported yet.");
-
+        pTable->setError(sqlite3_mprintf("UPDATE statements on vss0 virtual tables not supported yet."));
         return SQLITE_ERROR;
     }
 
