@@ -169,7 +169,10 @@ public:
         return write_index_update(writer, db, schema, name, rowId);
     }
 
-    // Creates a new vss_index or returns a cached index to caller.
+    /*
+     * Creates a new vss_index as a virtual table is being
+     * created using the VSS module.
+     */
     static vss_index * factory(sqlite3 *db,
                                const char *schema,
                                const char *name,
@@ -177,27 +180,40 @@ public:
                                string * factoryArgs,
                                int dimensions) {
 
+        // Figuring out cache key to use to store index into cache.
         string key = name;
         key += indexId;
-        if (factoryArgs == nullptr) {
 
-            unique_ptr<vss_index> tmp(new vss_index(vss_index::read_index_select(db, name, indexId)));
+        // Creating a new index and storing in cache.
+        unique_ptr<vss_index> newIndex(new vss_index(faiss::index_factory(dimensions, factoryArgs->c_str())));
 
-            int rc = tmp->write_index(db,
-                                      schema,
-                                      name,
-                                      indexId);
+        int rc = newIndex->write_index(db,
+                                       schema,
+                                       name,
+                                       indexId);
 
-            if (rc != SQLITE_OK)
-                throw domain_error("Couldn't write initial state of index");
+        // Returning index to caller.
+        return newIndex.release();
+    }
 
-            return tmp.release();
+    /*
+     * Creates a new vss_index by reading existing data fromdb,
+     * or returns a cached index to caller.
+     */
+    static vss_index * factory(sqlite3 *db,
+                               const char *schema,
+                               const char *name,
+                               int indexId) {
 
-        } else {
+        // Figuring out cache key to use to lookup into cache to see if index already has been created and cached.
+        string key = name;
+        key += indexId;
 
-            unique_ptr<vss_index> tmp(new vss_index(faiss::index_factory(dimensions, factoryArgs->c_str())));
-            return tmp.release();
-        }
+        // Reading index from db.
+        unique_ptr<vss_index> tmp(new vss_index(read_index_select(db, name, indexId)));
+
+        // Returning index to caller.
+        return tmp.release();
     }
 
 private:

@@ -274,6 +274,10 @@ static int init(sqlite3 *db,
 
         if (isCreate) {
 
+            rc = create_shadow_tables(db, argv[1], argv[2]);
+            if (rc != SQLITE_OK)
+                return rc;
+
             auto i = 0;
             for (auto iter = columns->begin(); iter != columns->end(); ++iter, i++) {
 
@@ -287,25 +291,6 @@ static int init(sqlite3 *db,
 
             }
 
-            rc = create_shadow_tables(db, argv[1], argv[2]);
-            if (rc != SQLITE_OK)
-                return rc;
-
-            // Shadow tables were successully created.
-            // After shadow tables are created, write the initial index state to
-            // shadow _index.
-            i = 0;
-            for (auto iter = pTable->getIndexes().begin(); iter != pTable->getIndexes().end(); ++iter, i++) {
-
-                int rc = (*iter)->write_index(pTable->getDb(),
-                                              pTable->getSchema(),
-                                              pTable->getName(),
-                                              i);
-
-                if (rc != SQLITE_OK)
-                    return rc;
-            }
-
         } else {
 
             for (int i = 0; i < columns->size(); i++) {
@@ -314,9 +299,7 @@ static int init(sqlite3 *db,
                     vss_index::factory(db,
                                        argv[1],
                                        argv[2],
-                                       i,
-                                       nullptr,
-                                       -1));
+                                       i));
             }
         }
 
