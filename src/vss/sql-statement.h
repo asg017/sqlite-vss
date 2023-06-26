@@ -4,6 +4,10 @@
 
 #include "sqlite-vss.h"
 
+/*
+ * Helper class encapsulating an SQL statement towards SQLite, with automatic and deterministic destruction
+ * and cleanup of any heap memory, etc.
+ */
 class SqlStatement {
 
 public:
