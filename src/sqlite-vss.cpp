@@ -133,34 +133,6 @@ static int shadow_data_delete(sqlite3 *db,
     return SQLITE_OK;
 }
 
-static faiss::Index * read_index_select(sqlite3 *db,
-                                        const char *name,
-                                        int indexId) {
-
-    SqlStatement select(db,
-                        sqlite3_mprintf("select idx from \"%w_index\" where rowid = ?",
-                                        name));
-
-    if (select.prepare() != SQLITE_OK)
-        return nullptr;
-
-    if (select.bind_int64(1, indexId) != SQLITE_OK)
-        return nullptr;
-
-    if (select.step() != SQLITE_ROW)
-        return nullptr;
-
-    auto index_data = select.column_blob(0);
-    auto size = select.column_bytes(0);
-
-    faiss::VectorIOReader reader;
-    copy((const uint8_t *)index_data,
-         ((const uint8_t *)index_data) + size,
-         back_inserter(reader.data));
-
-    return faiss::read_index(&reader);
-}
-
 static int create_shadow_tables(sqlite3 *db,
                                 const char *schema,
                                 const char *name,
@@ -299,36 +271,31 @@ static int init(sqlite3 *db,
 
     *ppVtab = pTable;
 
-    if (isCreate) {
+    try {
 
-        for (auto iter = columns->begin(); iter != columns->end(); ++iter) {
+        if (isCreate) {
 
-            try {
+            auto i = 0;
+            for (auto iter = columns->begin(); iter != columns->end(); ++iter, i++) {
 
-                auto index = faiss::index_factory(iter->dimensions, iter->factory.c_str());
-                pTable->getIndexes().push_back(new vss_index(index));
+                pTable->getIndexes().push_back(
+                    vss_index::factory(db,
+                                        argv[2],
+                                        i,
+                                        &iter->factory,
+                                        iter->dimensions));
 
-            } catch (faiss::FaissException &e) {
-
-                *pzErr = sqlite3_mprintf("Error building index factory for %s, exception was: %s",
-                                         iter->name.c_str(),
-                                         e.msg.c_str());
-
-                return SQLITE_ERROR;
             }
-        }
 
-        rc = create_shadow_tables(db, argv[1], argv[2], columns->size());
-        if (rc != SQLITE_OK)
-            return rc;
+            rc = create_shadow_tables(db, argv[1], argv[2], columns->size());
+            if (rc != SQLITE_OK)
+                return rc;
 
-        // Shadow tables were successully created.
-        // After shadow tables are created, write the initial index state to
-        // shadow _index.
-        auto i = 0;
-        for (auto iter = pTable->getIndexes().begin(); iter != pTable->getIndexes().end(); ++iter, i++) {
-
-            try {
+            // Shadow tables were successully created.
+            // After shadow tables are created, write the initial index state to
+            // shadow _index.
+            i = 0;
+            for (auto iter = pTable->getIndexes().begin(); iter != pTable->getIndexes().end(); ++iter, i++) {
 
                 int rc = (*iter)->write_index(pTable->getDb(),
                                               pTable->getSchema(),
@@ -337,27 +304,22 @@ static int init(sqlite3 *db,
 
                 if (rc != SQLITE_OK)
                     return rc;
+            }
 
-            } catch (faiss::FaissException &e) {
+        } else {
 
-                return SQLITE_ERROR;
+            for (int i = 0; i < columns->size(); i++) {
+
+                pTable->getIndexes().push_back(vss_index::factory(db, argv[2], i, nullptr, -1));
             }
         }
 
-    } else {
+    } catch (faiss::FaissException &e) {
 
-        for (int i = 0; i < columns->size(); i++) {
+        *pzErr = sqlite3_mprintf("Error building index factory, exception was: %s",
+                                 e.msg.c_str());
 
-            auto index = read_index_select(db, argv[2], i);
-
-            // Index in shadow table should always be available, integrity check
-            // to avoid null pointer
-            if (index == nullptr) {
-                *pzErr = sqlite3_mprintf("Could not read index at position %d", i);
-                return SQLITE_ERROR;
-            }
-            pTable->getIndexes().push_back(new vss_index(index));
-        }
+        return SQLITE_ERROR;
     }
 
     return SQLITE_OK;

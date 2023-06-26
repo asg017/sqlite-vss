@@ -16,8 +16,6 @@ class vss_index {
 
 public:
 
-    explicit vss_index(faiss::Index *index) : index(index) { }
-
     ~vss_index() {
 
         if (index != nullptr) {
@@ -171,7 +169,58 @@ public:
         return write_index_update(writer, db, schema, name, rowId);
     }
 
+    // Creates a new vss_index or returns a cached index to caller.
+    static vss_index * factory(sqlite3 *db,
+                             const char *name,
+                             int indexId,
+                             string * factoryArgs,
+                             int dimensions) {
+
+        string key = name;
+        key += indexId;
+        if (factoryArgs == nullptr) {
+
+            unique_ptr<vss_index> tmp(new vss_index(vss_index::read_index_select(db, name, indexId)));
+            return tmp.release();
+
+        } else {
+
+            unique_ptr<vss_index> tmp(new vss_index(faiss::index_factory(dimensions, factoryArgs->c_str())));
+            return tmp.release();
+        }
+    }
+
 private:
+
+    explicit vss_index(faiss::Index *index) : index(index) { }
+
+    static faiss::Index * read_index_select(sqlite3 *db,
+                                            const char *name,
+                                            int indexId) {
+
+        SqlStatement select(db,
+                            sqlite3_mprintf("select idx from \"%w_index\" where rowid = ?",
+                                            name));
+
+        if (select.prepare() != SQLITE_OK)
+            return nullptr;
+
+        if (select.bind_int64(1, indexId) != SQLITE_OK)
+            return nullptr;
+
+        if (select.step() != SQLITE_ROW)
+            return nullptr;
+
+        auto index_data = select.column_blob(0);
+        auto size = select.column_bytes(0);
+
+        faiss::VectorIOReader reader;
+        copy((const uint8_t *)index_data,
+            ((const uint8_t *)index_data) + size,
+            back_inserter(reader.data));
+
+        return faiss::read_index(&reader);
+    }
 
     int write_index_insert(faiss::VectorIOWriter &writer,
                            sqlite3 *db,
