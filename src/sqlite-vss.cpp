@@ -664,7 +664,9 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
     } else if (strcmp(idxStr, "fullscan") == 0) {
 
         pCursor->setQuery_type(QueryType::fullscan);
-        pCursor->setSql(sqlite3_mprintf("select rowid from \"%w_data\"", pCursor->getTable()->getName()));
+        pCursor->setSql(
+                        sqlite3_mprintf("select rowid from \"%w_data\"",
+                                        pCursor->getTable()->getName()));
 
         int res = sqlite3_prepare_v2(pCursor->getTable()->getDb(),
                                      pCursor->getSql(),
@@ -783,6 +785,7 @@ static int vssIndexColumn(sqlite3_vtab_cursor *cur,
         vssIndexRowid(cur, &rowId);
 
         try {
+
             index->reconstruct(rowId, vec.data());
 
         } catch (faiss::FaissException &e) {
@@ -1164,7 +1167,7 @@ __declspec(dllexport)
                                    SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
                                    0,
                                    vss_version,
-                                   0, 0, 0);
+                                   nullptr, nullptr, nullptr);
 
         sqlite3_create_function_v2(db,
                                    "vss_debug",
@@ -1172,7 +1175,7 @@ __declspec(dllexport)
                                    SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
                                    0,
                                    vss_debug,
-                                   0, 0, 0);
+                                   nullptr, nullptr, nullptr);
 
         sqlite3_create_function_v2(db,
                                    "vss_distance_l1",
@@ -1180,7 +1183,7 @@ __declspec(dllexport)
                                    SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
                                    vector_api,
                                    vss_distance_l1,
-                                   0, 0, 0);
+                                   nullptr, nullptr, nullptr);
 
         sqlite3_create_function_v2(db, "vss_distance_l2",
                                    2,
