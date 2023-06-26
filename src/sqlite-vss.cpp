@@ -1096,7 +1096,7 @@ static int vssIndexShadowName(const char *zName) {
 }
 
 static sqlite3_module vssIndexModule = {
-    /* iVersion    */ 3,
+    /* iVersion    */ 3, // TODO: Shouldn't this be the same as the version for sqlite-vector.cpp?
     /* xCreate     */ vssIndexCreate,
     /* xConnect    */ vssIndexConnect,
     /* xBestIndex  */ vssIndexBestIndex,
