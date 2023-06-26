@@ -174,8 +174,9 @@ public:
                                int dimensions) {
 
         // Figuring out cache key to use to store index into cache.
-        string key = name;
-        key += indexId;
+        string key = schema;
+        key += name;
+        key += to_string(indexId);
 
         auto cached = _instances.find(key);
         if (cached != _instances.end()) {
@@ -218,8 +219,9 @@ public:
                                int indexId) {
 
         // Figuring out cache key to use to lookup into cache to see if index already has been created and cached.
-        string key = name;
-        key += indexId;
+        string key = schema;
+        key += name;
+        key += to_string(indexId);
 
         auto cached = _instances.find(key);
         if (cached != _instances.end()) {
