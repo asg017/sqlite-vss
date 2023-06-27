@@ -19,6 +19,11 @@ const vss = {
       os: "darwin",
       cpu: "x86_64",
     },
+    {
+      path: `${process.env["ARTIFACT-MACOS-AARCH64-EXTENSION"]}/vss0.dylib`,
+      os: "darwin",
+      cpu: "aarch64",
+    },
   ],
 };
 const vector = {
@@ -34,6 +39,11 @@ const vector = {
       path: `${process.env["ARTIFACT-MACOS-X86_64-EXTENSION"]}/vector0.dylib`,
       os: "darwin",
       cpu: "x86_64",
+    },
+    {
+      path: `${process.env["ARTIFACT-MACOS-AARCH64-EXTENSION"]}/vector0.dylib`,
+      os: "darwin",
+      cpu: "aarch64",
     },
   ],
 };
