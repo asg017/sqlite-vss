@@ -35,9 +35,7 @@ static int fvecsEachConnect(sqlite3 *db,
                             sqlite3_vtab **ppVtab,
                             char **pzErr) {
 
-    int rc;
-
-    rc = sqlite3_declare_vtab(db, "create table x(dimensions, vector, input hidden)");
+    auto rc = sqlite3_declare_vtab(db, "create table x(dimensions, vector, input hidden)");
 
     if (rc == SQLITE_OK) {
 
@@ -52,25 +50,25 @@ static int fvecsEachConnect(sqlite3 *db,
 
 static int fvecsEachDisconnect(sqlite3_vtab *pVtab) {
 
-    auto pTable = static_cast<fvecsEach_vtab *>(pVtab);
-    delete pTable;
+    auto table = static_cast<fvecsEach_vtab *>(pVtab);
+    delete table;
     return SQLITE_OK;
 }
 
 static int fvecsEachOpen(sqlite3_vtab *p, sqlite3_vtab_cursor **ppCursor) {
 
-    auto pCur = new fvecsEach_cursor(p);
-    if (pCur == nullptr)
+    auto cursor = new fvecsEach_cursor(p);
+    if (cursor == nullptr)
         return SQLITE_NOMEM;
 
-    *ppCursor = pCur;
+    *ppCursor = cursor;
     return SQLITE_OK;
 }
 
-static int fvecsEachClose(sqlite3_vtab_cursor *cur) {
+static int fvecsEachClose(sqlite3_vtab_cursor *pCursor) {
 
-    auto pCur = static_cast<fvecsEach_cursor *>(cur);
-    delete pCur;
+    auto cursor = static_cast<fvecsEach_cursor *>(pCursor);
+    delete cursor;
     return SQLITE_OK;
 }
 
@@ -97,80 +95,80 @@ static int fvecsEachBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
     return SQLITE_OK;
 }
 
-static int fvecsEachFilter(sqlite3_vtab_cursor *pVtabCursor,
+static int fvecsEachFilter(sqlite3_vtab_cursor *pCursor,
                            int idxNum,
                            const char *idxStr,
                            int argc,
                            sqlite3_value **argv) {
 
-    auto pCur = static_cast<fvecsEach_cursor *>(pVtabCursor);
+    auto cursor = static_cast<fvecsEach_cursor *>(pCursor);
 
     int size = sqlite3_value_bytes(argv[0]);
     const void *blob = sqlite3_value_blob(argv[0]);
 
-    pCur->setBlob(sqlite3_malloc(size));
-    pCur->iBlobN = size;
-    pCur->iRowid = 1;
-    memcpy(pCur->getBlob(), blob, size);
+    cursor->setBlob(sqlite3_malloc(size));
+    cursor->iBlobN = size;
+    cursor->iRowid = 1;
+    memcpy(cursor->getBlob(), blob, size);
 
-    memcpy(&pCur->iCurrentD, pCur->getBlob(), sizeof(int));
-    float *vecBegin = (float *)((char *)pCur->getBlob() + sizeof(int));
+    memcpy(&cursor->iCurrentD, cursor->getBlob(), sizeof(int));
+    float *vecBegin = (float *)((char *)cursor->getBlob() + sizeof(int));
 
     // TODO: Shouldn't this multiply by sizeof(float)?
-    pCur->pCurrentVector = vec_ptr(new vector<float>(vecBegin, vecBegin + pCur->iCurrentD));
+    cursor->pCurrentVector = vec_ptr(new vector<float>(vecBegin, vecBegin + cursor->iCurrentD));
 
-    pCur->p = sizeof(int) + (pCur->iCurrentD * sizeof(float));
+    cursor->p = sizeof(int) + (cursor->iCurrentD * sizeof(float));
 
     return SQLITE_OK;
 }
 
-static int fvecsEachNext(sqlite3_vtab_cursor *cur) {
+static int fvecsEachNext(sqlite3_vtab_cursor *pCursor) {
 
-    auto pCur = static_cast<fvecsEach_cursor *>(cur);
+    auto cursor = static_cast<fvecsEach_cursor *>(pCursor);
 
     // TODO: Shouldn't this multiply by sizeof(float)?
-    memcpy(&pCur->iCurrentD, ((char *)pCur->getBlob() + pCur->p), sizeof(int));
-    float *vecBegin = (float *)(((char *)pCur->getBlob() + pCur->p) + sizeof(int));
+    memcpy(&cursor->iCurrentD, ((char *)cursor->getBlob() + cursor->p), sizeof(int));
+    float *vecBegin = (float *)(((char *)cursor->getBlob() + cursor->p) + sizeof(int));
 
-    pCur->pCurrentVector->clear();
-    pCur->pCurrentVector->shrink_to_fit();
-    pCur->pCurrentVector->reserve(pCur->iCurrentD);
-    pCur->pCurrentVector->insert(pCur->pCurrentVector->begin(),
+    cursor->pCurrentVector->clear();
+    cursor->pCurrentVector->shrink_to_fit();
+    cursor->pCurrentVector->reserve(cursor->iCurrentD);
+    cursor->pCurrentVector->insert(cursor->pCurrentVector->begin(),
                                  vecBegin,
-                                 vecBegin + pCur->iCurrentD);
+                                 vecBegin + cursor->iCurrentD);
 
-    pCur->p += (sizeof(int) + (pCur->iCurrentD * sizeof(float)));
-    pCur->iRowid++;
+    cursor->p += (sizeof(int) + (cursor->iCurrentD * sizeof(float)));
+    cursor->iRowid++;
     return SQLITE_OK;
 }
 
-static int fvecsEachEof(sqlite3_vtab_cursor *cur) {
+static int fvecsEachEof(sqlite3_vtab_cursor *pCursor) {
 
-    auto pCur = (fvecsEach_cursor *)cur;
-    return pCur->p > pCur->iBlobN;
+    auto cursor = (fvecsEach_cursor *)pCursor;
+    return cursor->p > cursor->iBlobN;
 }
 
-static int fvecsEachRowid(sqlite3_vtab_cursor *cur, sqlite_int64 *pRowid) {
+static int fvecsEachRowid(sqlite3_vtab_cursor *pCursor, sqlite_int64 *pRowid) {
 
-    fvecsEach_cursor *pCur = (fvecsEach_cursor *)cur;
-    *pRowid = pCur->iRowid;
+    fvecsEach_cursor *cursor = (fvecsEach_cursor *)pCursor;
+    *pRowid = cursor->iRowid;
     return SQLITE_OK;
 }
 
-static int fvecsEachColumn(sqlite3_vtab_cursor *cur,
+static int fvecsEachColumn(sqlite3_vtab_cursor *pCursor,
                            sqlite3_context *context,
                            int i) {
 
-    auto pCur = static_cast<fvecsEach_cursor *>(cur);
+    auto cursor = static_cast<fvecsEach_cursor *>(pCursor);
 
     switch (i) {
 
         case FVECS_EACH_DIMENSIONS:
-            sqlite3_result_int(context, pCur->iCurrentD);
+            sqlite3_result_int(context, cursor->iCurrentD);
             break;
 
         case FVECS_EACH_VECTOR:
-            resultVector(context, pCur->pCurrentVector.get());
+            resultVector(context, cursor->pCurrentVector.get());
             break;
 
         case FVECS_EACH_INPUT:
