@@ -261,7 +261,7 @@ static int init(sqlite3 *db,
                                        argv[1],
                                        argv[2],
                                        i,
-                                       &iter->factory,
+                                       iter->factory,
                                        iter->dimensions));
 
             }

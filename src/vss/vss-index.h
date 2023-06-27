@@ -170,7 +170,7 @@ public:
                                const char *schema,
                                const char *name,
                                int indexId,
-                               string * factoryArgs,
+                               string & factoryArgs,
                                int dimensions) {
 
         // Figuring out cache key to use to store index into cache.
@@ -186,7 +186,7 @@ public:
         }
 
         // Creating a new index and storing in cache.
-        auto newIndex = new vss_index(faiss::index_factory(dimensions, factoryArgs->c_str()));
+        auto newIndex = new vss_index(faiss::index_factory(dimensions, factoryArgs.c_str()));
 
         // Checking if this is our first index for table, at which point we create our shadow tables.
         if (indexId == 0) {

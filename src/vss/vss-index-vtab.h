@@ -53,7 +53,7 @@ public:
         return vector_api;
     }
 
-    vector<vss_index*> & getIndexes() {
+    vector<vss_index *> & getIndexes() {
 
         return indexes;
     }
