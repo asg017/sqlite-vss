@@ -205,10 +205,6 @@ unique_ptr<vector<VssIndexColumn>> parse_constructor(int argc,
 #define VSS_INDEX_COLUMN_OPERATION 1
 #define VSS_INDEX_COLUMN_VECTORS 2
 
-// Declaration of static objects required to do caching.
-shared_mutex vss_index::_globalLock;
-map<string, vss_index *> vss_index::_instances;
-
 static int init(sqlite3 *db,
                 void *pAux,
                 int argc,
@@ -248,19 +244,16 @@ static int init(sqlite3 *db,
 
     try {
 
-        // To avoid race conditions towards cache we lock creation of indexes.
-        unique_lock<shared_mutex> globalLock(*vss_index::getGlobalLock());
-
         if (isCreate) {
 
-            auto i = 0;
-            for (auto iter = columns->begin(); iter != columns->end(); ++iter, i++) {
+            auto idxNo = 0;
+            for (auto iter = columns->begin(); iter != columns->end(); ++iter, idxNo++) {
 
                 pTable->getIndexes().push_back(
                     vss_index::factory(db,
                                        argv[1],
                                        argv[2],
-                                       i,
+                                       idxNo,
                                        iter->factory,
                                        iter->dimensions));
 
@@ -268,13 +261,12 @@ static int init(sqlite3 *db,
 
         } else {
 
-            for (int i = 0; i < columns->size(); i++) {
+            for (int idxNo = 0; idxNo < columns->size(); idxNo++) {
 
                 pTable->getIndexes().push_back(
                     vss_index::factory(db,
-                                       argv[1],
                                        argv[2],
-                                       i));
+                                       idxNo));
             }
         }
 
@@ -318,9 +310,6 @@ static int vssIndexDestroy(sqlite3_vtab *pVtab) {
 
     auto pTable = static_cast<vss_index_vtab *>(pVtab);
     drop_shadow_tables(pTable->getDb(), pTable->getName());
-
-    // Removing from cache.
-    vss_index::destroy(pTable->getSchema(), pTable->getName());
 
     vssIndexDisconnect(pVtab);
     return SQLITE_OK;

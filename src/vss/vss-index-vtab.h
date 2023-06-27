@@ -28,9 +28,9 @@ public:
         if (this->zErrMsg != nullptr)
             delete this->zErrMsg;
 
-        // Resetting all indexes since we cannot delete them since they're reused and cached.
+        // Deleting all indexes associated with table.
         for (auto iter = indexes.begin(); iter != indexes.end(); ++iter) {
-            (*iter)->reset();
+            delete (*iter);
         }
     }
 

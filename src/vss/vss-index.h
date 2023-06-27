@@ -3,8 +3,6 @@
 #define VSS_INDEX_H
 
 #include "inclusions.h"
-#include <shared_mutex>
-#include <map>
 /*
  * Wrapper around a single faiss index, with training data, insert records, and
  * delete records.
@@ -15,6 +13,13 @@
 class vss_index {
 
 public:
+
+    ~vss_index() {
+
+        if (index != nullptr) {
+            delete index;
+        }
+    }
 
     // Returns false if index requires training before inserting items to it.
     bool isTrained() {
@@ -41,15 +46,11 @@ public:
                 vector<float> & distances,
                 vector<faiss::idx_t> & ids) {
 
-        shared_lock<shared_mutex> lock(_lock);
-
         index->search(nq, vec->data(), max, distances.data(), ids.data());
     }
 
     // Queries the index for a range of items.
     void range_search(int nq, vec_ptr & vec, float distance, unique_ptr<faiss::RangeSearchResult> & result) {
-
-        shared_lock<shared_mutex> lock(_lock);
 
         index->range_search(nq, vec->data(), distance, result.get());
     }
@@ -73,8 +74,6 @@ public:
      */
     void addTrainings(vec_ptr & vec) {
 
-        unique_lock<shared_mutex> lock(_lock);
-
         trainings.reserve(trainings.size() + vec->size());
         trainings.insert(trainings.end(), vec->begin(), vec->end());
     }
@@ -85,8 +84,6 @@ public:
      * Notice, needs to invoke synchronize() later to actually add data to index.
      */
     void addInsertData(faiss::idx_t rowId, vec_ptr & vec) {
-
-        unique_lock<shared_mutex> lock(_lock);
 
         insert_data.reserve(insert_data.size() + vec->size());
         insert_data.insert(insert_data.end(), vec->begin(), vec->end());
@@ -101,8 +98,6 @@ public:
      */
     void addDelete(faiss::idx_t rowid) {
 
-        unique_lock<shared_mutex> lock(_lock);
-
         delete_ids.push_back(rowid);
     }
 
@@ -110,8 +105,6 @@ public:
      * Synchronizes index by updating index according to trainings, inserts and deletes.
      */
     bool synchronize() {
-
-        unique_lock<shared_mutex> lock(_lock);
 
         auto result = tryTrain();
         result = tryDelete() || result;
@@ -124,8 +117,6 @@ public:
      * Resets all temporary training data to free memory.
      */
     void reset() {
-
-        unique_lock<shared_mutex> lock(_lock);
 
         trainings.clear();
         trainings.shrink_to_fit();
@@ -144,8 +135,6 @@ public:
                     const char *schema,
                     const char *name,
                     int rowId) {
-
-        unique_lock<shared_mutex> lock(_lock);
 
         // Writing our index
         faiss::VectorIOWriter writer;
@@ -169,27 +158,15 @@ public:
     static vss_index * factory(sqlite3 *db,
                                const char *schema,
                                const char *name,
-                               int indexId,
+                               bool  indexNo,
                                string & factoryArgs,
                                int dimensions) {
-
-        // Figuring out cache key to use to store index into cache.
-        string key = schema;
-        key += name;
-        key += to_string(indexId);
-
-        auto cached = _instances.find(key);
-        if (cached != _instances.end()) {
-
-            cached->second->reset();
-            return cached->second;
-        }
 
         // Creating a new index and storing in cache.
         auto newIndex = new vss_index(faiss::index_factory(dimensions, factoryArgs.c_str()));
 
         // Checking if this is our first index for table, at which point we create our shadow tables.
-        if (indexId == 0) {
+        if (indexNo == 0) {
 
             auto rc = create_shadow_tables(db, schema, name);
             if (rc != SQLITE_OK)
@@ -200,10 +177,7 @@ public:
         int rc = newIndex->write_index(db,
                                        schema,
                                        name,
-                                       indexId);
-
-        // Caching index.
-        _instances[key] = newIndex;
+                                       indexNo);
 
         // Returning index to caller.
         return newIndex;
@@ -214,69 +188,19 @@ public:
      * or returns a cached index to caller.
      */
     static vss_index * factory(sqlite3 *db,
-                               const char *schema,
                                const char *name,
-                               int indexId) {
-
-        // Figuring out cache key to use to lookup into cache to see if index already has been created and cached.
-        string key = schema;
-        key += name;
-        key += to_string(indexId);
-
-        auto cached = _instances.find(key);
-        if (cached != _instances.end()) {
-
-            cached->second->reset();
-            return cached->second;
-        }
+                               int indexNo) {
 
         // Reading index from db.
-        auto newIndex = new vss_index(read_index_select(db, name, indexId));
-
-        // Caching index.
-        _instances[key] = newIndex;
+        auto newIndex = new vss_index(read_index_select(db, name, indexNo));
 
         // Returning index to caller.
         return newIndex;
     }
 
-    // Deletes all indexes associated with the specified schema and table.
-    static void destroy(const char * schema, const char * name) {
-
-        // Synchronising access.
-        unique_lock<shared_mutex> lock(_globalLock);
-
-        string filter = schema;
-        filter += name;
-        for (auto iter = _instances.begin(); iter != _instances.end();) {
-
-            if (iter->first.compare(filter) == 0) {
-
-                delete iter->second;
-                _instances.erase(iter++);
-
-            } else {
-
-                ++iter;
-            }
-        }
-    }
-
-    static shared_mutex * getGlobalLock() {
-
-        return &_globalLock;
-    }
-
 private:
 
     explicit vss_index(faiss::Index *index) : index(index) { }
-
-    ~vss_index() {
-
-        if (index != nullptr) {
-            delete index;
-        }
-    }
 
     static int create_shadow_tables(sqlite3 *db,
                                     const char *schema,
@@ -438,9 +362,6 @@ private:
         return true;
     }
 
-    static map<string, vss_index *> _instances;
-    static shared_mutex _globalLock;
-    shared_mutex _lock;
     faiss::Index * index;
     vector<float> trainings;
     vector<float> insert_data;

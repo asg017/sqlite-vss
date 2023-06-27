@@ -15,8 +15,10 @@ public:
         sql(nullptr) { }
 
     ~vss_index_cursor() {
+
         if (stmt != nullptr)
             sqlite3_finalize(stmt);
+
         if (sql != nullptr)
             sqlite3_free(sql);
     }
