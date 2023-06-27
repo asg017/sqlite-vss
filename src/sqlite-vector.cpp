@@ -407,6 +407,10 @@ struct fvecsEach_cursor : public sqlite3_vtab_cursor {
     vec_ptr pCurrentVector;
 };
 
+#define FVECS_EACH_DIMENSIONS 0
+#define FVECS_EACH_VECTOR 1
+#define FVECS_EACH_INPUT 2
+
 static int fvecsEachConnect(sqlite3 *db,
                             void *pAux,
                             int argc,
@@ -417,10 +421,6 @@ static int fvecsEachConnect(sqlite3 *db,
     int rc;
 
     rc = sqlite3_declare_vtab(db, "create table x(dimensions, vector, input hidden)");
-
-#define FVECS_EACH_DIMENSIONS 0
-#define FVECS_EACH_VECTOR 1
-#define FVECS_EACH_INPUT 2
 
     if (rc == SQLITE_OK) {
 
