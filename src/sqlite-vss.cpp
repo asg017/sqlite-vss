@@ -187,7 +187,7 @@ static void vss_fvec_add(sqlite3_context *context, int argc,
     vec_ptr c(new vector<float>(size));
     faiss::fvec_add(size, lhs->data(), rhs->data(), c->data());
 
-    vector_api->xResultVector(context, c.get());
+    sqlite3_result_blob64(context, c->data(), c->size() * sizeof(float), SQLITE_TRANSIENT);
 }
 
 static void vss_fvec_sub(sqlite3_context *context, int argc,
@@ -215,7 +215,7 @@ static void vss_fvec_sub(sqlite3_context *context, int argc,
     int size = lhs->size();
     vec_ptr c = vec_ptr(new vector<float>(size));
     faiss::fvec_sub(size, lhs->data(), rhs->data(), c->data());
-    vector_api->xResultVector(context, c.get());
+    sqlite3_result_blob64(context, c->data(), c->size() * sizeof(float), SQLITE_TRANSIENT);
 }
 
 #pragma endregion
@@ -1163,7 +1163,7 @@ static int vssIndexColumn(sqlite3_vtab_cursor *cur,
             sqlite3_free(errmsg);
             return SQLITE_ERROR;
         }
-        pCursor->table->vector_api->xResultVector(ctx, &vec);
+        sqlite3_result_blob64(ctx, vec.data(), vec.size() * sizeof(float), SQLITE_TRANSIENT);
     }
     return SQLITE_OK;
 }

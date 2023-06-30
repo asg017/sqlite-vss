@@ -101,12 +101,16 @@ class TestVss(unittest.TestCase):
 
   def test_vss_fvec_add(self):
     vss_fvec_add = lambda a, b: db.execute("select vss_fvec_add(json(?), json(?))", [a, b]).fetchone()[0]
-    self.assertEqual(vss_fvec_add('[0, 0]', '[0, 0]'), None)
+    self.assertEqual(vss_fvec_add('[0, 0]', '[0, 0]'), b'\x00\x00\x00\x00\x00\x00\x00\x00')
+    self.assertEqual(vss_fvec_add('[-1, -1]', '[1, 1]'), b'\x00\x00\x00\x00\x00\x00\x00\x00')
+    self.assertEqual(vss_fvec_add('[0, 0]', '[1, 1]'), b'\x00\x00\x80?\x00\x00\x80?')
     self.skipTest("TODO")
 
   def test_vss_fvec_sub(self):
     vss_fvec_sub = lambda a, b: db.execute("select vss_fvec_sub(json(?), json(?))", [a, b]).fetchone()[0]
-    self.assertEqual(vss_fvec_sub('[0, 0]', '[0, 0]'), None)
+    self.assertEqual(vss_fvec_sub('[0, 0]', '[0, 0]'), b'\x00\x00\x00\x00\x00\x00\x00\x00')
+    self.assertEqual(vss_fvec_sub('[1, 1]', '[1, 1]'), b'\x00\x00\x00\x00\x00\x00\x00\x00')
+    self.assertEqual(vss_fvec_sub('[0, 0]', '[1, 1]'), b'\x00\x00\x80\xbf\x00\x00\x80\xbf')
     self.skipTest("TODO")
 
   def test_vss_search(self):
@@ -251,6 +255,12 @@ class TestVss(unittest.TestCase):
       {'rowid': 1002, 'distance': 0.25},
     ])
 
+    self.assertEqual(execute_all(cur, 'select rowid, a, b, distance from x'), [
+      {'rowid': 1000, "a": b'\x00\x00\x00\x00\x00\x00\x80?', "b": b'\x00\x00\x80?', "distance": None},
+      {'rowid': 1001, "a": b'\x00\x00\x00\x00\x00\x00\x80\xbf', "b": b'\x00\x00\x00@', "distance": None},
+      {'rowid': 1002, "a": b'\x00\x00\x80?\x00\x00\x00\x00', "b": b'\x00\x00@@', "distance": None},
+      {'rowid': 1003, "a": b'\x00\x00\x80\xbf\x00\x00\x00\x00', "b": b'\x00\x00\x80@', "distance": None},
+    ])
     self.assertEqual(execute_all(cur, 'select rowid, vector_debug(a) as a, vector_debug(b) as b, distance from x'), [
       {'rowid': 1000, "a": "size: 2 [0.000000, 1.000000]",  "b": "size: 1 [1.000000]", "distance": None},
       {'rowid': 1001, "a": "size: 2 [0.000000, -1.000000]", "b": "size: 1 [2.000000]", "distance": None},
