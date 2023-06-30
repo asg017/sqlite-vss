@@ -498,6 +498,32 @@ class TestVss(unittest.TestCase):
     )
     db.close()
 
+  # Make sure tha VACUUMing a database with vss0 tables still works as expected
+  def test_vss0_vacuum(self):
+    cur = db.cursor()
+    execute_all(cur, "create virtual table x using vss0(a(2));")
+    execute_all(cur, """
+      insert into x(rowid, a)
+        select
+          key + 1000,
+          value
+        from json_each(?);
+      """, ["""
+        [
+          [1, 1],
+          [2, 2],
+          [3, 3]
+        ]
+        """])
+    db.commit()
+
+    db.execute("VACUUM;")
+
+    self.assertEqual(
+      execute_all(db, "select rowid, distance from x where vss_search(a, vss_search_params(?, ?))", ['[0, 0]', 1]),
+      [{'distance': 2.0, 'rowid': 1000}]
+    )
+
 VECTOR_FUNCTIONS = [
   'vector0',
   'vector_debug',

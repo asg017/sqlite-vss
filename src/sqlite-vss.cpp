@@ -337,8 +337,7 @@ static int write_index_insert(faiss::Index *index,
         // INSERT was success, index wasn't written yet, all good to exit
         return SQLITE_OK;
 
-    } else if (sqlite3_extended_errcode(db) != SQLITE_CONSTRAINT_ROWID) {
-
+    } else if (sqlite3_extended_errcode(db) != SQLITE_CONSTRAINT_PRIMARYKEY) {
         // INSERT failed for another unknown reason, bad, return error
         return SQLITE_ERROR;
     }
@@ -390,7 +389,7 @@ static int shadow_data_insert(sqlite3 *db,
     if (rowid == nullptr) {
 
         auto sql = sqlite3_mprintf(
-            "insert into \"%w\".\"%w_data\"(x) values (?)", schema, name);
+            "insert into \"%w\".\"%w_data\"(_) values (?)", schema, name);
 
         int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
         sqlite3_free(sql);
@@ -408,7 +407,7 @@ static int shadow_data_insert(sqlite3 *db,
     } else {
 
         auto sql = sqlite3_mprintf(
-            "insert into \"%w\".\"%w_data\"(rowid, x) values (?, ?);", schema,
+            "insert into \"%w\".\"%w_data\"(rowid, _) values (?, ?);", schema,
             name);
 
         int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
@@ -471,13 +470,15 @@ static faiss::Index *read_index_select(sqlite3 *db, const char *name, int indexI
     if (rc != SQLITE_OK || stmt == nullptr) {
         sqlite3_finalize(stmt);
         sqlite3_free(sql);
+        printf("zz prepare error\n");
         return nullptr;
     }
 
     sqlite3_bind_int64(stmt, 1, indexId);
-    if (sqlite3_step(stmt) != SQLITE_ROW) {
+    if ((rc = sqlite3_step(stmt)) != SQLITE_ROW) {
         sqlite3_finalize(stmt);
         sqlite3_free(sql);
+        printf("zz step error %d\n", rc);
         return nullptr;
     }
 
@@ -500,7 +501,7 @@ static int create_shadow_tables(sqlite3 *db,
                                 const char *name,
                                 int n) {
 
-    auto sql = sqlite3_mprintf("create table \"%w\".\"%w_index\"(idx)",
+    auto sql = sqlite3_mprintf("create table \"%w\".\"%w_index\"(rowid integer primary key autoincrement, idx)",
                                 schema,
                                 name);
 
@@ -509,7 +510,7 @@ static int create_shadow_tables(sqlite3 *db,
     if (rc != SQLITE_OK)
         return rc;
 
-    sql = sqlite3_mprintf("create table \"%w\".\"%w_data\"(x);",
+    sql = sqlite3_mprintf("create table \"%w\".\"%w_data\"(rowid integer primary key autoincrement, _);",
                           schema,
                           name);
 
