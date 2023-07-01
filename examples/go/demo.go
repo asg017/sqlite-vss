@@ -9,7 +9,9 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// #cgo LDFLAGS: -L../../dist/debug -Wl,-undefined,dynamic_lookup -lstdc++ -lomp
+// #cgo linux,amd64 LDFLAGS: -Wl,-undefined,dynamic_lookup -lstdc++
+// #cgo darwin,amd64 LDFLAGS: -Wl,-undefined,dynamic_lookup -lomp
+// #cgo darwin,arm64 LDFLAGS: -Wl,-undefined,dynamic_lookup -lomp
 import "C"
 
 func main() {

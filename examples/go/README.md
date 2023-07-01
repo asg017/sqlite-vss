@@ -1,13 +1,10 @@
 # `sqlite-vss` in Go example
 
-To build:
+To run:
 
 ```
-make demo
+make demo SQLITE_VSS_LIB_DIR=../../dist/debug
+./demo
 ```
 
-On Linux machines you'll need to link to many other libraries, which you can do with:
-
-```
-make demo CGO_LDFLAGS="-lm -latlas -lblas -llapack -lgomp -lstdc++"
-```
+Where `SQLITE_VSS_LIB_DIR` is a path to a directory containing pre-compiled `sqlite-vss` static files.
