@@ -11,13 +11,14 @@ RUN pip install sentence-transformers
 RUN python3 -c 'from sentence_transformers import SentenceTransformer; model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2");'
 ADD plugins/ /app/plugins
 
+# SQLite v3.41.2 
 WORKDIR /sqlite
-RUN curl -L 'https://www.sqlite.org/snapshot/sqlite-snapshot-202302081247.tar.gz'  \
-  |tar -xvzf -
-WORKDIR /sqlite/sqlite-snapshot-202302081247
+ADD https://www.sqlite.org/2023/sqlite-autoconf-3410200.tar.gz .
+RUN tar -xvzf sqlite-autoconf-3410200.tar.gz
+WORKDIR /sqlite/sqlite-autoconf-3410200
 RUN ./configure
 RUN make
-ENV LD_LIBRARY_PATH=/sqlite/sqlite-snapshot-202302081247/.libs
+ENV LD_LIBRARY_PATH=/sqlite/sqlite-autoconf-3410200/.libs
 
 #  TODO outdated, use the datasette-sqlite-vss plugin instead
 
