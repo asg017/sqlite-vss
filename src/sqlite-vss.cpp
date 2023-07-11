@@ -657,7 +657,7 @@ faiss::MetricType parse_metric_type(const std::string& metric_type) {
         {"L2", faiss::METRIC_L2},
         {"INNER_PRODUCT", faiss::METRIC_INNER_PRODUCT},
         {"Linf", faiss::METRIC_Linf},
-        {"Lp", faiss::METRIC_Lp},
+        // {"Lp", faiss::METRIC_Lp}, unavailable until metric arg is added
         {"Canberra", faiss::METRIC_Canberra},
         {"BrayCurtis", faiss::METRIC_BrayCurtis},
         {"JensenShannon", faiss::METRIC_JensenShannon}
@@ -713,8 +713,6 @@ unique_ptr<vector<VssIndexColumn>> parse_constructor(int argc,
             factory = string("Flat,IDMap2");
         }
 
-        // FIXME: should non-default factory be required to check for non-default metric type?
-        //        (seems like a yes to me but idk)
         faiss::MetricType metric_type;
         size_t metricStart, metricStringStartFrom;
 

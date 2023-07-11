@@ -533,6 +533,70 @@ class TestVss(unittest.TestCase):
       execute_all(db, "select rowid, distance from x where vss_search(a, vss_search_params(?, ?))", ['[0, 0]', 1]),
       [{'distance': 2.0, 'rowid': 1000}]
     )
+  
+  def test_vss0_metric_type_JensenShannon(self):
+    tf = tempfile.NamedTemporaryFile(delete=False)
+    tf.close()
+
+    db = connect(tf.name)
+    db.execute("create table t as select 1 as a")
+    cur = db.cursor()
+    execute_all(cur, """
+      create virtual table x using vss0( a(2) metric_type=JensenShannon );
+    """)
+    execute_all(cur, """
+      insert into x(rowid, a)
+      values
+          (1, '[1.0, 2.0]'),
+          (2, '[2.0, 2.0]'),
+          (3, '[3.0, 2.0]');
+      """)
+
+    db.commit()
+
+    
+    res = execute_all(cur, f"select rowid, distance from x where vss_search(a, vss_search_params(json('[1.0, 2.0]'), 3));")    
+
+    self.assertEqual(res, [
+      {'rowid': 1, 'distance': 0.0000000000000000},
+      {'rowid': 2, 'distance': 0.0849495381116867},
+      {'rowid': 3, 'distance': 0.2616240382194519},
+    ])
+
+    db.close()
+
+  def test_vss0_cosine_similarity(self):
+    tf = tempfile.NamedTemporaryFile(delete=False)
+    tf.close()
+
+    db = connect(tf.name)
+    db.execute("create table t as select 1 as a")
+    cur = db.cursor()
+    execute_all(cur, """
+      create virtual table x using vss0( a(2) factory="L2norm,Flat,IDMap2" metric_type=INNER_PRODUCT );
+    """)
+    execute_all(cur, """
+      insert into x(rowid, a)
+      values
+          (1, '[1.0, 2.0]'),
+          (2, '[2.0, 2.0]'),
+          (3, '[3.0, 2.0]'),
+          (4, '[2.0, 0.0]');
+      """)
+
+    db.commit()
+
+    
+    res = execute_all(cur, f"select rowid, distance from x where vss_search(a, vss_search_params(json('[1.0, 2.0]'), 4));")    
+
+    self.assertEqual(res, [
+      {'rowid': 1, 'distance': 0.9999999403953552},
+      {'rowid': 2, 'distance': 0.9486832618713379},
+      {'rowid': 3, 'distance': 0.8682430982589722},
+      {'rowid': 4, 'distance': 0.4472135901451111}
+    ])
+
+    db.close()
 
 VECTOR_FUNCTIONS = [
   'vector0',
