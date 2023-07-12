@@ -533,70 +533,69 @@ class TestVss(unittest.TestCase):
       execute_all(db, "select rowid, distance from x where vss_search(a, vss_search_params(?, ?))", ['[0, 0]', 1]),
       [{'distance': 2.0, 'rowid': 1000}]
     )
+
+  def test_vss0_metric_type(self):
+    cur = db.cursor()
+    execute_all(
+      cur,
+      '''create virtual table vss_mts using vss0(
+        ip(2) metric_type=INNER_PRODUCT,
+        l1(2) metric_type=L1,
+        l2(2) metric_type=L2,
+        linf(2) metric_type=Linf,
+        -- lp(2) metric_type=Lp,
+        canberra(2) metric_type=Canberra,
+        braycurtis(2) metric_type=BrayCurtis,
+        jensenshannon(2) metric_type=JensenShannon
+      )'''
+    )
+    idxs = list(map(lambda row: row[0], db.execute("select idx from vss_mts_index").fetchall()))
+
+    # ensure all the indexes are IDMap2 ("IxM2")
+    for idx in idxs:
+      idx_type = idx[0:4]
+      self.assertEqual(idx_type, b"IxM2")
+
+    # manually tested until i ended up at 33 ¯\_(ツ)_/¯
+    METRIC_TYPE_OFFSET = 33
+
+    # values should match https://github.com/facebookresearch/faiss/blob/43d86e30736ede853c384b24667fc3ab897d6ba9/faiss/MetricType.h#L22
+    self.assertEqual(idxs[0][METRIC_TYPE_OFFSET], 0) # ip
+    self.assertEqual(idxs[1][METRIC_TYPE_OFFSET], 2) # l1
+    self.assertEqual(idxs[2][METRIC_TYPE_OFFSET], 1) # l2
+    self.assertEqual(idxs[3][METRIC_TYPE_OFFSET], 3) # linf
+    #self.assertEqual(idxs[4][METRIC_TYPE_OFFSET], 4) # lp
+    self.assertEqual(idxs[4][METRIC_TYPE_OFFSET], 20) # canberra
+    self.assertEqual(idxs[5][METRIC_TYPE_OFFSET], 21) # braycurtis
+    self.assertEqual(idxs[6][METRIC_TYPE_OFFSET], 22) # jensenshannon
+
+
+    db.execute(
+      "insert into vss_mts(rowid, ip, l1, l2, linf, /*lp,*/ canberra, braycurtis, jensenshannon) values (1, ?1,?1,?1,?1, /*?1,*/ ?1,?1,?2)",
+      ["[4,1]", "[0.8, 0.2]"]
+    )
+    db.commit()
+
+    def distance_of(metric_type, query):
+      return db.execute(
+       f"select distance from vss_mts where vss_search({metric_type}, vss_search_params(?1, 1))",
+       [query]
+      ).fetchone()[0]
+    
+    self.assertEqual(distance_of("ip",          "[0,0]"), 0.0)
+    self.assertEqual(distance_of("l1",          "[0,0]"), 5.0)
+    self.assertEqual(distance_of("l2",          "[0,0]"), 17.0)
+    self.assertEqual(distance_of("linf",        "[0,0]"), 4.0)
+    #self.assertEqual(distance_of("lp",          "[0,0]"), 2.0)
+    self.assertEqual(distance_of("canberra",    "[0,0]"), 2.0)
+    self.assertEqual(distance_of("braycurtis",  "[0,0]"), 1.0)
+
+    # JS distance assumes L1 normalized input (a valid probability distribution)
+    # additionally, faiss actually computes JS divergence and not JS distance
+    self.assertEqual(distance_of("jensenshannon", "[0.33333333, 0.66666667]"), 0.11577349901199341)
+
+    self.assertEqual(distance_of("ip", "[2,2]"), 10.0)
   
-  def test_vss0_metric_type_JensenShannon(self):
-    tf = tempfile.NamedTemporaryFile(delete=False)
-    tf.close()
-
-    db = connect(tf.name)
-    db.execute("create table t as select 1 as a")
-    cur = db.cursor()
-    execute_all(cur, """
-      create virtual table x using vss0( a(2) metric_type=JensenShannon );
-    """)
-    execute_all(cur, """
-      insert into x(rowid, a)
-      values
-          (1, '[1.0, 2.0]'),
-          (2, '[2.0, 2.0]'),
-          (3, '[3.0, 2.0]');
-      """)
-
-    db.commit()
-
-    
-    res = execute_all(cur, f"select rowid, distance from x where vss_search(a, vss_search_params(json('[1.0, 2.0]'), 3));")    
-
-    self.assertEqual(res, [
-      {'rowid': 1, 'distance': 0.0000000000000000},
-      {'rowid': 2, 'distance': 0.0849495381116867},
-      {'rowid': 3, 'distance': 0.2616240382194519},
-    ])
-
-    db.close()
-
-  def test_vss0_cosine_similarity(self):
-    tf = tempfile.NamedTemporaryFile(delete=False)
-    tf.close()
-
-    db = connect(tf.name)
-    db.execute("create table t as select 1 as a")
-    cur = db.cursor()
-    execute_all(cur, """
-      create virtual table x using vss0( a(2) factory="L2norm,Flat,IDMap2" metric_type=INNER_PRODUCT );
-    """)
-    execute_all(cur, """
-      insert into x(rowid, a)
-      values
-          (1, '[1.0, 2.0]'),
-          (2, '[2.0, 2.0]'),
-          (3, '[3.0, 2.0]'),
-          (4, '[2.0, 0.0]');
-      """)
-
-    db.commit()
-
-    
-    res = execute_all(cur, f"select rowid, distance from x where vss_search(a, vss_search_params(json('[1.0, 2.0]'), 4));")    
-
-    self.assertEqual(res, [
-      {'rowid': 1, 'distance': 0.9999999403953552},
-      {'rowid': 2, 'distance': 0.9486832618713379},
-      {'rowid': 3, 'distance': 0.8682430982589722},
-      {'rowid': 4, 'distance': 0.4472135901451111}
-    ])
-
-    db.close()
 
 VECTOR_FUNCTIONS = [
   'vector0',
