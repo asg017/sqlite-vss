@@ -39,7 +39,7 @@ stmt.run(JSON.stringify(embedding));
 
 ### Vectors as Bytes
 
-Alternatively, if your vectors in Node.js are represented as a [Float32Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float32Array), you can access the [`.buffer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/buffer) accessor to insert the underlying ArrayBuffer.
+Alternatively, if your vectors in Node.js are represented as a [Float32Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float32Array), use the [`.buffer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/buffer) accessor to insert the underlying ArrayBuffer.
 
 ```js
 const embedding = new Float32Array([0.1, 0.2, 0.3]);

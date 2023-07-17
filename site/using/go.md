@@ -6,9 +6,17 @@
 The Go bindings for `sqlite-vss` are still in beta and are subject to change. If you come across problems, [please comment on the Go tracking issue](https://github.com/asg017/sqlite-vss/issues/49).
 :::
 
-1. binary struct pack
-
 ## Installing `sqlite-vss` into Go Projects
+
+The official `sqlite-vss` Go bindings can be installed like so:
+
+```
+go get -u github.com/asg017/sqlite-vss/bindings/go
+```
+
+You are required to provide pre-compiled static library files of `sqlite-vss`. You can do this by compiling `sqlite-vss` yourself, or [from a Github Release](https://github.com/asg017/sqlite-vss/releases).
+
+Once you have a directory with the pre-compiled static library files, you
 
 ## Working with Vectors in Go
 

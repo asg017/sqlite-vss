@@ -82,7 +82,7 @@ create virtual table vss_demo using vss0(
 
 Notice the `2` declaration in the `a` column definition. This is a required argument that tells `sqlite-vss` how many dimensions our vectors have. Also note that prefixing the virtual table name with `vss_` is a convention but not required.
 
-Now we have an empty `vss_demo`. Let's insert our vectors!
+Let's insert our vectors!
 
 ```sqlite
 insert into vss_demo(rowid, a)
@@ -99,7 +99,7 @@ insert into vss_demo(rowid, a)
   ');
 ```
 
-Here we are using [SQLite's builting JSON support](https://www.sqlite.org/json1.html) to define our vector data in a JSON string. `sqlite-vss` supports reading vectors and JSON in a few different formats, which you [can learn more about here](api-reference#inserting-data).
+Here we are using [SQLite's builting JSON support](https://www.sqlite.org/json1.html) to define our vector data in a JSON string. `sqlite-vss` supports vectors in a few different formats, which you [can learn more about here](api-reference#inserting-data).
 
 <p align="center"> <img src="./demo_q1.png" width="75%"> </p>
 
@@ -111,7 +111,6 @@ select
 from vss_lookup
 where vss_search(a, json('[2.0, 2.0]'))
 limit 3;
-
 ```
 
 ```
