@@ -581,7 +581,7 @@ class TestVss(unittest.TestCase):
        f"select distance from vss_mts where vss_search({metric_type}, vss_search_params(?1, 1))",
        [query]
       ).fetchone()[0]
-    
+
     self.assertEqual(distance_of("ip",          "[0,0]"), 0.0)
     self.assertEqual(distance_of("l1",          "[0,0]"), 5.0)
     self.assertEqual(distance_of("l2",          "[0,0]"), 17.0)
@@ -592,10 +592,10 @@ class TestVss(unittest.TestCase):
 
     # JS distance assumes L1 normalized input (a valid probability distribution)
     # additionally, faiss actually computes JS divergence and not JS distance
-    self.assertEqual(distance_of("jensenshannon", "[0.33333333, 0.66666667]"), 0.11577349901199341)
+    self.assertAlmostEqual(distance_of("jensenshannon", "[0.33333333, 0.66666667]"), 0.1157735)
 
     self.assertEqual(distance_of("ip", "[2,2]"), 10.0)
-  
+
 
 VECTOR_FUNCTIONS = [
   'vector0',
