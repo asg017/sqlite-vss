@@ -33,7 +33,7 @@ jobs:
         run: ./configure && make
 
       # TODO how cache this?
-      - run: sudo apt-get install -y cmake libgomp1
+      - run: sudo apt-get update -y && sudo apt-get install -y cmake libgomp1
       - run: make loadable static
       - uses: actions/upload-artifact@v3
         with:
