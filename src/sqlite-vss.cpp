@@ -722,6 +722,10 @@ unique_ptr<vector<VssIndexColumn>> parse_constructor(int argc,
             size_t lquote = arg.find_first_not_of(" ", metricStringStartFrom + 1);
             size_t rquote = arg.find(",", lquote);
 
+            if(lquote == -1) {
+              throw std::invalid_argument( "invalid metric_type value" );
+            }
+
             if (rquote == string::npos) {
                 rquote = arg.size();
             }
@@ -734,7 +738,7 @@ unique_ptr<vector<VssIndexColumn>> parse_constructor(int argc,
 
         } else {
             // L2 is the default
-            metric_type = faiss::METRIC_L2; 
+            metric_type = faiss::METRIC_L2;
         }
 
         columns->push_back(VssIndexColumn{name, dimensions, factory, metric_type});

@@ -432,6 +432,12 @@ class TestVss(unittest.TestCase):
     with self.assertRaisesRegex(sqlite3.OperationalError, ".*could not parse index string invalid"):
       execute_all(cur, 'create virtual table t1 using vss0(a(2) factory="invalid");')
 
+    with self.assertRaisesRegex(sqlite3.OperationalError, "unknown metric type: L3"):
+      db.execute("create virtual table xx using vss0( a(2) metric_type=L3)")
+
+    with self.assertRaisesRegex(sqlite3.OperationalError, "invalid metric_type value"):
+      db.execute("create virtual table xx using vss0( a(2) metric_type=)")
+
   def test_vss_training(self):
     import random
     import json
