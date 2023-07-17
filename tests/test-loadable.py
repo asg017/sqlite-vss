@@ -534,6 +534,69 @@ class TestVss(unittest.TestCase):
       [{'distance': 2.0, 'rowid': 1000}]
     )
 
+  def test_vss0_metric_type(self):
+    cur = db.cursor()
+    execute_all(
+      cur,
+      '''create virtual table vss_mts using vss0(
+        ip(2) metric_type=INNER_PRODUCT,
+        l1(2) metric_type=L1,
+        l2(2) metric_type=L2,
+        linf(2) metric_type=Linf,
+        -- lp(2) metric_type=Lp,
+        canberra(2) metric_type=Canberra,
+        braycurtis(2) metric_type=BrayCurtis,
+        jensenshannon(2) metric_type=JensenShannon
+      )'''
+    )
+    idxs = list(map(lambda row: row[0], db.execute("select idx from vss_mts_index").fetchall()))
+
+    # ensure all the indexes are IDMap2 ("IxM2")
+    for idx in idxs:
+      idx_type = idx[0:4]
+      self.assertEqual(idx_type, b"IxM2")
+
+    # manually tested until i ended up at 33 ¯\_(ツ)_/¯
+    METRIC_TYPE_OFFSET = 33
+
+    # values should match https://github.com/facebookresearch/faiss/blob/43d86e30736ede853c384b24667fc3ab897d6ba9/faiss/MetricType.h#L22
+    self.assertEqual(idxs[0][METRIC_TYPE_OFFSET], 0) # ip
+    self.assertEqual(idxs[1][METRIC_TYPE_OFFSET], 2) # l1
+    self.assertEqual(idxs[2][METRIC_TYPE_OFFSET], 1) # l2
+    self.assertEqual(idxs[3][METRIC_TYPE_OFFSET], 3) # linf
+    #self.assertEqual(idxs[4][METRIC_TYPE_OFFSET], 4) # lp
+    self.assertEqual(idxs[4][METRIC_TYPE_OFFSET], 20) # canberra
+    self.assertEqual(idxs[5][METRIC_TYPE_OFFSET], 21) # braycurtis
+    self.assertEqual(idxs[6][METRIC_TYPE_OFFSET], 22) # jensenshannon
+
+
+    db.execute(
+      "insert into vss_mts(rowid, ip, l1, l2, linf, /*lp,*/ canberra, braycurtis, jensenshannon) values (1, ?1,?1,?1,?1, /*?1,*/ ?1,?1,?2)",
+      ["[4,1]", "[0.8, 0.2]"]
+    )
+    db.commit()
+
+    def distance_of(metric_type, query):
+      return db.execute(
+       f"select distance from vss_mts where vss_search({metric_type}, vss_search_params(?1, 1))",
+       [query]
+      ).fetchone()[0]
+    
+    self.assertEqual(distance_of("ip",          "[0,0]"), 0.0)
+    self.assertEqual(distance_of("l1",          "[0,0]"), 5.0)
+    self.assertEqual(distance_of("l2",          "[0,0]"), 17.0)
+    self.assertEqual(distance_of("linf",        "[0,0]"), 4.0)
+    #self.assertEqual(distance_of("lp",          "[0,0]"), 2.0)
+    self.assertEqual(distance_of("canberra",    "[0,0]"), 2.0)
+    self.assertEqual(distance_of("braycurtis",  "[0,0]"), 1.0)
+
+    # JS distance assumes L1 normalized input (a valid probability distribution)
+    # additionally, faiss actually computes JS divergence and not JS distance
+    self.assertEqual(distance_of("jensenshannon", "[0.33333333, 0.66666667]"), 0.11577349901199341)
+
+    self.assertEqual(distance_of("ip", "[2,2]"), 10.0)
+  
+
 VECTOR_FUNCTIONS = [
   'vector0',
   'vector_debug',

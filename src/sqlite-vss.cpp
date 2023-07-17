@@ -648,7 +648,28 @@ struct VssIndexColumn {
     string name;
     sqlite3_int64 dimensions;
     string factory;
+    faiss::MetricType metric;
 };
+
+faiss::MetricType parse_metric_type(const std::string& metric_type) {
+    static const std::unordered_map<std::string, faiss::MetricType> metric_type_map = {
+        {"L1", faiss::METRIC_L1},
+        {"L2", faiss::METRIC_L2},
+        {"INNER_PRODUCT", faiss::METRIC_INNER_PRODUCT},
+        {"Linf", faiss::METRIC_Linf},
+        // {"Lp", faiss::METRIC_Lp}, unavailable until metric arg is added
+        {"Canberra", faiss::METRIC_Canberra},
+        {"BrayCurtis", faiss::METRIC_BrayCurtis},
+        {"JensenShannon", faiss::METRIC_JensenShannon}
+    };
+
+    auto it = metric_type_map.find(metric_type);
+    if (it == metric_type_map.end()) {
+        throw invalid_argument("unknown metric type: " + metric_type);
+    }
+
+    return it->second;
+}
 
 unique_ptr<vector<VssIndexColumn>> parse_constructor(int argc,
                                                      const char *const *argv) {
@@ -691,7 +712,32 @@ unique_ptr<vector<VssIndexColumn>> parse_constructor(int argc,
         } else {
             factory = string("Flat,IDMap2");
         }
-        columns->push_back(VssIndexColumn{name, dimensions, factory});
+
+        faiss::MetricType metric_type;
+        size_t metricStart, metricStringStartFrom;
+
+        if ((metricStart = arg.find("metric_type", rparen)) != string::npos &&
+            (metricStringStartFrom = arg.find("=", metricStart)) != string::npos) {
+
+            size_t lquote = arg.find_first_not_of(" ", metricStringStartFrom + 1);
+            size_t rquote = arg.find(",", lquote);
+
+            if (rquote == string::npos) {
+                rquote = arg.size();
+            }
+
+            try {
+                metric_type = parse_metric_type(arg.substr(lquote, rquote - lquote));
+            } catch (const invalid_argument& e) {
+                throw;
+            }
+
+        } else {
+            // L2 is the default
+            metric_type = faiss::METRIC_L2; 
+        }
+
+        columns->push_back(VssIndexColumn{name, dimensions, factory, metric_type});
     }
 
     return columns;
@@ -712,7 +758,13 @@ static int init(sqlite3 *db,
     sqlite3_str_appendall(str,
                           "create table x(distance hidden, operation hidden");
 
-    auto columns = parse_constructor(argc, argv);
+    unique_ptr<vector<VssIndexColumn>> columns;
+    try {
+        columns = parse_constructor(argc, argv);
+    } catch (const invalid_argument& e) {
+        *pzErr = sqlite3_mprintf(e.what());
+        return SQLITE_ERROR;
+    }
 
     if (columns == nullptr) {
         *pzErr = sqlite3_mprintf("Error parsing constructor");
@@ -747,7 +799,7 @@ static int init(sqlite3 *db,
 
             try {
 
-                auto index = faiss::index_factory(iter->dimensions, iter->factory.c_str());
+                auto index = faiss::index_factory(iter->dimensions, iter->factory.c_str(), iter->metric);
                 pTable->indexes.push_back(new vss_index(index));
 
             } catch (faiss::FaissException &e) {
