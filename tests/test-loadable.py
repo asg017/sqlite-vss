@@ -735,4 +735,4 @@ class TestCoverage(unittest.TestCase):
       self.assertTrue(func in funcs_with_tests, f"{func} does not have cooresponding test in {funcs_with_tests}")
 
 if __name__ == '__main__':
-     unittest.main()
+    unittest.main()
