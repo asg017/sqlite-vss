@@ -160,6 +160,41 @@ static void vss_inner_product(sqlite3_context *context, int argc,
                           faiss::fvec_inner_product(lhs->data(), rhs->data(), lhs->size()));
 }
 
+static void vss_cosine_similarity(sqlite3_context *context, int argc,
+                              sqlite3_value **argv) {
+
+    auto vector_api = (vector0_api *)sqlite3_user_data(context);
+
+    vec_ptr lhs = vector_api->xValueAsVector(argv[0]);
+    if (lhs == nullptr) {
+        sqlite3_result_error(context, "LHS is not a vector", -1);
+        return;
+    }
+
+    vec_ptr rhs = vector_api->xValueAsVector(argv[1]);
+    if (rhs == nullptr) {
+        sqlite3_result_error(context, "RHS is not a vector", -1);
+        return;
+    }
+
+    if (lhs->size() != rhs->size()) {
+        sqlite3_result_error(context, "LHS and RHS are not vectors of the same size",
+                             -1);
+        return;
+    }
+    
+    float inner_product = faiss::fvec_inner_product(lhs->data(), rhs->data(), lhs->size());
+    float lhs_norm = faiss::fvec_norm_L2sqr(lhs->data(), lhs->size());
+    float rhs_norm = faiss::fvec_norm_L2sqr(rhs->data(), rhs->size());
+
+    if (lhs_norm == 0.0f || rhs_norm == 0.0f) {
+        sqlite3_result_error(context, "One or both vectors are zero-vectors", -1);
+        return;
+    }
+
+    sqlite3_result_double(context, inner_product / (sqrt(lhs_norm) * sqrt(rhs_norm)));
+}
+
 static void vss_fvec_add(sqlite3_context *context, int argc,
                          sqlite3_value **argv) {
 
@@ -1641,6 +1676,13 @@ __declspec(dllexport)
                                    SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
                                    vector_api,
                                    vss_inner_product,
+                                   0, 0, 0);
+
+        sqlite3_create_function_v2(db, "vss_cosine_similarity",
+                                   2,
+                                   SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS,
+                                   vector_api,
+                                   vss_cosine_similarity,
                                    0, 0, 0);
 
         sqlite3_create_function_v2(db, "vss_fvec_add",

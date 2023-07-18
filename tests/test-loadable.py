@@ -44,6 +44,7 @@ def execute_all(cursor, sql, args=None):
   return list(map(lambda x: dict(x), results))
 
 VSS_FUNCTIONS = [
+  'vss_cosine_similarity',
   'vss_debug',
   'vss_distance_l1',
   'vss_distance_l2',
@@ -98,6 +99,11 @@ class TestVss(unittest.TestCase):
     vss_inner_product = lambda a, b: db.execute("select vss_inner_product(json(?), json(?))", [a, b]).fetchone()[0]
     self.assertEqual(vss_inner_product('[0, 0]', '[0, 0]'), 0.0)
     self.assertEqual(vss_inner_product('[0, 0]', '[0, 1]'), 0.0)
+
+  def test_vss_cosine_similarity(self):
+    vss_cosine_similarity = lambda a, b: db.execute("select vss_cosine_similarity(json(?), json(?))", [a, b]).fetchone()[0]
+    self.assertAlmostEqual(vss_cosine_similarity('[2, 1]', '[1, 2]'), 0.8)
+    self.assertEqual(vss_cosine_similarity('[1, 1]', '[-1, 1]'), 0.0)
 
   def test_vss_fvec_add(self):
     vss_fvec_add = lambda a, b: db.execute("select vss_fvec_add(json(?), json(?))", [a, b]).fetchone()[0]
