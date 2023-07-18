@@ -3,7 +3,7 @@
 #define _SQLITE_VSS_H
 
 #include "sqlite3ext.h"
-#define SQLITE_VSS_VERSION "v0.1.1-alpha.20"
+#define SQLITE_VSS_VERSION "v0.1.1-alpha.21"
 
 #define SQLITE_VSS_VERSION_MAJOR @sqlite - vss_VERSION_MAJOR @
 #define SQLITE_VSS_VERSION_MINOR @sqlite - vss_VERSION_MINOR @
