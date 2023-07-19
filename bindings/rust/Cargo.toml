@@ -9,7 +9,7 @@ description = "FFI bindings to the sqlite-vss SQLite extension"
 homepage = "https://github.com/asg017/sqlite-vss"
 repository = "https://github.com/asg017/sqlite-vss"
 keywords = ["sqlite", "sqlite-extension"]
-license = "MIT/Apache-2.0"
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 
