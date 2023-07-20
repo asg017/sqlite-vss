@@ -2,14 +2,14 @@
 
 [package]
 name = "sqlite-vss"
-version = "0.1.1-alpha.21"
+version = "0.1.1-alpha.22"
 edition = "2021"
 authors = ["Alex Garcia <alexsebastian.garcia@gmail.com>"]
 description = "FFI bindings to the sqlite-vss SQLite extension"
 homepage = "https://github.com/asg017/sqlite-vss"
 repository = "https://github.com/asg017/sqlite-vss"
 keywords = ["sqlite", "sqlite-extension"]
-license = "MIT OR Apache-2.0"
+license = "MIT/Apache-2.0"
 
 [dependencies]
 
