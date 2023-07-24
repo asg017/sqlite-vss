@@ -22,15 +22,8 @@ ENV LD_LIBRARY_PATH=/sqlite/sqlite-autoconf-3410200/.libs
 
 #  TODO outdated, use the datasette-sqlite-vss plugin instead
 
-WORKDIR /app
-RUN curl -L 'https://github.com/asg017/sqlite-vss/releases/download/v0.0.1-alpha.7/sqlite-vss-v0.0.1-alpha.7-ubuntu-x86_64.tar.gz' \
-  | tar -xvzf  -
-RUN curl -L 'https://github.com/asg017/sqlite-vector/releases/download/v0.0.1-alpha.5/sqlite-vector-v0.0.1-alpha.5-ubuntu-x86_64.tar.gz' \
-  | tar -xvzf -
-
+RUN datasette install datasette-sqlite-vss
 
 CMD datasette /data/headlines.db \
   -p 8001 -h 0.0.0.0 --cors \
-  --load-extension=/app/vector0 \
-  --load-extension=/app/vss0 \
   --plugins-dir=/app/plugins
