@@ -25,6 +25,12 @@ LOADABLE_EXTENSION=dll
 LIBRARY_PREFIX=
 endif
 
+ifdef IS_MACOS_ARM
+RENAME_WHEELS_ARGS=--is-macos-arm
+else
+RENAME_WHEELS_ARGS=
+endif
+
 prefix=dist
 
 ifdef python
