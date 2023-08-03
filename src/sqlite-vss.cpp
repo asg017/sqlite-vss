@@ -684,6 +684,7 @@ struct VssIndexColumn {
     sqlite3_int64 dimensions;
     string factory;
     faiss::MetricType metric;
+    bool on_disk;
 };
 
 faiss::MetricType parse_metric_type(const std::string& metric_type) {
@@ -704,6 +705,12 @@ faiss::MetricType parse_metric_type(const std::string& metric_type) {
     }
 
     return it->second;
+}
+
+bool parse_on_disk(const std::string& on_disk) {
+    if (on_disk == "True" || on_disk == "1") return true;
+    else if (on_disk == "False" || on_disk == "0") return false;
+    throw invalid_argument("unknown option for on disk: " + on_disk);
 }
 
 unique_ptr<vector<VssIndexColumn>> parse_constructor(int argc,
@@ -749,6 +756,7 @@ unique_ptr<vector<VssIndexColumn>> parse_constructor(int argc,
         }
 
         faiss::MetricType metric_type;
+        bool on_disk;
         size_t metricStart, metricStringStartFrom;
 
         if ((metricStart = arg.find("metric_type", rparen)) != string::npos &&
@@ -776,7 +784,25 @@ unique_ptr<vector<VssIndexColumn>> parse_constructor(int argc,
             metric_type = faiss::METRIC_L2;
         }
 
-        columns->push_back(VssIndexColumn{name, dimensions, factory, metric_type});
+        if ((metricStart = arg.find("on_disk", rparen)) != string::npos &&
+            (metricStringStartFrom = arg.find("=", metricStart)) != string::npos) {
+
+            size_t lquote = arg.find_first_not_of(" ", metricStringStartFrom + 1);
+            size_t rquote = arg.find(",", lquote);
+
+            if(lquote == -1) {
+              throw std::invalid_argument( "invalid metric_type value" );
+            }
+
+            if (rquote == string::npos) {
+                rquote = arg.size();
+            }
+
+            on_disk = parse_on_disk(arg.substr(lquote, rquote - lquote));
+
+        }
+
+        columns->push_back(VssIndexColumn{name, dimensions, factory, metric_type, on_disk});
     }
 
     return columns;
