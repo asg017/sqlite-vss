@@ -150,6 +150,20 @@ datasette-release: $(TARGET_WHEELS_RELEASE) bindings/datasette/setup.py bindings
 	rm $(TARGET_WHEELS_RELEASE)/datasette* || true
 	pip3 wheel bindings/datasette/ --no-deps -w $(TARGET_WHEELS_RELEASE)
 
+bindings/sqlite-utils/pyproject.toml: bindings/sqlite-utils/pyproject.toml.tmpl VERSION
+	VERSION=$(VERSION) envsubst < $< > $@
+	echo "✅ generated $@"
+
+bindings/sqlite-utils/sqlite_utils_sqlite_vss/version.py: bindings/sqlite-utils/sqlite_utils_sqlite_vss/version.py.tmpl VERSION
+	VERSION=$(VERSION) envsubst < $< > $@
+	echo "✅ generated $@"
+
+sqlite-utils: $(TARGET_WHEELS) bindings/sqlite-utils/pyproject.toml bindings/sqlite-utils/sqlite_utils_sqlite_vss/version.py
+	python3 -m build bindings/sqlite-utils -w -o $(TARGET_WHEELS)
+
+sqlite-utils-release: $(TARGET_WHEELS) bindings/sqlite-utils/pyproject.toml bindings/sqlite-utils/sqlite_utils_sqlite_vss/version.py
+	python3 -m build bindings/sqlite-utils -w -o $(TARGET_WHEELS_RELEASE)
+
 npm: VERSION bindings/node/platform-package.README.md.tmpl bindings/node/platform-package.package.json.tmpl bindings/node/sqlite-vss/package.json.tmpl scripts/npm_generate_platform_packages.sh
 	scripts/npm_generate_platform_packages.sh
 
@@ -182,6 +196,7 @@ elixir: bindings/elixir/VERSION
 version:
 	make python-versions
 	make python
+	make bindings/sqlite-utils/pyproject.toml bindings/sqlite-utils/sqlite_utils_sqlite_vss/version.py
 	make npm
 	make deno
 	make bindings/ruby/lib/version.rb
@@ -230,4 +245,4 @@ publish-release:
 	loadable loadable-release static static-release \
 	publish-release \
 	patch-openmp patch-openmp-undo \
-	python python-release python-versions datasette elixir npm deno go rust version
+	python python-release python-versions datasette sqlite-utils sqlite-utils-release elixir npm deno go rust version

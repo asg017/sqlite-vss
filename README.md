@@ -158,10 +158,10 @@ npm install sqlite-vss
 
 ```js
 import Database from "better-sqlite3"; // also compatible with node-sqlite3
-import * as sqlite_vss from "sqlite-ulid";
+import * as sqlite_vss from "sqlite-vss";
 
 const db = new Database(":memory:");
-sqlite_ulid.load(db);
+sqlite_vss.load(db);
 
 const version = db.prepare("select vss_version()").pluck().get();
 console.log(version);

@@ -13,6 +13,7 @@ env:
   ARTIFACT-LINUX-X86_64-WHEELS: sqlite-vss-linux-x86_64-wheels
   ARTIFACT-MACOS-X86_64-WHEELS: sqlite-vss-macos-x86_64-wheels
   ARTIFACT-MACOS-AARCH64-WHEELS: sqlite-vss-macos-aarch64-wheels
+  ARTIFACT-DATASETTE-SQLITE-UTILS-WHEELS: sqlite-vss-datasette-sqlite-utils-wheels
 jobs:
   build-linux-x86_64-extension:
     runs-on: ubuntu-20.04
@@ -50,7 +51,6 @@ jobs:
       - uses: actions/setup-python@v3
       - run: pip install wheel
       - run: make python-release
-      - run: make datasette-release
       - uses: actions/upload-artifact@v3
         with:
           name: ${{ env.ARTIFACT-LINUX-X86_64-WHEELS }}
@@ -101,7 +101,6 @@ jobs:
       - uses: actions/setup-python@v3
       - run: pip install wheel
       - run: make python-release
-      - run: make datasette-release
       - uses: actions/upload-artifact@v3
         with:
           name: ${{ env.ARTIFACT-MACOS-X86_64-WHEELS }}
@@ -145,10 +144,20 @@ jobs:
           path: dist/release/
       - run: pip3 install wheel
       - run: make python-release IS_MACOS_ARM=1
-      - run: make datasette-release
       - uses: actions/upload-artifact@v3
         with:
           name: ${{ env.ARTIFACT-MACOS-AARCH64-WHEELS }}
+          path: dist/release/wheels/*.whl
+  build-datasette-sqlite-utils:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
+      - run: pip install wheel build
+      - run: make datasette-release sqlite-utils-release
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ ENV.ARTIFACT-DATASETTE-SQLITE-UTILS-WHEELS }}
           path: dist/release/wheels/*.whl
   upload-deno:
     needs:
@@ -291,6 +300,7 @@ jobs:
         build-linux-x86_64-python,
         build-macos-x86_64-python,
         build-macos-aarch64-python,
+        build-datasette-sqlite-utils,
       ]
     runs-on: ubuntu-latest
     steps:
@@ -305,6 +315,10 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: ${{ env.ARTIFACT-MACOS-AARCH64-WHEELS }}
+          path: dist
+      - uses: actions/download-artifact@v3
+        with:
+          name: ${{ ENV.ARTIFACT-DATASETTE-SQLITE-UTILS-WHEELS }}
           path: dist
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
