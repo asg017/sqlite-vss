@@ -1,6 +1,6 @@
 [project]
 name = "sqlite-utils-sqlite-vss"
-version = "0.1.2-alpha.2"
+version = "0.1.2-alpha.3"
 description = "TODO"
 readme = "README.md"
 authors = [{name = "Alex Garcia"}]
