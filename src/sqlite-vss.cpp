@@ -182,7 +182,7 @@ static void vss_cosine_similarity(sqlite3_context *context, int argc,
                              -1);
         return;
     }
-    
+
     float inner_product = faiss::fvec_inner_product(lhs->data(), rhs->data(), lhs->size());
     float lhs_norm = faiss::fvec_norm_L2sqr(lhs->data(), lhs->size());
     float rhs_norm = faiss::fvec_norm_L2sqr(rhs->data(), rhs->size());
@@ -950,12 +950,23 @@ static int vssIndexClose(sqlite3_vtab_cursor *cur) {
     return SQLITE_OK;
 }
 
+#define VSS0_IDXNUM_FULLSCAN    1
+#define VSS0_IDXNUM_POINT       2
+#define VSS0_IDXNUM_SEARCH      3
+#define VSS0_IDXNUM_RANGESEARCH 4
+
+#define VSS0_IDXCHAR_VECTOR_COLUMN_IDX  'A'
+#define VSS0_IDXCHAR_LIMIT              'B'
+#define VSS0_IDXCHAR_ROWID_EQ           'C'
+#define VSS0_IDXCHAR_ROWID_IN           'D'
+
 static int vssIndexBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
 
     int iSearchTerm = -1;
     int iRangeSearchTerm = -1;
     int iXSearchColumn = -1;
     int iLimit = -1;
+    sqlite3_str* idxStr = sqlite3_str_new(NULL);
 
     for (int i = 0; i < pIdxInfo->nConstraint; i++) {
 
@@ -981,8 +992,9 @@ static int vssIndexBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
 
     if (iSearchTerm >= 0) {
 
-        pIdxInfo->idxNum = iXSearchColumn - VSS_INDEX_COLUMN_VECTORS;
-        pIdxInfo->idxStr = (char *)"search";
+        pIdxInfo->idxNum = VSS0_IDXNUM_SEARCH;
+        //pIdxInfo->idxStr = (char *)"search";
+        sqlite3_str_appendchar(idxStr, 1, ('A' - iXSearchColumn - VSS_INDEX_COLUMN_VECTORS));
         pIdxInfo->aConstraintUsage[iSearchTerm].argvIndex = 1;
         pIdxInfo->aConstraintUsage[iSearchTerm].omit = 1;
         if (iLimit >= 0) {
@@ -997,17 +1009,20 @@ static int vssIndexBestIndex(sqlite3_vtab *tab, sqlite3_index_info *pIdxInfo) {
 
     if (iRangeSearchTerm >= 0) {
 
-        pIdxInfo->idxNum = iXSearchColumn - VSS_INDEX_COLUMN_VECTORS;
-        pIdxInfo->idxStr = (char *)"range_search";
+        pIdxInfo->idxNum = VSS0_IDXNUM_RANGESEARCH;
+        //pIdxInfo->idxStr = (char *)"range_search";
         pIdxInfo->aConstraintUsage[iRangeSearchTerm].argvIndex = 1;
         pIdxInfo->aConstraintUsage[iRangeSearchTerm].omit = 1;
+        iXSearchColumn - VSS_INDEX_COLUMN_VECTORS
         pIdxInfo->estimatedCost = 300.0;
         pIdxInfo->estimatedRows = 10;
         return SQLITE_OK;
     }
 
-    pIdxInfo->idxNum = -1;
-    pIdxInfo->idxStr = (char *)"fullscan";
+    // TODO ADD VSS0_IDXNUM_POINT support
+
+    pIdxInfo->idxNum = VSS0_IDXNUM_FULLSCAN;
+    //pIdxInfo->idxStr = (char *)"fullscan";
     pIdxInfo->estimatedCost = 3000000.0;
     pIdxInfo->estimatedRows = 100000;
     return SQLITE_OK;
@@ -1064,6 +1079,7 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
         }
 
         int nq = 1;
+        // TODO change out of idxNum
         auto index = pCursor->table->indexes.at(idxNum)->index;
 
         if (query_vector->size() != index->d) {
@@ -1111,6 +1127,7 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
         vector<faiss::idx_t> nns(params->distance * nq);
         pCursor->range_search_result = unique_ptr<faiss::RangeSearchResult>(new faiss::RangeSearchResult(nq, true));
 
+        // TODO change out of idxNum
         auto index = pCursor->table->indexes.at(idxNum)->index;
 
         index->range_search(nq,

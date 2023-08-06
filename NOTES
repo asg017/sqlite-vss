@@ -1,3 +1,5 @@
+`rowid in (...)` notes
+
 ## TODO
 
 - [ ] `sqlite-vector`
@@ -6,10 +8,9 @@
   - `pTable->vectors_to_add`
   - `xCommit`/`xRollback`
 - [ ] DELETE and UPDATE support
+
   - [ ] xUpdate DELETE, with `pTable->ids_to_data` and `xCommit`/`xRollback` support
   - [ ] update, call remove_id, add_id?
-
-
 
 - [ ] clustering?
 - [ ] [Distances](https://faiss.ai/cpp_api/file/distances_8h.html)
