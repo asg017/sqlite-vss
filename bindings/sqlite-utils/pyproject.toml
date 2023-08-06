@@ -1,0 +1,21 @@
+[project]
+name = "sqlite-utils-sqlite-vss"
+version = "0.1.2"
+description = "TODO"
+readme = "README.md"
+authors = [{name = "Alex Garcia"}]
+license = {text = "Apache-2.0"}
+classifiers = []
+
+dependencies = [
+    "sqlite-utils",
+    "sqlite-vss"
+]
+
+[project.urls]
+Homepage = "https://github.com/asg017/sqlite-vss"
+Changelog = "https://github.com/asg017/sqlite-vss/releases"
+Issues = "https://github.com/asg017/sqlite-vss/issues"
+
+[project.entry-points.sqlite_utils]
+sqlite_vss = "sqlite_utils_sqlite_vss"
