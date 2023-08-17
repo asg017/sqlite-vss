@@ -19,9 +19,10 @@ This page goes over other vector databases and vector storage techniques that ex
 
 ## Vector Databases (Pinecone, Milvus, Qdrant, etc.) { #vector-dbs }
 
-In general, "real" vector databases like [Pinecone](https://www.pinecone.io/), [Milvus](https://milvus.io/), [Qdrant](https://qdrant.tech/), and dozens of others will likely "scale" better than `sqlite-vss`. They mostly likely handle writes faster and more efficiently than `sqlite-vss`, can handle a large number of users at the same time, and handle metadata-filtering on queries.
+In general, "real" vector databases like [Pinecone](https://www.pinecone.io/), [Milvus](https://milvus.io/), [Qdrant](https://qdrant.tech/), and dozens of others will likely "scale" better than `sqlite-vss`. These databases perform writes faster and more efficiently than `sqlite-vss`, can handle a large number of users at the same time, and can perform metadata-filtering on queries.
 
 On the other hand, `sqlite-vss` doesn't require an entire new server to maintain, is open source, and is most likely "fast enough" for many use-cases.
+
 
 ## JSON or Pickle
 

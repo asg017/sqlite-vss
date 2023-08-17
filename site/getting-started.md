@@ -17,10 +17,6 @@ You have several options to include `sqlite-vss` into your projects, including P
 pip install sqlite-vss
 ```
 
-```bash [Datasette]
-datasette install datasette-sqlite-vss
-```
-
 ```bash [Node.js]
 npm install sqlite-vss
 ```
@@ -45,11 +41,13 @@ cargo add sqlite-vss
 go get -u github.com/asg017/sqlite-vss/bindings/go
 ```
 
-<!--
-```bash [sqlite-package-manager]
-spm install github.com/asg017/sqlite-vss
+```bash [Datasette]
+datasette install datasette-sqlite-vss
 ```
--->
+
+```bash [sqlite-utils]
+sqlite-utils install sqlite-utils-sqlite-vss
+```
 
 :::
 

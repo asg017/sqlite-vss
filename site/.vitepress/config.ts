@@ -65,10 +65,6 @@ function nav(): DefaultTheme.NavItem[] {
               link: `https://pypi.org/project/${PROJECT}`,
             },
             {
-              text: "Datasette: Plugin",
-              link: `https://datasette.io/plugins/datasette-${PROJECT}`,
-            },
-            {
               text: "Node.js: NPM package",
               link: `https://www.npmjs.com/package/${PROJECT}`,
             },
@@ -91,6 +87,14 @@ function nav(): DefaultTheme.NavItem[] {
             {
               text: "Golang: Go module",
               link: `https://pkg.go.dev/github.com/asg017/${PROJECT}/bindings/go`,
+            },
+            {
+              text: "Datasette: Plugin",
+              link: `https://datasette.io/plugins/datasette-${PROJECT}`,
+            },
+            {
+              text: "sqlite-utils: Plugin",
+              link: `https://datasette.io/plugins/datasette-${PROJECT}`,
             },
           ],
         },

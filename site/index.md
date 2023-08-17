@@ -22,5 +22,5 @@ features:
   - title: Embeddable
     details: Like SQLite, no external server, no network access, zero configuration
   - title: Based on Faiss
-    details: Reliable, fast, and configurable vector search options
+    details: Reliable, fast, and configurable vector search
 ---
