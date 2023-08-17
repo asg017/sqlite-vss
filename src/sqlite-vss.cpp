@@ -11,6 +11,7 @@ SQLITE_EXTENSION_INIT1
 #include <random>
 #include <fstream>
 #include <functional>
+#include <optional>
 
 #include <faiss/IndexFlat.h>
 #include <faiss/IndexIVFPQ.h>
@@ -184,7 +185,7 @@ static void vss_cosine_similarity(sqlite3_context *context, int argc,
                              -1);
         return;
     }
-    
+
     float inner_product = faiss::fvec_inner_product(lhs->data(), rhs->data(), lhs->size());
     float lhs_norm = faiss::fvec_norm_L2sqr(lhs->data(), lhs->size());
     float rhs_norm = faiss::fvec_norm_L2sqr(rhs->data(), rhs->size());
@@ -645,14 +646,12 @@ static faiss::Index *read_index_select(sqlite3 *db, const char *schema, const ch
         int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr);
         if (rc != SQLITE_OK || stmt == nullptr) {
             finalize_and_free(stmt, sql);
-            printf("zz prepare error\n");
             return nullptr;
         }
 
         sqlite3_bind_int64(stmt, 1, indexId);
         if ((rc = sqlite3_step(stmt)) != SQLITE_ROW) {
             finalize_and_free(stmt, sql);
-            printf("zz step error %d\n", rc);
             return nullptr;
         }
 
@@ -676,10 +675,11 @@ static int create_shadow_tables(sqlite3 *db,
                                 vector<vss_index *> indices) {
 
 
-    bool skip_shadow_index = false;
+    // make the _index shadow tables if there's at least 1 column that uses the default faiss_shadow
+    bool skip_shadow_index = true;
     for (auto i : indices) {
-        if (i->storage_type == StorageType::faiss_ondisk) {
-            skip_shadow_index = true;
+        if (i->storage_type == StorageType::faiss_shadow) {
+            skip_shadow_index = false;
         }
     }
 
@@ -741,9 +741,138 @@ static int drop_shadow_tables(sqlite3 *db, char *name) {
 #define VSS_SEARCH_FUNCTION SQLITE_INDEX_CONSTRAINT_FUNCTION
 #define VSS_RANGE_SEARCH_FUNCTION SQLITE_INDEX_CONSTRAINT_FUNCTION + 1
 
+// Tokens types when parsing vss0 column definitions
+enum TokenType {
+  LPAREN = 1,
+  RPAREN = 2,
+  EQUAL = 3,
+  IDENTIFIER = 50,
+  STRING = 51,
+  INTEGER = 52
+};
 
-faiss::MetricType parse_metric_type(const std::string& metric_type) {
-    static const std::unordered_map<std::string, faiss::MetricType> metric_type_map = {
+// Tokens types when parsing vss0 column definitions
+struct Token {
+public:
+  TokenType token_type;
+  // Only definied when token_type == TokenType::IDENTIFIER
+  string identifier_value;
+  // Only definied when token_type == TokenType::STRING
+  string string_value;
+  // Only definied when token_type == TokenType::INTEGER
+  int int_value;
+
+  explicit Token(TokenType token_type) : token_type(token_type) {}
+  // TODO: maybe these should just be different classes that inherit Token? idk C++ man
+  static Token IdentifierToken(string value){
+    Token token(TokenType::IDENTIFIER);
+    token.identifier_value = value;
+    return token;
+  }
+  static Token StringToken(string value){
+    Token token(TokenType::STRING);
+    token.string_value = value;
+    return token;
+  }
+  static Token IntToken(int value){
+    Token token(TokenType::INTEGER);
+    token.int_value = value;
+    return token;
+  }
+};
+
+// scans through a vss0 column definition string
+struct Scanner {
+public:
+  explicit Scanner(string source): source(source), idx(0), len(source.length()) {}
+  char advance() {
+    return source[idx++];
+  }
+  optional<char> peek() {
+    if(idx >= len) {
+      return {};
+    }
+    return source[idx];
+  }
+  bool eof() {
+    return idx >= len;
+  }
+
+private:
+  string source;
+  int idx;
+  int len;
+
+};
+
+// Valid chatacters allowed in an identifier, except the 1st character (most be a-zA-Z_)
+bool is_identifier_char(optional<char> c) {
+  if(!c.has_value()) {
+    return false;
+  }
+  return (c >= 'a' && c <= 'z')
+  || (c >= 'A' && c <= 'Z')
+  || (c >= '0' && c <= '9')
+  || (c == '_');
+}
+
+// sus out the tokens in a vss0 column definition
+vector<Token> tokenize(string source) {
+  vector<Token> tokens;
+  Scanner scanner(source);
+  while (!scanner.eof()) {
+    char c = scanner.advance();
+    if(c == ' ' || c == '\n' || c == '\t') {
+      continue;
+    }
+    else if(c=='(') {
+      tokens.push_back(Token(TokenType::LPAREN));
+    }
+    else if(c==')') {
+      tokens.push_back(Token(TokenType::RPAREN));
+    }
+    else if(c=='=') {
+      tokens.push_back(Token(TokenType::EQUAL));
+    }
+    else if((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+      string identifier;
+      identifier.push_back(c);
+      while (is_identifier_char(scanner.peek())) {
+        identifier.push_back(scanner.advance());
+      }
+      tokens.push_back(Token::IdentifierToken(identifier));
+
+    }
+    else if(c >= '0' && c <= '9') {
+      string number_literal;
+      number_literal.push_back(c);
+      optional<char> next;
+      while((next = scanner.peek()) && next.has_value() && next >= '0' && next <= '9') {
+        number_literal.push_back(*next);
+        scanner.advance();
+      }
+      tokens.push_back(Token::IntToken(atoi(number_literal.c_str())));
+    }
+    else if (c == '"') {
+      string string_literal;
+      optional<char> next;
+      while(!scanner.eof() && (next = scanner.peek()) && next != '"') {
+        string_literal.push_back(*next);
+        scanner.advance();
+      }
+      if (next == '"') {
+        scanner.advance();
+        tokens.push_back(Token::StringToken(string_literal));
+      }else {
+        throw invalid_argument("unterminated string");
+      }
+
+    }
+  }
+  return tokens;
+}
+
+static const std::unordered_map<std::string, faiss::MetricType> metric_type_map = {
         {"L1", faiss::METRIC_L1},
         {"L2", faiss::METRIC_L2},
         {"INNER_PRODUCT", faiss::METRIC_INNER_PRODUCT},
@@ -754,96 +883,133 @@ faiss::MetricType parse_metric_type(const std::string& metric_type) {
         {"JensenShannon", faiss::METRIC_JensenShannon}
     };
 
-    auto it = metric_type_map.find(metric_type);
-    if (it == metric_type_map.end()) {
-        throw invalid_argument("unknown metric type: " + metric_type);
+// parse a vss0 column definition. Throws on errors
+VssIndexColumn parse_vss0_column_definition(string source) {
+  string name;
+  sqlite3_int64 dimensions;
+  string factory = "Flat,IDMap2";
+  faiss::MetricType metric_type = faiss::MetricType::METRIC_L2;
+  StorageType storage_type = StorageType::faiss_shadow;
+
+  vector<Token> tokens = tokenize(source);
+  std::vector<Token>::iterator it = tokens.begin();
+
+  // STEP 1: expect a column name as a first token (identifier)
+  if(it == tokens.end()) {
+    throw invalid_argument("No tokens available.");
+  }
+  if((*it).token_type != TokenType::IDENTIFIER) {
+    throw invalid_argument("Expected identifier as first token, got ");
+  }
+  name = (*it).identifier_value;
+
+  // STEP 2: ensure a '(' immediately follows
+  it++;
+  if(it == tokens.end()) {
+    throw invalid_argument("Expected dimensions after column name declaration");
+  }
+  if((*it).token_type != TokenType::LPAREN) {
+    throw invalid_argument("Expected left parethesis '('");
+  }
+
+  // STEP 3: ensure an integer token (# dimensions) immediately follows
+  it++;
+  if(it == tokens.end()) {
+    throw invalid_argument("Expected dimensions after column name declaration");
+  }
+  if((*it).token_type != TokenType::INTEGER) {
+    throw invalid_argument("Expected integer");
+  }
+  dimensions = (*it).int_value;
+
+  // STEP 4: ensure a ')' token immediately follows
+  it++;
+  if(it == tokens.end()) {
+    throw invalid_argument("Expected dimensions after column name declaration");
+  }
+  if((*it).token_type != TokenType::RPAREN) {
+    throw invalid_argument("Expected right parethesis ')'");
+  }
+
+  // STEP 5: parse any column options
+  it++;
+  while(it != tokens.end()) {
+    // every column option must start with an identifier
+    if((*it).token_type != TokenType::IDENTIFIER) {
+      throw invalid_argument("Expected an identifier for column arguments");
+    }
+    string key = (*it).identifier_value;
+    if(key != "factory" && key != "metric_type" && key != "storage_type") {
+      throw invalid_argument("Unknown vss0 column option '" + key + "'");
     }
 
-    return it->second;
-}
-
-StorageType parse_storage_type(const string& storage_type) {
-    if (storage_type == "faiss_ondisk") return StorageType::faiss_ondisk;
-    else if (storage_type == "faiss_shadow") return StorageType::faiss_shadow;
-    throw invalid_argument("unknown option for on storage type: " + storage_type);
-}
-
-string parse_factory(const string& s) {
-    size_t lquote = s.find_first_of("\"");
-    size_t rquote = s.find_last_of("\"");
-
-    if (lquote == string::npos || rquote == string::npos ||
-        lquote >= rquote) {
-        return nullptr;
+    // ensure it is followed by an '='
+    it++;
+    if(it == tokens.end() || (*it).token_type != TokenType::EQUAL) {
+      throw invalid_argument("Expected '=' ");
     }
 
-    return s.substr(lquote + 1, rquote - lquote - 1);
-}
-
-template <typename T>
-T parse_attribute(const string& arg, const string& keyword, T default_value,
-                  size_t rparen, function<T(const string&)> parse_func) {
-
-    size_t keywordStart, keywordStringStartFrom;
-
-    if ((keywordStart = arg.find(keyword, rparen)) != string::npos &&
-        (keywordStringStartFrom = arg.find("=", keywordStart)) != string::npos) {
-
-        size_t l = arg.find_first_not_of(" ", keywordStringStartFrom + 1);
-        if (l == string::npos) {
-            throw invalid_argument("Invalid " + keyword + " value");
-        }
-
-        size_t r;
-        if ((r = arg.find(' ', l)) && r != string::npos) {
-            return parse_func(arg.substr(l, r - l));
-        }
-
-        r = min(arg.find(',', l), arg.size());
-
-        return parse_func(arg.substr(l, r - l));
+    // now parse the value - different legal values for each key
+    it++;
+    if(it == tokens.end()) {
+      throw invalid_argument("Expected column option value for " + key);
     }
-    else {
-        return default_value;
+    if (key == "factory") {
+      if((*it).token_type != TokenType::STRING) {
+        throw invalid_argument("Expected string value for factory column option, got ");
+      }
+      factory = (*it).string_value;
     }
+    else if (key == "metric_type") {
+      if((*it).token_type != TokenType::IDENTIFIER) {
+        throw invalid_argument("Expected an identifier value for the 'metric_type' column option");
+      }
+      string value = (*it).identifier_value;
+      auto it2 = metric_type_map.find(value);
+
+      if( it2 == metric_type_map.end())  {
+        throw invalid_argument("Unknown metric type: " + value);
+      }
+
+      metric_type = it2->second;
+    }
+    else if (key == "storage_type") {
+      if((*it).token_type != TokenType::IDENTIFIER) {
+        throw invalid_argument("Expected an identifier value for the 'storage_type' column option");
+      }
+      string value = (*it).identifier_value;
+      if(value == "faiss_shadow") {
+        storage_type = StorageType::faiss_shadow;
+      }
+      else if(value == "faiss_ondisk") {
+        storage_type = StorageType::faiss_ondisk;
+      }else {
+        throw invalid_argument("storage_type value must be one of faiss_shadow or faiss_ondisk");
+      }
+    }
+
+    it++;
+  }
+  return VssIndexColumn {
+    name,
+    dimensions,
+    factory,
+    metric_type,
+    storage_type
+  };
 }
 
 unique_ptr<vector<VssIndexColumn>> parse_constructor(int argc,
                                                      const char* const* argv,
                                                      sqlite3 *db) {
-    auto columns =
-        unique_ptr<vector<VssIndexColumn>>(new vector<VssIndexColumn>());
+    auto columns = unique_ptr<vector<VssIndexColumn>>(new vector<VssIndexColumn>());
 
     for (int i = 3; i < argc; i++) {
-        string arg = string(argv[i]);
-
-        size_t lparen = arg.find("(");
-        size_t rparen = arg.find(")");
-
-        if (lparen == string::npos || rparen == string::npos || lparen >= rparen) {
-            return nullptr;
-        }
-
-        string name = arg.substr(0, lparen);
-        string sDimensions = arg.substr(lparen + 1, rparen - lparen - 1);
-        sqlite3_int64 dimensions = atoi(sDimensions.c_str());
-
-        string factory =
-            parse_attribute<string>(arg, "factory", "Flat,IDMap2", rparen,
-                                    parse_factory);
-
-        faiss::MetricType metric_type = parse_attribute<faiss::MetricType>(
-            arg, "metric_type", faiss::METRIC_L2, rparen, parse_metric_type);
-
-        StorageType storage_type =
-            parse_attribute<StorageType>(arg, "storage_type", StorageType::faiss_shadow, rparen, parse_storage_type);
-
-        if (storage_type == StorageType::faiss_ondisk && sqlite3_db_filename(db, "main") == nullptr) {
+        auto column = parse_vss0_column_definition(string(argv[i]));
+        if (column.storage_type == StorageType::faiss_ondisk && sqlite3_db_filename(db, "main")[0] == '\0') {
             throw invalid_argument("Cannot use on disk storage for in memory db");
         }
-
-        columns->push_back(
-            VssIndexColumn{ name, dimensions, factory, metric_type, storage_type });
+        columns->push_back(column);
     }
 
     return columns;
@@ -868,7 +1034,7 @@ static int init(sqlite3 *db,
     try {
         columns = parse_constructor(argc, argv, db);
     } catch (const invalid_argument& e) {
-        *pzErr = sqlite3_mprintf(e.what());
+        *pzErr = sqlite3_mprintf("Error parsing constructor: %s", e.what());
         return SQLITE_ERROR;
     }
 
@@ -919,8 +1085,11 @@ static int init(sqlite3 *db,
         }
 
         rc = create_shadow_tables(db, argv[1], argv[2], pTable->indexes);
-        if (rc != SQLITE_OK)
-            return rc;
+        if (rc != SQLITE_OK){
+          *pzErr = sqlite3_mprintf("Error creating shadow tables");
+          return rc;
+        }
+
 
         // Shadow tables were successully created.
         // After shadow tables are created, write the initial index state to
@@ -938,11 +1107,13 @@ static int init(sqlite3 *db,
                                             (*iter)->name,
                                             (*iter)->storage_type);
 
-                if (rc != SQLITE_OK)
-                    return rc;
+                if (rc != SQLITE_OK) {
+                  *pzErr = sqlite3_mprintf("Error initializing _index shadow tables");
+                  return rc;
+                }
 
             } catch (faiss::FaissException &e) {
-
+              *pzErr = sqlite3_mprintf("Faiss error when initializing shadow tables: %s", e.what());
                 return SQLITE_ERROR;
             }
         }

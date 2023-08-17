@@ -12,7 +12,7 @@ endif()
 configure_file(src/sqlite-vss.h.in sqlite-vss.h)
 configure_file(src/sqlite-vector.h.in sqlite-vector.h)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(FAISS_ENABLE_GPU "" OFF)
