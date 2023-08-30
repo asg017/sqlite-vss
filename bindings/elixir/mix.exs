@@ -1,7 +1,7 @@
 defmodule SqliteVss.MixProject do
   use Mix.Project
 
-  @source_url "https://github.com/asg017/sqlite-vss/bindings/elixir"
+  @source_url "https://github.com/asg017/sqlite-vss/tree/main/bindings/elixir"
   @version File.read!(Path.expand("./VERSION", __DIR__)) |> String.trim()
 
   def project do
@@ -12,8 +12,8 @@ defmodule SqliteVss.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       name: "sqlite_vss",
-      source_url: "https://github.com/asg017/sqlite-vss",
-      homepage_url: "https://github.com/asg017/sqlite-vss",
+      source_url: @source_url,
+      homepage_url: @source_url,
       docs: [
         main: "SqliteVss",
         extras: ["README.md"],
