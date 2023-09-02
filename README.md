@@ -191,6 +191,44 @@ console.log(version);
 
 See [`deno/sqlite-vss/README.md`](./deno/README.md) for more details.
 
+### Go
+
+For Go developers, use the [Go](./go) module:
+
+```go
+package main
+
+import (
+	"fmt"
+	"log"
+
+	vss "github.com/asg017/sqlite-vss/go"
+)
+
+func main() {
+	// /usr/local/lib/sqlite/ext/sqlite-vss is where vss0 and vector0 are stored.
+	db, err := vss.Open("vss-example.db", "/usr/local/lib/sqlite/ext/sqlite-vss")
+	if err != nil {
+		log.Fatal()
+	}
+	defer db.Close()
+
+	r := db.QueryRow("select vss_version();")
+	if err := r.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	var versions any
+	if err := r.Scan(&versions); err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(versions)
+}
+```
+
+See [`go/README.md`](./go/README.md) for more details.
+
 ### Datasette
 
 And for [Datasette](https://datasette.io/), install the [`datasette-sqlite-vss` plugin](https://datasette.io/plugins/datasette-sqlite-vss) with:
