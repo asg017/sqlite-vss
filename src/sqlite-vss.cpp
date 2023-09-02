@@ -1277,8 +1277,8 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
             // https://sqlite.org/forum/info/6b32f818ba1d97ef
             sqlite3_free(pVtabCursor->pVtab->zErrMsg);
             pVtabCursor->pVtab->zErrMsg = sqlite3_mprintf(
-                "vss_search() only support vss_search_params() as a "
-                "2nd parameter for SQLite versions below 3.41.0");
+                "vss_search() only supports vss_search_params() as a "
+                "2nd parameter for SQLite versions at or above 3.41.0");
             return SQLITE_ERROR;
 
         } else if ((query_vector = pCursor->table->vector_api->xValueAsVector(
