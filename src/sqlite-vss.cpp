@@ -433,12 +433,6 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
             if (argc > 1) {
 
                 pCursor->setLimit(sqlite3_value_int(argv[1]));
-            } else {
-
-                auto ptrVtab = static_cast<vss_index_vtab *>(pCursor->pVtab);
-                ptrVtab->setError(sqlite3_mprintf("LIMIT required on vss_search() queries"));
-
-                return SQLITE_ERROR;
             }
 
         } else {
