@@ -411,6 +411,9 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
         pCursor->setQuery_type(QueryType::search);
         vec_ptr query_vector;
 
+        int nq = 1;
+        auto index = pCursor->getTable()->getIndexes().at(idxNum);
+
         auto params = static_cast<VssSearchParams *>(sqlite3_value_pointer(argv[0], "vss0_searchparams"));
         if (params != nullptr) {
 
@@ -433,6 +436,10 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
             if (argc > 1) {
 
                 pCursor->setLimit(sqlite3_value_int(argv[1]));
+            } else {
+
+                auto ptrVtab = static_cast<vss_index_vtab *>(pCursor->pVtab);
+                pCursor->setLimit(index->size());
             }
 
         } else {
@@ -442,9 +449,6 @@ static int vssIndexFilter(sqlite3_vtab_cursor *pVtabCursor,
 
             return SQLITE_ERROR;
         }
-
-        int nq = 1;
-        auto index = pCursor->getTable()->getIndexes().at(idxNum);
 
         if (!index->canQuery(query_vector)) {
 
