@@ -26,7 +26,7 @@ create virtual table vss_articles using vss0(
 );
 ```
 
-`sqlite-vss` is a **Bring-your-own-vectors** database, it is compatable with any embedding or vector data you have. Consider using [OpenAI's Embeddings API](https://platform.openai.com/docs/guides/embeddings), [HuggingFace's Inference API](https://huggingface.co/blog/getting-started-with-embeddings#1-embedding-a-dataset), [`sentence-transformers`](https://www.sbert.net/), or [any of these open source model](https://github.com/embeddings-benchmark/mteb#leaderboard). In this example, we are using [sentence-transformers/all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) to generate embeddings from our text, which have 384 dimensions.
+`sqlite-vss` is a **Bring-your-own-vectors** database, it is compatible with any embedding or vector data you have. Consider using [OpenAI's Embeddings API](https://platform.openai.com/docs/guides/embeddings), [HuggingFace's Inference API](https://huggingface.co/blog/getting-started-with-embeddings#1-embedding-a-dataset), [`sentence-transformers`](https://www.sbert.net/), or [any of these open source model](https://github.com/embeddings-benchmark/mteb#leaderboard). In this example, we are using [sentence-transformers/all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) to generate embeddings from our text, which have 384 dimensions.
 
 You can insert vectors into `vss0` tables as JSON or raw bytes.
 
