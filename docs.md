@@ -97,7 +97,7 @@ An optional `factory=` option can be placed on individual columns. These are [Fa
 
 There is also the `metrict_type=` option. These are [Faiss metric types](https://github.com/facebookresearch/faiss/wiki/MetricType-and-distances). The options are `L1`, `L2`, `INNER_PRODUCT`, `Linf`, `Canberra`, `BrayCurtis`, and `JensenShannon`. If you are planning on using the `JensenShannon` metric type, you must L1 normalize inputs as FAISS assumes the inputs are L1 normalized. You should also be aware that FAISS implements this as the JensenShannon divergence, not the JensenShannon distance. 
 
-The `storage_type=` option can be used to specify how you would like indices to be stored. The current options are `faiss_ondisk` and `faiss_shadow`. The on disk option will store the indices on disk in the same directory as your database file. The default option stores indices as blobs in index shadow tables. 
+The `storage_type=` option can be used to specify how you would like indices to be stored. The current options are `faiss_ondisk` and `faiss_shadow`. The on disk option will store the indices on disk in the same directory as your database file. The default option stores indices as blobs in index shadow tables. If you use the `faiss_ondisk` option you can also specify `mmap=True`. When turned on, this option tells faiss to use mmap when reading the index from disk, allowing the file contents to be read into progam memory. 
 
 By contention the table name should be prefixed with `vss_`. If your data exists in a "normal" table named `"xyz"`, then name the vss0 table `vss_xyz`.
 
