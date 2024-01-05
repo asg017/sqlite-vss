@@ -176,7 +176,7 @@ For [Deno](https://deno.land/) developers, use the [deno.land/x/sqlite_vss](http
 ```ts
 // Requires all permissions (-A) and the --unstable flag
 
-import { Database } from "https://deno.land/x/sqlite3@0.8.0/mod.ts";
+import { Database } from "https://deno.land/x/sqlite3@0.10.0/mod.ts";
 import * as sqlite_vss from "https://deno.land/x/sqlite_vss/mod.ts";
 
 const db = new Database(":memory:");
