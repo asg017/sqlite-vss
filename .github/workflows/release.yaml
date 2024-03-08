@@ -12,7 +12,7 @@ env:
   ARTIFACT-MACOS-AARCH64-EXTENSION: sqlite-vss-macos-aarch64
 jobs:
   build-macos-aarch64-extension:
-    runs-on: [self-hosted, mm1]
+    runs-on: flyci-macos-large-latest-m1
     steps:
       - uses: actions/checkout@v3
         with:
