@@ -34,6 +34,7 @@ jobs:
           path: build
           key: ${{ runner.os }}-build
       - run: make patch-openmp
+      - run: brew install llvm
       - run: make loadable-release static-release
         env:
           # `brew info libomp` gives the correct one, with .a file for static openmp builds
