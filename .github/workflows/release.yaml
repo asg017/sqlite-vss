@@ -14,7 +14,6 @@ jobs:
   build-macos-aarch64-extension:
     runs-on: flyci-macos-large-latest-m1
     steps:
-    steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
