@@ -14,6 +14,7 @@ jobs:
   build-macos-aarch64-extension:
     runs-on: flyci-macos-large-latest-m1
     steps:
+    steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
@@ -43,7 +44,7 @@ jobs:
           CPPFLAGS: "-I/usr/local/opt/libomp/include/"
       - uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.ARTIFACT-MACOS-X86_64-EXTENSION }}
+          name: ${{ env.ARTIFACT-MACOS-AARCH64-EXTENSION }}
           path: dist/release/*
   build-linux-x86_64-extension:
     runs-on: ubuntu-20.04
