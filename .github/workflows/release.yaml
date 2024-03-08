@@ -35,6 +35,10 @@ jobs:
           key: ${{ runner.os }}-build
       - run: make patch-openmp
       - run: make loadable-release static-release
+        env:
+          # `brew info libomp` gives the correct one, with .a file for static openmp builds
+          LDFLAGS: "-L/usr/local/opt/libomp/lib/"
+          CPPFLAGS: "-I/usr/local/opt/libomp/include/"
       - uses: actions/upload-artifact@v3
         with:
           name: ${{ env.ARTIFACT-MACOS-AARCH64-EXTENSION }}
