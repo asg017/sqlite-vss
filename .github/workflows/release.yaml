@@ -9,7 +9,36 @@ env:
   ARTIFACT-LINUX-X86_64-EXTENSION: sqlite-vss-linux-x86_64
   ARTIFACT-MACOS-X86_64-EXTENSION: sqlite-vss-macos-x86_64
   ARTIFACT-WINDOWS-X86_64-EXTENSION: sqlite-vss-windows-x86_64
+  ARTIFACT-MACOS-AARCH64-EXTENSION: sqlite-vss-macos-aarch64
 jobs:
+  build-macos-aarch64-extension:
+    runs-on: [self-hosted, mm1]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: "recursive"
+      - id: cache-sqlite-build
+        uses: actions/cache@v3
+        with:
+          path: vendor/sqlite
+          key: ${{ runner.os }}-${{ hashFiles('vendor/get_sqlite.sh') }}
+      - if: steps.cache-sqlite-build.outputs.cache-hit != 'true'
+        run: ./vendor/get_sqlite.sh
+      - if: steps.cache-sqlite-build.outputs.cache-hit != 'true'
+        working-directory: vendor/sqlite
+        run: ./configure && make
+      - run: make patch-openmp
+      - run: make loadable-release static-release
+        env:
+          # `brew info libomp` gives the correct one, with .a file for static openmp builds
+          CC: /opt/homebrew/opt/llvm/bin/clang
+          CXX: /opt/homebrew/opt/llvm/bin/clang++
+          LDFLAGS: "-L/opt/homebrew/opt/libomp/lib"
+          CPPFLAGS: "-I/opt/homebrew/opt/libomp/include"
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.ARTIFACT-MACOS-AARCH64-EXTENSION }}
+          path: dist/release/*
   build-linux-x86_64-extension:
     runs-on: ubuntu-20.04
     steps:
@@ -72,6 +101,7 @@ jobs:
     needs:
       [
         build-macos-x86_64-extension,
+        build-macos-aarch64-extension,
         build-linux-x86_64-extension,
       ]
     permissions:
@@ -89,4 +119,5 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           platforms: |
             macos-x86_64:     ${{ env.ARTIFACT-MACOS-X86_64-EXTENSION }}/*
+            macos-aarch64:    ${{ env.ARTIFACT-MACOS-AARCH64-EXTENSION }}/*
             linux-x86_64:     ${{ env.ARTIFACT-LINUX-X86_64-EXTENSION }}/*
