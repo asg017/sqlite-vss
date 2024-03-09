@@ -37,10 +37,10 @@ jobs:
       - run: make loadable-release static-release
         env:
           # `brew info libomp` gives the correct one, with .a file for static openmp builds
-          CC: /opt/homebrew/opt/llvm/bin/clang
-          CXX: /opt/homebrew/opt/llvm/bin/clang++
-          LDFLAGS: "-L/opt/homebrew/opt/libomp/lib"
-          CPPFLAGS: "-I/opt/homebrew/opt/libomp/include"
+          CC: /usr/local/opt/llvm/bin/clang
+          CXX: /usr/local/opt/llvm/bin/clang++
+          LDFLAGS: "-L/usr/local/opt/libomp/lib/"
+          CPPFLAGS: "-I/usr/local/opt/libomp/include/"
       - uses: actions/upload-artifact@v3
         with:
           name: ${{ env.ARTIFACT-MACOS-AARCH64-EXTENSION }}
